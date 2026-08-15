@@ -121,7 +121,7 @@
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
     .range-filter-name { color: var(--ink); font-size: 13px; font-weight: 600; }
-    .range-filter output { color: var(--muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .range-filter output { color: var(--muted); font: 14px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .dual-range { --low: 0%; --high: 100%; position: relative; width: 100%; height: 18px; background: linear-gradient(to right, var(--line) 0 var(--low), var(--accent) var(--low) var(--high), var(--line) var(--high) 100%); background-size: 100% 3px; background-position: center; background-repeat: no-repeat; }
     .dual-range input { position: absolute; inset: 0; width: 100%; height: 18px; margin: 0; padding: 0; appearance: none; background: transparent; pointer-events: none; }
     .dual-range input::-webkit-slider-runnable-track { height: 3px; background: transparent; }
@@ -419,8 +419,11 @@
       if (rerender && state.project) renderTree();
     }
     function branchMatchesFilter(branch) {
-      const gain = Number(branch.gain_count || 0); const loss = Number(branch.loss_count || 0); const filter = state.branchFilter;
-      return gain >= filter.gainMin && gain <= filter.gainMax && loss >= filter.lossMin && loss <= filter.lossMax;
+      return branchValueMatchesFilter(branch, "gain") && branchValueMatchesFilter(branch, "loss");
+    }
+    function branchValueMatchesFilter(branch, kind) {
+      const value = Number(branch[`${kind}_count`] || 0);
+      return value >= state.branchFilter[`${kind}Min`] && value <= state.branchFilter[`${kind}Max`];
     }
     function normalizedBranchSupport(node) {
       let value = node.support;
@@ -485,14 +488,15 @@
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
-        const labelFilterClass = branchMatchesFilter(branch) ? "" : " filtered-branch-label";
         const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: "branch-hit", "data-branch": node.branch_id});
         canvas.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
         canvas.append(line);
-        const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: `branch-label${labelFilterClass}`, "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
-        const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
-        const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
+        const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
+        const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
+        const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
+        const gain = svgEl("tspan", {class: gainClass}); gain.textContent = `+${branch.gain_count}`;
+        const loss = svgEl("tspan", {class: lossClass, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
         label.append(gain, loss); canvas.append(label);
         const support = normalizedBranchSupport(node);
         if (support != null) {

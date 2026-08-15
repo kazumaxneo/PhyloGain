@@ -31,6 +31,7 @@
 - Add a persistent 60–200% phylogenetic-tree zoom slider that keeps the current viewport centered.
 - Move phenotype, candidate-gene, and collapse controls into the title bar and remove the separate toolbar.
 - Arrange shorter Gain and Loss sliders with Zoom in one horizontal row to maximize tree height.
+- Make Gain and Loss label fading independent and enlarge the displayed filter ranges.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
