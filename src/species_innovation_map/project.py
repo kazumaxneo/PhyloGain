@@ -21,6 +21,7 @@ from .analysis import (
     read_phenotypes,
 )
 from .annotation import (
+    fetch_official_kegg_names,
     import_go_term_names,
     import_eggnog_annotations,
     run_eggnog_mapper,
@@ -141,6 +142,7 @@ def build_project(
     annotate: str | None = None,
     annotation_path: str | Path | None = None,
     go_obo_path: str | Path | None = None,
+    fetch_kegg_names: bool = False,
     proteomes: str | Path | None = None,
     eggnog_emapper: str = "emapper.py",
     eggnog_data_dir: str | Path | None = None,
@@ -170,6 +172,8 @@ def build_project(
         raise InputError(f"GO ontology file was not found: {go_obo_path}")
     if go_obo_path and not (annotate or annotation_path):
         raise InputError("--go-obo requires --annotate or --annotations")
+    if fetch_kegg_names and not (annotate or annotation_path):
+        raise InputError("--fetch-kegg-names requires --annotate or --annotations")
     output_path = Path(output).resolve()
     if output_path.exists() and any(output_path.iterdir()):
         raise InputError(f"Output directory is not empty: {output_path}")
@@ -330,6 +334,13 @@ def build_project(
     if imported_annotation:
         progress("Importing functional annotations")
         annotation_report = import_eggnog_annotations(connection, imported_annotation)
+        if fetch_kegg_names:
+            progress("Fetching official KEGG term names")
+            kegg_report = fetch_official_kegg_names(
+                connection,
+                output_path / "annotations" / "kegg_term_names.tsv",
+            )
+            annotation_report["named_kegg_terms"] = kegg_report["total"]
         if go_obo_path:
             progress("Importing official Gene Ontology term names")
             go_names = import_go_term_names(connection, go_obo_path)
@@ -385,6 +396,7 @@ def build_project(
             "annotation_engine": "eggnog" if imported_annotation else None,
             "annotated_families": annotation_report["annotated_families"] if annotation_report else 0,
             "named_go_terms": annotation_report.get("named_go_terms", 0) if annotation_report else 0,
+            "named_kegg_terms": annotation_report.get("named_kegg_terms", 0) if annotation_report else 0,
         },
     }
     (output_path / "project.json").write_text(
@@ -402,6 +414,7 @@ def build_project(
         "gtdb_taxonomy_file": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
         "annotation_file": str(imported_annotation) if imported_annotation else None,
         "go_ontology_file": str(Path(go_obo_path).resolve()) if go_obo_path else None,
+        "kegg_names_source": "KEGG REST API" if fetch_kegg_names else None,
         "proteomes_directory": str(Path(proteomes).resolve()) if proteomes else None,
         "warnings": report["warnings"],
     }

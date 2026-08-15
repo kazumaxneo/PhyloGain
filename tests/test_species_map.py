@@ -5,6 +5,7 @@ import sqlite3
 import tempfile
 import unittest
 import zlib
+from io import BytesIO
 from contextlib import closing
 from pathlib import Path
 from unittest.mock import patch
@@ -209,6 +210,38 @@ class ProjectTests(unittest.TestCase):
             self.assertTrue((output / "annotations" / "go-basic.obo").is_file())
             project = json.loads((output / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project["settings"]["named_go_terms"], 2)
+
+    def test_fetch_official_kegg_names_once_and_cache(self):
+        responses = {
+            "ko": "K02588\tnifH; nitrogenase iron protein\n",
+            "pathway": "map00910\tNitrogen metabolism\n",
+            "module": "M00175\tNitrogen fixation, nitrogen => ammonia\n",
+            "reaction": "R00001\tpolyphosphate polyphosphohydrolase\n",
+        }
+
+        def fake_urlopen(request, timeout):
+            database = request.full_url.rsplit("/", 1)[-1]
+            return BytesIO(responses[database].encode("utf-8"))
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            with patch("species_innovation_map.annotation.urlopen", side_effect=fake_urlopen):
+                with patch("species_innovation_map.annotation.time.sleep"):
+                    build_project(
+                        FIXTURE,
+                        output,
+                        annotation_path=EGGNOG_ANNOTATIONS,
+                        fetch_kegg_names=True,
+                    )
+            with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
+                name = connection.execute(
+                    "SELECT term_name FROM annotation_terms WHERE source='KEGG KO' AND term_id='K02588'"
+                ).fetchone()[0]
+                self.assertEqual(name, "nifH; nitrogenase iron protein")
+            cache = output / "annotations" / "kegg_term_names.tsv"
+            self.assertIn("KEGG KO\tK02588\tnifH", cache.read_text(encoding="utf-8"))
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project["settings"]["named_kegg_terms"], 4)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

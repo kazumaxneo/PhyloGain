@@ -52,6 +52,11 @@ def parser() -> argparse.ArgumentParser:
         "--go-obo",
         help="Official go-basic.obo file used to add readable names to GO identifiers",
     )
+    build.add_argument(
+        "--fetch-kegg-names",
+        action="store_true",
+        help="Fetch and cache official KEGG names at build time (academic use only)",
+    )
     build.add_argument("--annotation-cpu", type=int, default=1)
 
     serve = commands.add_parser("serve", help="Open a generated map in a local web server")
@@ -113,6 +118,7 @@ def main(argv: list[str] | None = None) -> None:
                 annotate=args.annotate,
                 annotation_path=args.annotations,
                 go_obo_path=args.go_obo,
+                fetch_kegg_names=args.fetch_kegg_names,
                 proteomes=args.proteomes,
                 eggnog_emapper=args.eggnog_emapper,
                 eggnog_data_dir=args.eggnog_data_dir,

@@ -5,7 +5,9 @@ import math
 import shutil
 import sqlite3
 import subprocess
+import time
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 
 COG_CATEGORIES = {
@@ -45,6 +47,14 @@ TERM_COLUMNS = {
     "KEGG_Reaction": "KEGG reaction",
     "PFAMs": "Pfam",
 }
+
+KEGG_LIST_DATABASES = {
+    "KEGG KO": "ko",
+    "KEGG pathway": "pathway",
+    "KEGG module": "module",
+    "KEGG reaction": "reaction",
+}
+KEGG_REST_URL = "https://rest.kegg.jp"
 
 
 def write_representative_fasta(
@@ -249,6 +259,67 @@ def import_go_term_names(
         updates,
     )
     return len(updates)
+
+
+def fetch_official_kegg_names(
+    connection: sqlite3.Connection,
+    cache_path: str | Path | None = None,
+    base_url: str = KEGG_REST_URL,
+) -> dict[str, int]:
+    """Fetch official KEGG labels once, cache them, and update stored term names."""
+    fetched: dict[str, dict[str, str]] = {}
+    for index, (source, database) in enumerate(KEGG_LIST_DATABASES.items()):
+        request = Request(
+            f"{base_url.rstrip('/')}/list/{database}",
+            headers={"User-Agent": "species-innovation-map"},
+        )
+        with urlopen(request, timeout=120) as response:
+            text = response.read().decode("utf-8")
+        fetched[source] = _parse_kegg_list(text)
+        if index + 1 < len(KEGG_LIST_DATABASES):
+            time.sleep(0.4)
+
+    existing = connection.execute(
+        "SELECT source,term_id FROM annotation_terms WHERE source LIKE 'KEGG %'"
+    ).fetchall()
+    updates: list[tuple[str, str, str]] = []
+    cached_rows: list[tuple[str, str, str]] = []
+    counts = {source: 0 for source in KEGG_LIST_DATABASES}
+    for source, term_id in existing:
+        lookup_id = term_id
+        if source == "KEGG pathway" and term_id.startswith("ko"):
+            lookup_id = "map" + term_id[2:]
+        term_name = fetched.get(source, {}).get(lookup_id)
+        if not term_name:
+            continue
+        updates.append((term_name, source, term_id))
+        cached_rows.append((source, term_id, term_name))
+        counts[source] += 1
+    connection.executemany(
+        "UPDATE annotation_terms SET term_name=? WHERE source=? AND term_id=?",
+        updates,
+    )
+    if cache_path:
+        destination = Path(cache_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+            writer.writerow(["source", "term_id", "term_name"])
+            writer.writerows(sorted(cached_rows))
+    counts["total"] = len(updates)
+    return counts
+
+
+def _parse_kegg_list(text: str) -> dict[str, str]:
+    names: dict[str, str] = {}
+    for line in text.splitlines():
+        if "\t" not in line:
+            continue
+        term_id, term_name = line.split("\t", 1)
+        term_id = term_id.removeprefix("ko:")
+        if term_id and term_name:
+            names[term_id] = term_name
+    return names
 
 
 def _update_kegg_ko_names(connection: sqlite3.Connection) -> int:

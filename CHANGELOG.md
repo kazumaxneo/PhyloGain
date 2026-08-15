@@ -16,7 +16,7 @@
 - Use colon-separated, regular-weight assembly labels and emphasize functional annotation headings and items.
 - Unify functional-annotation typography, simplify orthogroup headers, and emphasize the Back button.
 - Replace boxed gene-family event buttons with compact single-line gain/loss, orthogroup, and annotation rows.
-- Label KEGG KO enrichment terms with representative eggNOG functional descriptions.
+- Fetch and cache official KEGG KO, pathway, module, and reaction names at build time.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

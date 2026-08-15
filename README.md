@@ -88,13 +88,14 @@ species-map build \
   --proteomes proteomes \
   --eggnog-data-dir /path/to/eggnog_data \
   --go-obo /path/to/go-basic.obo \
+  --fetch-kegg-names \
   --annotation-cpu 16 \
   --output annotated_map
 
 species-map serve annotated_map
 ```
 
-The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Species Innovation Map selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. KEGG KO identifiers are labeled with the representative eggNOG functional description.
+The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Species Innovation Map selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. `--fetch-kegg-names` retrieves official KO, pathway, module, and reaction names from the KEGG REST API once during the build and stores them in SQLite and `annotations/kegg_term_names.tsv`; viewing the map then requires no KEGG API calls. The KEGG REST API is limited to academic use by academic users.
 
 If eggNOG-mapper was run separately, import its standard output without repeating the search:
 
@@ -173,6 +174,7 @@ species-map validate \
 --eggnog-emapper FILE      eggNOG-mapper executable (default: emapper.py)
 --eggnog-data-dir DIR      Existing eggNOG database directory
 --go-obo FILE              Official go-basic.obo file for readable GO term names
+--fetch-kegg-names         Fetch and cache official KEGG names during the build
 --annotation-cpu INT       CPUs used by eggNOG-mapper (default: 1)
 ```
 
