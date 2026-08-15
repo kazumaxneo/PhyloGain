@@ -140,11 +140,9 @@
     .detail-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
     .detail-body { padding: 15px 18px 24px; }
     .empty { color: var(--muted); padding: 24px 4px; }
-    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 15px; }
-    .count { border-radius: 7px; padding: 10px 12px; }
-    .count.gain { color: var(--gain); background: var(--gain-soft); }
-    .count.loss { color: var(--loss); background: var(--loss-soft); }
-    .count strong { display: block; font-size: 20px; }
+    .counts { display: flex; gap: 22px; margin-bottom: 14px; color: var(--muted); font-size: 12px; }
+    .count { padding: 0; }
+    .count strong { margin-left: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
     .section-title { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
     .event-list { display: grid; gap: 5px; }
     .family-button { display: flex; justify-content: space-between; width: 100%; text-align: left; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -291,7 +289,7 @@
       $("detailSubtitle").textContent = branch.tip_label || `${branch.parent_node} → ${branch.child_node}`;
       const body = $("detailBody"); body.replaceChildren();
       const counts = document.createElement("div"); counts.className = "counts";
-      counts.innerHTML = `<div class="count gain"><strong>+${number(branch.gain_count)}</strong>gained families</div><div class="count loss"><strong>−${number(branch.loss_count)}</strong>lost families</div>`;
+      counts.innerHTML = `<div class="count">Gain <strong>+${number(branch.gain_count)}</strong></div><div class="count">Loss <strong>−${number(branch.loss_count)}</strong></div>`;
       body.append(counts);
       const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading gene families…"; body.append(loading);
       const result = await api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500`);
