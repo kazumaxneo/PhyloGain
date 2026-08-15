@@ -108,32 +108,32 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 9px; }
-    .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 13px 16px; align-items: center; column-gap: 3px; width: 112px; color: var(--muted); white-space: nowrap; }
-    .tree-scale-control label { grid-column: 1; grid-row: 1; overflow: hidden; font-size: 9px; line-height: 1; text-overflow: ellipsis; }
-    .tree-scale-control input { grid-column: 1 / 3; grid-row: 2; width: 112px; margin: 0; accent-color: var(--accent); }
-    .tree-scale-control output { grid-column: 2; grid-row: 1; width: 26px; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 7px; }
+    .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; width: 134px; color: var(--muted); white-space: nowrap; }
+    .tree-scale-control label { grid-column: 1; grid-row: 1; overflow: hidden; font-size: 11px; line-height: 1; text-overflow: ellipsis; }
+    .tree-scale-control input { grid-column: 1 / 3; grid-row: 2; width: 134px; margin: 0; accent-color: var(--accent); }
+    .tree-scale-control output { grid-column: 2; grid-row: 1; width: 32px; color: var(--ink); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
     .filter-actions { grid-column: 4; grid-row: 1; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
-    .svg-download { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; white-space: nowrap; text-decoration: underline; text-underline-offset: 2px; }
+    .svg-download { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 11px; white-space: nowrap; text-decoration: underline; text-underline-offset: 2px; }
     .svg-download:focus-visible { outline: none; color: var(--accent); text-decoration-thickness: 2px; }
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(80px, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 14px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
-    .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 13px 18px; align-items: center; column-gap: 4px; width: 280px; }
+    .branch-filters { display: grid; grid-template-columns: minmax(235px, 1fr) minmax(235px, 1fr) max-content max-content minmax(0, auto); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; min-width: 235px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
-    .range-filter-name { grid-column: 1; grid-row: 1; color: var(--muted); font-size: 9px; font-weight: 400; line-height: 1; }
-    .range-filter output { grid-column: 2; grid-row: 1; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .range-filter-name { grid-column: 1; grid-row: 1; color: var(--muted); font-size: 11px; font-weight: 400; line-height: 1; }
+    .range-filter output { grid-column: 2; grid-row: 1; color: var(--ink); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .dual-range { --low: 0%; --high: 100%; position: relative; grid-column: 1 / 3; grid-row: 2; width: 100%; height: 18px; background: linear-gradient(to right, var(--line) 0 var(--low), var(--accent) var(--low) var(--high), var(--line) var(--high) 100%); background-size: 100% 3px; background-position: center; background-repeat: no-repeat; }
     .dual-range input { position: absolute; inset: 0; width: 100%; height: 18px; margin: 0; padding: 0; appearance: none; background: transparent; pointer-events: none; }
     .dual-range input::-webkit-slider-runnable-track { height: 3px; background: transparent; }
     .dual-range input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; appearance: none; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
     .dual-range input::-moz-range-track { height: 3px; background: transparent; }
     .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
-    .filter-reset { border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+    .filter-reset { border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
     .filter-match-count { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
@@ -280,6 +280,7 @@
     }
     @media (max-width: 1400px) {
       .summary .card:nth-child(3), .summary .card:last-child { display: none; }
+      .branch-filters { grid-template-columns: 235px 235px max-content max-content 0; column-gap: 10px; }
       .filter-status .legend { display: none; }
       .filter-match-count { display: none; }
     }
