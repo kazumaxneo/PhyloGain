@@ -143,11 +143,11 @@
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; will-change: transform; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
-    .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
-    .branch-hit:hover + .branch, .radial-branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
+    .branch { stroke: #83909a; stroke-width: var(--branch-width, 1.5px); pointer-events: none; transition: stroke .12s, stroke-width .12s; }
+    .branch-hit:hover + .branch, .radial-branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: calc(var(--branch-width, 1.5px) + 2.5px); }
     .connector-hit { fill: transparent; cursor: ns-resize; }
-    .connector { stroke: #a6afb5; stroke-width: 1.2; pointer-events: none; }
-    .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: 3; }
+    .connector { stroke: #a6afb5; stroke-width: var(--connector-width, 1.2px); pointer-events: none; }
+    .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: calc(var(--connector-width, 1.2px) + 1.8px); }
     .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
     .support-label { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
@@ -403,6 +403,11 @@
             <input id="tipFontSize" type="range" min="6" max="16" step="1" value="9" aria-label="Tip label font size">
             <output id="tipFontSizeValue" for="tipFontSize">9px</output>
           </div>
+          <div class="tree-scale-control">
+            <label for="branchWidth">Branch width</label>
+            <input id="branchWidth" type="range" min="1" max="8" step="0.5" value="1.5" aria-label="Phylogenetic tree branch width">
+            <output id="branchWidthValue" for="branchWidth">1.5px</output>
+          </div>
         </div>
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Filter (gain)</span>
@@ -435,7 +440,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -641,8 +646,12 @@
     function applyTreePan() {
       $("treeSvg").style.transform = `translate(${state.treePanX}px, ${state.treePanY}px)`;
     }
+    function applyBranchWidth() {
+      $("treeSvg").style.setProperty("--branch-width", `${state.branchWidth}px`);
+      $("treeSvg").style.setProperty("--connector-width", `${state.branchWidth * .8}px`);
+    }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan();
+      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth();
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -1061,6 +1070,17 @@
         rerenderKeepingCenter();
       });
       enableRangeTrack($("tipFontSize"));
+      const storedBranchWidth = Number(localStorage.getItem("species-map-branch-width"));
+      if (Number.isFinite(storedBranchWidth) && storedBranchWidth >= 1 && storedBranchWidth <= 8) state.branchWidth = storedBranchWidth;
+      $("branchWidth").value = String(state.branchWidth);
+      $("branchWidthValue").textContent = `${state.branchWidth}px`;
+      $("branchWidth").addEventListener("input", event => {
+        state.branchWidth = Number(event.target.value);
+        $("branchWidthValue").textContent = `${state.branchWidth}px`;
+        localStorage.setItem("species-map-branch-width", String(state.branchWidth));
+        applyBranchWidth();
+      });
+      enableRangeTrack($("branchWidth"));
       $("treeLayoutSelect").addEventListener("change", event => {
         state.treeLayout = event.target.value;
         renderTree();
@@ -1097,9 +1117,9 @@
       const color = name => theme.getPropertyValue(name).trim();
       const style = document.createElementNS(SVG, "style");
       style.textContent = `
-        .branch { stroke: #83909a; stroke-width: 1.5; fill: none; }
-        .branch.selected { stroke: ${color("--accent")}; stroke-width: 4; }
-        .connector { stroke: #a6afb5; stroke-width: 1.2; }
+        .branch { stroke: #83909a; stroke-width: ${state.branchWidth}; fill: none; }
+        .branch.selected { stroke: ${color("--accent")}; stroke-width: ${state.branchWidth + 2.5}; }
+        .connector { stroke: #a6afb5; stroke-width: ${state.branchWidth * .8}; }
         .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
         .support-label { fill: ${color("--muted")}; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
         .gain-value { fill: ${color("--gain-text")}; }
