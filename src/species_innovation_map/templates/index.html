@@ -108,16 +108,17 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-tools { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 10px; }
+    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; }
     .tree-zoom { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
     .tree-zoom input { width: 100px; accent-color: var(--accent); }
     .tree-zoom output { width: 34px; color: var(--ink); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
+    .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: 285px 285px minmax(190px, 1fr) max-content max-content; grid-template-rows: auto; align-items: center; gap: 10px 14px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
-    .range-filter { display: grid; grid-template-columns: 34px 150px 82px; align-items: center; gap: 7px; }
+    .branch-filters { display: grid; grid-template-columns: 315px 315px max-content max-content minmax(150px, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 14px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: 34px 180px 82px; align-items: center; gap: 7px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
     .range-filter-name { color: var(--ink); font-size: 13px; font-weight: 600; }
@@ -128,8 +129,8 @@
     .dual-range input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; appearance: none; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
     .dual-range input::-moz-range-track { height: 3px; background: transparent; }
     .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
-    .filter-reset { grid-column: 5; grid-row: 1; align-self: center; justify-self: end; border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
-    .filter-match-count { grid-column: 4; grid-row: 1; align-self: center; justify-self: end; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .filter-reset { grid-column: 4; grid-row: 1; align-self: center; justify-self: start; border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+    .filter-match-count { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
@@ -266,10 +267,10 @@
       .detail-panel { left: 20px; width: auto; }
       .detail-resize-handle { display: none; }
       .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
-      .branch-filters { grid-template-columns: 285px 285px minmax(100px, 1fr); grid-template-rows: auto auto; }
-      .tree-tools { grid-column: 1 / 3; grid-row: 2; justify-self: start; }
-      .filter-reset { grid-column: 3; grid-row: 1; }
-      .filter-match-count { grid-column: 3; grid-row: 2; justify-self: end; }
+      .branch-filters { grid-template-columns: 315px 315px minmax(100px, 1fr); grid-template-rows: auto auto; }
+      .tree-tools { grid-column: 1; grid-row: 2; justify-self: start; }
+      .filter-reset { grid-column: 2; grid-row: 2; justify-self: start; }
+      .filter-status { grid-column: 3; grid-row: 1 / 3; }
     }
     @media (max-width: 1180px) {
       .header-controls > label, .header-controls .header-field > label { display: none; }
@@ -315,7 +316,6 @@
           <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
           <output id="treeZoomValue" for="treeZoom">100%</output>
           </div>
-          <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
         </div>
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Gain</span>
@@ -328,7 +328,10 @@
           <output id="lossRangeValue"></output>
         </div>
         <button class="filter-reset" id="filterReset" type="button">Reset</button>
-        <span class="filter-match-count" id="filterMatchCount"></span>
+        <div class="filter-status">
+          <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
+          <span class="filter-match-count" id="filterMatchCount"></span>
+        </div>
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
     </section>

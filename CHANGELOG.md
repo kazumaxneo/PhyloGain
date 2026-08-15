@@ -34,6 +34,7 @@
 - Make Gain and Loss label fading independent and enlarge the displayed filter ranges.
 - Open event-specific branch panels: Gain numbers show only gained-family enrichment and lists, while Loss numbers show only lost-family results.
 - Add interactive clade collapse/expand on horizontal branches and child-order flipping on vertical connectors.
+- Slightly lengthen Gain/Loss sliders and place Zoom followed immediately by a compact Reset control.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
