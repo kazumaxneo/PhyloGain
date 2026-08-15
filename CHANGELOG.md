@@ -20,6 +20,7 @@
 - Link KEGG and GO term identifiers in branch and orthogroup panels to their official database pages.
 - Mark legacy module IDs missing from the current KEGG release instead of leaving unexplained bare IDs.
 - Give KEGG reaction charts a wider label column and a more compact plotting area for long reaction descriptions.
+- Widen term-label columns across all enrichment databases while keeping KEGG reaction labels widest.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
