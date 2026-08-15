@@ -153,6 +153,8 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("bar.style.backgroundColor = fdrColor", html)
             self.assertIn("detailResizeHandle", html)
             self.assertIn("enableDetailResize", html)
+            self.assertIn("background: var(--detail-panel)", html)
+            self.assertIn('--detail-panel: #202428', html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -7,6 +7,7 @@
 - Redesign enrichment charts with gene-family count on the axis and FDR encoded by a labelled red-to-blue color scale.
 - Add background frequencies to the exact enrichment tables.
 - Make the branch-detail panel width draggable and persistent.
+- Give the detail panel a subtly distinct background in every color theme.
 
 ## 0.3.1 — 2026-08-15
 
