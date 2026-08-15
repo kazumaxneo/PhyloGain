@@ -117,6 +117,8 @@
     .spacing-controls output { width: 31px; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: center; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
+    .svg-download { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; white-space: nowrap; text-decoration: underline; text-underline-offset: 2px; }
+    .svg-download:focus-visible { outline: none; color: var(--accent); text-decoration-thickness: 2px; }
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
@@ -380,6 +382,7 @@
         <div class="filter-status">
           <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
           <span class="filter-match-count" id="filterMatchCount"></span>
+          <button class="svg-download" id="downloadSvg" type="button">Download SVG</button>
         </div>
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
@@ -767,6 +770,53 @@
         });
       });
     }
+    function downloadCurrentTreeSvg() {
+      if (!state.project) return;
+      const source = $("treeSvg");
+      const clone = source.cloneNode(true);
+      clone.setAttribute("xmlns", SVG);
+      clone.removeAttribute("style");
+      clone.querySelectorAll(".branch-hit, .radial-branch-hit, .connector-hit").forEach(node => node.remove());
+      clone.querySelectorAll("*").forEach(node => {
+        for (const attribute of [...node.attributes]) {
+          if (attribute.name === "role" || attribute.name === "tabindex" || attribute.name.startsWith("aria-") || attribute.name.startsWith("data-")) node.removeAttribute(attribute.name);
+        }
+      });
+      const theme = getComputedStyle(document.documentElement);
+      const color = name => theme.getPropertyValue(name).trim();
+      const style = document.createElementNS(SVG, "style");
+      style.textContent = `
+        .branch { stroke: #83909a; stroke-width: 1.5; fill: none; }
+        .branch.selected { stroke: ${color("--accent")}; stroke-width: 4; }
+        .connector { stroke: #a6afb5; stroke-width: 1.2; }
+        .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .support-label { fill: ${color("--muted")}; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .gain-value { fill: ${color("--gain-text")}; }
+        .loss-value { fill: ${color("--loss-text")}; }
+        .filtered-branch-label { opacity: .1; }
+        .tip-label { font: 11px sans-serif; fill: ${color("--ink")}; }
+        .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
+        .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
+        .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
+        .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
+        .phenotype-loss { fill: ${color("--loss")}; stroke: white; stroke-width: 2; }
+      `;
+      const background = document.createElementNS(SVG, "rect");
+      background.setAttribute("width", "100%");
+      background.setAttribute("height", "100%");
+      background.setAttribute("fill", color("--panel"));
+      clone.prepend(background);
+      clone.prepend(style);
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
+      const blob = new Blob([markup], {type: "image/svg+xml;charset=utf-8"});
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `gene-gain-loss-tree-${state.treeLayout}.svg`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
     function openDetailPanel() {
       document.querySelector(".workspace").classList.add("detail-open");
       document.querySelector(".detail-panel").setAttribute("aria-hidden", "false");
@@ -1064,6 +1114,7 @@
       $("treeViewport").scrollTo({top: 0, left: 0});
       renderTree();
     });
+    $("downloadSvg").addEventListener("click", downloadCurrentTreeSvg);
     $("detailClose").addEventListener("click", closeDetailPanel);
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
     function enableDetailResize() {
