@@ -513,6 +513,7 @@
         </div>
         <div class="filter-actions">
           <div class="control-row"><span class="control-row-label">Settings</span><button class="filter-reset" id="filterReset" type="button">Reset</button></div>
+          <div class="control-row"><span class="control-row-label">Label edits</span><button class="filter-reset" id="restoreLabelDefaults" type="button" title="Restore original tip and GTDB labels and GTDB label positions">Restore defaults</button></div>
           <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
         </div>
         <div class="filter-status">
@@ -958,33 +959,25 @@
         labelNode.textContent = text;
         rotated.append(labelNode); group.append(rotated); canvas.append(group);
       }
-      function appendTaxonomyLegend(x, y, maxWidth) {
+      function appendTaxonomyLegend(x, y) {
         if (!state.cladeLabelMode || !taxonomyDisplayLegend.size) return 0;
         const group = svgEl("g", {"aria-label": "GTDB clade background legend"});
         const title = svgEl("text", {x, y, class: "taxonomy-legend-label taxonomy-legend-title"});
         title.textContent = "GTDB clades"; group.append(title);
-        const startX = x + 72;
-        const rightEdge = x + Math.max(240, maxWidth);
         const rowHeight = 17;
-        let cursorX = startX;
         let row = 0;
         for (const [key, item] of taxonomyDisplayLegend) {
           const defaultText = `${taxonomyRankTitle(item.rank)}: ${item.value}`;
           const text = state.taxonomyLabelOverrides.get(key) || defaultText;
-          const itemWidth = Math.max(74, 22 + text.length * 5.6);
-          if (cursorX > startX && cursorX + itemWidth > rightEdge) {
-            row += 1;
-            cursorX = startX;
-          }
+          row += 1;
           const itemY = y + row * rowHeight;
-          group.append(svgEl("rect", {x: cursorX, y: itemY - 10, width: 12, height: 12, rx: 1, style: `fill:${taxonomyColor(item.rank, item.value, key)}`}));
-          const label = svgEl("text", {x: cursorX + 17, y: itemY, class: "taxonomy-legend-label"});
+          group.append(svgEl("rect", {x, y: itemY - 10, width: 12, height: 12, rx: 1, style: `fill:${taxonomyColor(item.rank, item.value, key)}`}));
+          const label = svgEl("text", {x: x + 17, y: itemY, class: "taxonomy-legend-label"});
           label.textContent = text;
           group.append(label);
-          cursorX += itemWidth;
         }
         canvas.append(group);
-        return (row + 1) * rowHeight;
+        return (taxonomyDisplayLegend.size + 1) * rowHeight;
       }
       const visibleNodes = [];
       function collect(node) {
@@ -1131,7 +1124,7 @@
           }
         }
         visibleNodes.forEach(node => appendCladeTaxonomyLabel(node, true));
-        const taxonomyLegendHeight = appendTaxonomyLegend(18, baseSize - 18, baseSize - 36);
+        const taxonomyLegendHeight = appendTaxonomyLegend(18, baseSize - 18);
         if (taxonomyLegendHeight > 17) svg.setAttribute("height", (baseSize + taxonomyLegendHeight - 17 + 12) * zoom);
         return;
       }
@@ -1216,7 +1209,7 @@
         }
       }
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
-      const taxonomyLegendHeight = appendTaxonomyLegend(18, baseHeight - 18, baseWidth - 36);
+      const taxonomyLegendHeight = appendTaxonomyLegend(18, baseHeight - 18);
       if (taxonomyLegendHeight > 17) svg.setAttribute("height", (baseHeight + taxonomyLegendHeight - 17 + 12) * zoom);
     }
     function enableTreeZoom() {
@@ -1810,6 +1803,15 @@
       localStorage.setItem("species-map-taxonomy-color-seed", String(nextSeed));
       renderTree();
     });
+    $("restoreLabelDefaults").addEventListener("click", () => {
+      state.taxonomyLabelOffsets.clear();
+      state.taxonomyLabelOverrides.clear();
+      state.tipLabelOverrides.clear();
+      localStorage.removeItem("species-map-taxonomy-label-offsets");
+      localStorage.removeItem("species-map-taxonomy-label-overrides");
+      localStorage.removeItem("species-map-tip-label-overrides");
+      renderTree();
+    });
     $("treeOrderSelect").addEventListener("change", event => {
       state.treeOrder = event.target.value;
       state.flippedNodes.clear();
@@ -1903,10 +1905,13 @@
       let pendingExpandNode = null;
       let pendingCollapseNode = null;
       let pendingFlipNode = null;
+      let pendingTipLabel = null;
       let draggedTaxonomyLabel = null;
       let lastPointerSelection = 0;
       let lastTaxonomyClickKey = null;
       let lastTaxonomyClickTime = 0;
+      let lastTipClickKey = null;
+      let lastTipClickTime = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         if (event.target === labelEditor) return;
@@ -1923,6 +1928,7 @@
         pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
         pendingCollapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode || null;
         pendingFlipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode || null;
+        pendingTipLabel = event.target.closest("[data-tip-node]");
         const hasTreeAction = pendingExpandNode || pendingCollapseNode || pendingFlipNode;
         pendingBranch = hasTreeAction ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
         pendingEvent = hasTreeAction ? null : (event.target.closest("[data-event]")?.dataset.event || null);
@@ -1930,7 +1936,6 @@
         startY = event.clientY;
         startPanX = state.treePanX;
         startPanY = state.treePanY;
-        viewport.setPointerCapture(event.pointerId);
         viewport.classList.add("dragging");
       });
       viewport.addEventListener("pointermove", event => {
@@ -1951,7 +1956,12 @@
         if (!active) return;
         const dx = event.clientX - startX;
         const dy = event.clientY - startY;
-        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
+        if (!moved && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+          moved = true;
+          viewport.setPointerCapture(event.pointerId);
+          lastTipClickKey = null;
+          lastTipClickTime = 0;
+        }
         if (!moved) return;
         state.treePanX = startPanX + dx;
         state.treePanY = startPanY + dy;
@@ -1995,7 +2005,18 @@
         active = false;
         viewport.classList.remove("dragging");
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
-        if (!moved && pendingExpandNode) {
+        if (!moved && pendingTipLabel) {
+          const key = pendingTipLabel.dataset.tipNode;
+          const now = Date.now();
+          if (lastTipClickKey === key && now - lastTipClickTime <= 500) {
+            openTipLabelEditor(pendingTipLabel, event.clientX, event.clientY);
+            lastTipClickKey = null;
+            lastTipClickTime = 0;
+          } else {
+            lastTipClickKey = key;
+            lastTipClickTime = now;
+          }
+        } else if (!moved && pendingExpandNode) {
           lastPointerSelection = Date.now();
           expandCollapsedNode(pendingExpandNode);
           renderTree();
@@ -2018,6 +2039,7 @@
         pendingExpandNode = null;
         pendingCollapseNode = null;
         pendingFlipNode = null;
+        pendingTipLabel = null;
       };
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);
@@ -2077,6 +2099,12 @@
         const currentLabel = state.taxonomyLabelOverrides.get(key) || defaultLabel;
         openLabelEditor({kind: "taxonomy", key, defaultLabel, currentLabel, clientX, clientY});
       }
+      function openTipLabelEditor(tip, clientX, clientY) {
+        const nodeId = tip.dataset.tipNode;
+        const defaultLabel = tip.dataset.tipLabelDefault || "";
+        const currentLabel = state.tipLabelOverrides.get(nodeId) || defaultLabel;
+        openLabelEditor({kind: "tip", key: nodeId, defaultLabel, currentLabel, clientX, clientY});
+      }
       const editLabelFromEvent = event => {
         const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
         if (taxonomyLabel) {
@@ -2087,10 +2115,7 @@
         }
         const tip = event.target.closest("[data-tip-node]");
         if (!tip) return false;
-        const nodeId = tip.dataset.tipNode;
-        const defaultLabel = tip.dataset.tipLabelDefault || "";
-        const currentLabel = state.tipLabelOverrides.get(nodeId) || defaultLabel;
-        openLabelEditor({kind: "tip", key: nodeId, defaultLabel, currentLabel, clientX: event.clientX, clientY: event.clientY});
+        openTipLabelEditor(tip, event.clientX, event.clientY);
         event.preventDefault();
         event.stopPropagation();
         return true;
