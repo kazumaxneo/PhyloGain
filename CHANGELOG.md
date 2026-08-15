@@ -36,6 +36,7 @@
 - Add interactive clade collapse/expand on horizontal branches and child-order flipping on vertical connectors.
 - Slightly lengthen Gain/Loss sliders and place Zoom followed immediately by a compact Reset control.
 - Add subtle English hover tooltips for clade collapse, expansion, and vertical-branch flipping.
+- Replace delayed boxed browser tooltips with immediate, unboxed text hints beside the cursor.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

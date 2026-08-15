@@ -134,6 +134,7 @@
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
+    .tree-action-hint { position: absolute; z-index: 4; color: var(--muted); font-size: 10px; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
@@ -333,7 +334,7 @@
           <span class="filter-match-count" id="filterMatchCount"></span>
         </div>
       </div>
-      <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
+      <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
       <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
@@ -354,9 +355,7 @@
       return node;
     };
     function addSvgTooltip(node, text) {
-      const title = svgEl("title");
-      title.textContent = text;
-      node.append(title);
+      node.dataset.actionHint = text;
       return node;
     }
     async function api(path) {
@@ -911,6 +910,7 @@
     }
     function enableTreePan() {
       const viewport = $("treeViewport");
+      const actionHint = $("treeActionHint");
       let active = false;
       let moved = false;
       let startX = 0;
@@ -925,6 +925,7 @@
       let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
+        actionHint.hidden = true;
         active = true;
         moved = false;
         pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
@@ -950,6 +951,17 @@
         viewport.scrollTop = startTop - dy;
         event.preventDefault();
       });
+      viewport.addEventListener("pointermove", event => {
+        if (active && moved) { actionHint.hidden = true; return; }
+        const action = event.target.closest("[data-action-hint]");
+        if (!action) { actionHint.hidden = true; return; }
+        const bounds = viewport.getBoundingClientRect();
+        actionHint.textContent = action.dataset.actionHint;
+        actionHint.style.left = `${event.clientX - bounds.left + viewport.scrollLeft + 9}px`;
+        actionHint.style.top = `${event.clientY - bounds.top + viewport.scrollTop - 13}px`;
+        actionHint.hidden = false;
+      });
+      viewport.addEventListener("pointerleave", () => { actionHint.hidden = true; });
       const finishPan = event => {
         if (!active) return;
         active = false;
