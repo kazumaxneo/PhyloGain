@@ -156,11 +156,12 @@
     .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
     .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .15; pointer-events: none; }
     .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .18; pointer-events: none; }
+    .clade-taxonomy-band.species { fill: #d27b45; fill-opacity: .20; pointer-events: none; }
     .taxonomy-label-badge { cursor: move; }
     .clade-taxonomy-label-bg { fill: #252b31; fill-opacity: .82; pointer-events: all; cursor: move; }
     .clade-taxonomy-label-accent { pointer-events: none; }
     .clade-taxonomy-label { fill: #fff; font: 600 9px/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
-    .clade-taxonomy-label.genus { font-style: italic; }
+    .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
     .taxonomy-legend-label { fill: var(--muted); font: 9px Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
     .taxonomy-legend-swatch.family { fill: #4f8fc9; fill-opacity: .45; }
     .taxonomy-legend-swatch.genus { fill: #a477c7; fill-opacity: .40; }
@@ -471,13 +472,21 @@
           $("collapseSelect").append(option);
         }
         $("taxonomyControl").hidden = ranks.length === 0;
-        const cladeRanks = ["family", "genus"].filter(rank => ranks.includes(rank));
+        const cladeRanks = ["family", "genus", "species"].filter(rank => ranks.includes(rank));
         for (const rank of cladeRanks) {
           const option = document.createElement("option"); option.value = rank; option.textContent = rankLabels[rank];
           $("cladeLabelSelect").append(option);
         }
-        if (cladeRanks.length === 2) {
+        if (cladeRanks.includes("family") && cladeRanks.includes("genus")) {
           const option = document.createElement("option"); option.value = "family,genus"; option.textContent = "Family + Genus";
+          $("cladeLabelSelect").append(option);
+        }
+        if (cladeRanks.includes("genus") && cladeRanks.includes("species")) {
+          const option = document.createElement("option"); option.value = "genus,species"; option.textContent = "Genus + Species";
+          $("cladeLabelSelect").append(option);
+        }
+        if (["family", "genus", "species"].every(rank => cladeRanks.includes(rank))) {
+          const option = document.createElement("option"); option.value = "family,genus,species"; option.textContent = "Family + Genus + Species";
           $("cladeLabelSelect").append(option);
         }
         const storedCladeLabels = localStorage.getItem("species-map-clade-labels") || "";
@@ -590,13 +599,13 @@
         if (!children.length) {
           node.leafCount = 1;
           node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
-          node.taxonomyConsensus = Object.fromEntries(["family", "genus"].map(taxonomyRank => [taxonomyRank, taxonomy[node.label]?.[taxonomyRank] || ""]));
+          node.taxonomyConsensus = Object.fromEntries(["family", "genus", "species"].map(taxonomyRank => [taxonomyRank, taxonomy[node.label]?.[taxonomyRank] || ""]));
           return;
         }
         children.forEach(summarize);
         node.leafCount = children.reduce((sum, child) => sum + child.leafCount, 0);
         node.taxonomyConsensus = {};
-        for (const taxonomyRank of ["family", "genus"]) {
+        for (const taxonomyRank of ["family", "genus", "species"]) {
           const values = new Set(children.map(child => child.taxonomyConsensus[taxonomyRank]));
           node.taxonomyConsensus[taxonomyRank] = values.size === 1 && !values.has("") ? [...values][0] : "";
         }
@@ -635,13 +644,13 @@
             const offset = (index - (labels.length - 1) / 2) * 12;
             const x = node.x + ux * 9 + px * offset;
             const y = node.y + uy * 9 + py * offset;
-            const text = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+            const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
             appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, x, y, anchor, `rotate(${angle} ${x} ${y})`);
           });
           return;
         }
         labels.forEach((item, index) => {
-          const text = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+          const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
           appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, node.x + 7, node.y + 15 + index * 15);
         });
       }
@@ -690,7 +699,7 @@
         group.append(title);
         const sampleEntries = [...taxonomyDisplayColorIndex.entries()].slice(0, 5);
         sampleEntries.forEach(([key], index) => {
-          const taxonomyRank = key.startsWith("family:") ? "family" : "genus";
+          const taxonomyRank = key.split(":", 1)[0];
           group.append(svgEl("rect", {x: x + 66 + index * 17, y: y - 9, width: 13, height: 10, rx: 1, style: `fill:${taxonomyColor(taxonomyRank, "", key)}`}));
         });
         const explanation = svgEl("text", {x: x + 66 + sampleEntries.length * 17 + 8, y, class: "taxonomy-legend-label"});
@@ -1017,6 +1026,7 @@
         .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
         .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .15; }
         .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .18; }
+        .clade-taxonomy-band.species { fill: #d27b45; fill-opacity: .20; }
         .clade-taxonomy-label-bg { fill: #252b31; fill-opacity: .82; }
         .clade-taxonomy-label { fill: #fff; font: 600 9px sans-serif; }
         .clade-taxonomy-label.genus { font-style: italic; }
