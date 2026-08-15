@@ -53,6 +53,10 @@
       border-bottom: 1px solid var(--line);
     }
     h1 { margin: 0; font: 650 21px/1.1 Georgia, serif; letter-spacing: .01em; }
+    .header-controls { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .header-controls label { color: var(--header-ink); font-size: 10px; opacity: .72; }
+    .header-controls select, .header-controls button { min-width: 0; border-color: color-mix(in srgb, var(--header-ink) 25%, transparent); padding: 4px 7px; background: color-mix(in srgb, var(--header) 88%, var(--control)); color: var(--header-ink); font-size: 11px; }
+    .header-field { display: inline-flex; align-items: center; gap: 4px; }
     .theme-picker { display: flex; align-items: center; gap: 5px; }
     .theme-picker button { width: 18px; height: 18px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
     .theme-picker button.active { border-color: var(--swatch); background: var(--swatch); box-shadow: 0 0 0 2px var(--header), 0 0 0 4px var(--accent); }
@@ -93,14 +97,6 @@
       box-shadow: var(--shadow);
     }
     .map-panel { display: flex; flex-direction: column; width: 100%; height: 100%; }
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-height: 55px;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--line);
-    }
     label { color: var(--muted); font-size: 12px; }
     select, button {
       border: 1px solid var(--line);
@@ -112,7 +108,8 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-zoom { margin-left: auto; display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
+    .tree-tools { grid-column: 2; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 16px; }
+    .tree-zoom { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
     .tree-zoom input { width: 120px; accent-color: var(--accent); }
     .tree-zoom output { width: 34px; color: var(--ink); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
@@ -132,7 +129,7 @@
     .dual-range input::-moz-range-track { height: 3px; background: transparent; }
     .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
     .filter-reset { grid-column: 3; grid-row: 1 / 3; align-self: center; justify-self: end; border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
-    .filter-match-count { grid-column: 2; grid-row: 1 / 3; align-self: center; justify-self: end; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .filter-match-count { grid-column: 2; grid-row: 2; align-self: center; justify-self: end; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
@@ -268,8 +265,12 @@
       .detail-resize-handle { display: none; }
       .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
       .branch-filters { grid-template-columns: minmax(300px, 1fr) max-content; }
-      .filter-reset { grid-column: 2; }
-      .filter-match-count { grid-column: 1 / 3; grid-row: 3; justify-self: start; }
+      .tree-tools { grid-column: 1; grid-row: 3; justify-self: start; }
+      .filter-reset { grid-column: 2; grid-row: 1; }
+      .filter-match-count { grid-column: 2; grid-row: 2 / 4; justify-self: end; }
+    }
+    @media (max-width: 1180px) {
+      .header-controls > label, .header-controls .header-field > label { display: none; }
     }
     @media (max-width: 760px) {
       header { flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; }
@@ -287,6 +288,15 @@
       <button type="button" data-theme-value="blue" aria-label="Blue theme" title="Blue"></button>
     </div>
     <h1>Gene Gain/Loss Viewer</h1>
+    <div class="header-controls" aria-label="Tree controls">
+      <label for="phenotypeSelect">Phenotype</label>
+      <select id="phenotypeSelect" title="Phenotype"><option value="">None</option></select>
+      <button id="candidateButton" type="button">Candidate genes</button>
+      <span class="header-field" id="taxonomyControl" hidden>
+        <label for="collapseSelect">Collapse</label>
+        <select id="collapseSelect" title="Collapse taxonomic rank"><option value="">None</option></select>
+      </span>
+    </div>
     <div class="summary" aria-label="Dataset summary">
       <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
       <div class="card"><span>Gene families</span><strong id="familyCount">—</strong></div>
@@ -296,22 +306,15 @@
   </header>
   <main class="workspace">
     <section class="map-panel">
-      <div class="toolbar">
-        <label for="phenotypeSelect">Phenotype</label>
-        <select id="phenotypeSelect"><option value="">None</option></select>
-        <button id="candidateButton" type="button">Candidate genes</button>
-        <span id="taxonomyControl" hidden>
-          <label for="collapseSelect">Collapse</label>
-          <select id="collapseSelect"><option value="">None</option></select>
-        </span>
-        <div class="tree-zoom">
+      <div class="branch-filters" aria-label="Branch event filters">
+        <div class="tree-tools">
+          <div class="tree-zoom">
           <label for="treeZoom">Zoom</label>
           <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
           <output id="treeZoomValue" for="treeZoom">100%</output>
+          </div>
+          <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
         </div>
-        <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
-      </div>
-      <div class="branch-filters" aria-label="Branch event filters">
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Gain</span>
           <div class="dual-range" id="gainRange"><input id="gainMin" type="range" aria-label="Minimum gain count"><input id="gainMax" type="range" aria-label="Maximum gain count"></div>
