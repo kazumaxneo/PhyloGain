@@ -9,6 +9,7 @@ from .tree import Node, postorder, preorder
 
 
 INF = 10**12
+PIRATE_METADATA_COLUMNS = 20
 
 
 @dataclass(frozen=True)
@@ -152,6 +153,20 @@ def find_orthofinder_files(directory: str | Path) -> dict[str, Path | None]:
     }
 
 
+def find_pirate_files(directory: str | Path) -> dict[str, Path | None]:
+    root = Path(directory)
+    families = root / "PIRATE.gene_families.tsv"
+    tree = root / "binary_presence_absence.nwk"
+    representatives = root / "representative_sequences.faa"
+    return {
+        "root": root,
+        "tree": tree if tree.is_file() else None,
+        "counts": families if families.is_file() else None,
+        "members": families if families.is_file() else None,
+        "representatives": representatives if representatives.is_file() else None,
+    }
+
+
 def read_count_header(path: str | Path) -> tuple[list[str], str]:
     with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
         header = next(csv.reader(handle, delimiter="\t"))
@@ -183,3 +198,36 @@ def iter_gene_counts(path: str | Path) -> Iterable[tuple[str, list[int]]]:
             except ValueError as exc:
                 raise ValueError(f"Non-integer gene count in row {row_number}") from exc
             yield row[0], counts
+
+
+def read_pirate_header(path: str | Path) -> tuple[list[str], str]:
+    with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
+        header = next(csv.reader(handle, delimiter="\t"))
+    if len(header) <= PIRATE_METADATA_COLUMNS:
+        raise ValueError("PIRATE.gene_families.tsv has too few columns")
+    expected = ["allele_name", "gene_family", "consensus_gene_name", "consensus_product"]
+    if [value.strip() for value in header[:4]] != expected:
+        raise ValueError("PIRATE.gene_families.tsv has an unsupported header")
+    return header[PIRATE_METADATA_COLUMNS:], "gene_family"
+
+
+def split_pirate_loci(cell: str) -> list[str]:
+    """Split PIRATE copies while preserving parenthesized fission loci as one entry."""
+    return [value.strip() for value in cell.split(";") if value.strip()]
+
+
+def iter_pirate_counts(path: str | Path) -> Iterable[tuple[str, list[int]]]:
+    with Path(path).open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        header = next(reader)
+        expected = len(header)
+        for row_number, row in enumerate(reader, start=2):
+            if not row or not any(cell.strip() for cell in row):
+                continue
+            if len(row) != expected:
+                raise ValueError(
+                    f"PIRATE row {row_number} has {len(row)} columns; expected {expected}"
+                )
+            yield row[1], [
+                len(split_pirate_loci(cell)) for cell in row[PIRATE_METADATA_COLUMNS:]
+            ]

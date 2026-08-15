@@ -14,11 +14,16 @@ from pathlib import Path
 
 from . import __version__
 from .analysis import (
+    PIRATE_METADATA_COLUMNS,
     Reconstruction,
     find_orthofinder_files,
+    find_pirate_files,
     iter_gene_counts,
+    iter_pirate_counts,
     read_count_header,
+    read_pirate_header,
     read_phenotypes,
+    split_pirate_loci,
 )
 from .annotation import (
     fetch_official_kegg_names,
@@ -36,22 +41,36 @@ class InputError(ValueError):
 
 
 def validate_inputs(
-    orthofinder: str | Path,
+    orthofinder: str | Path | None,
     phenotype_path: str | Path | None = None,
     selected_phenotypes: list[str] | None = None,
     species_tree_path: str | Path | None = None,
     gtdb_taxonomy_path: str | Path | None = None,
+    pirate: str | Path | None = None,
 ) -> dict[str, object]:
-    found = find_orthofinder_files(orthofinder)
+    input_format, found = _resolve_input_files(orthofinder, pirate)
     errors: list[str] = []
     warnings: list[str] = []
     tree_path = Path(species_tree_path) if species_tree_path else found["tree"]
     if tree_path is None or not tree_path.is_file():
-        errors.append("No rooted species tree found in Species_Tree/")
+        location = (
+            "Species_Tree/" if input_format == "orthofinder" else "the PIRATE directory"
+        )
+        errors.append(f"No tree found in {location}; provide --species-tree")
     if found["counts"] is None:
-        errors.append("Orthogroups/Orthogroups.GeneCount.tsv was not found")
+        expected = (
+            "Orthogroups/Orthogroups.GeneCount.tsv"
+            if input_format == "orthofinder"
+            else "PIRATE.gene_families.tsv"
+        )
+        errors.append(f"{expected} was not found")
     if errors:
-        return {"ok": False, "errors": errors, "warnings": warnings}
+        return {
+            "ok": False,
+            "errors": errors,
+            "warnings": warnings,
+            "input_format": input_format,
+        }
 
     root = parse_newick(tree_path)
     tips = leaf_labels(root)
@@ -61,7 +80,11 @@ def validate_inputs(
     if duplicate_tips:
         errors.append(f"Duplicate species-tree tips: {', '.join(duplicate_tips[:10])}")
 
-    count_species, _ = read_count_header(found["counts"])
+    count_species, _ = (
+        read_count_header(found["counts"])
+        if input_format == "orthofinder"
+        else read_pirate_header(found["counts"])
+    )
     tree_only = sorted(set(tips) - set(count_species))
     counts_only = sorted(set(count_species) - set(tips))
     if tree_only or counts_only:
@@ -89,8 +112,16 @@ def validate_inputs(
             )
 
     if found["members"] is None:
+        member_name = (
+            "Orthogroups/Orthogroups.tsv"
+            if input_format == "orthofinder"
+            else "PIRATE.gene_families.tsv"
+        )
+        warnings.append(f"{member_name} was not found; gene IDs cannot be shown in the HTML")
+    if input_format == "pirate" and not species_tree_path:
         warnings.append(
-            "Orthogroups/Orthogroups.tsv was not found; gene IDs cannot be shown in the HTML"
+            "Using PIRATE binary_presence_absence.nwk, a gene-content tree; "
+            "a rooted external species tree is recommended for gain/loss inference"
         )
 
     taxonomy_report: dict[str, object] | None = None
@@ -124,11 +155,23 @@ def validate_inputs(
         "counts": str(found["counts"]),
         "members": str(found["members"]) if found["members"] else None,
         "taxonomy": taxonomy_report,
+        "input_format": input_format,
     }
 
 
+def _resolve_input_files(
+    orthofinder: str | Path | None,
+    pirate: str | Path | None,
+) -> tuple[str, dict[str, Path | None]]:
+    if bool(orthofinder) == bool(pirate):
+        raise InputError("Specify exactly one of --orthofinder or --pirate")
+    if orthofinder:
+        return "orthofinder", find_orthofinder_files(orthofinder)
+    return "pirate", find_pirate_files(pirate)
+
+
 def build_project(
-    orthofinder: str | Path,
+    orthofinder: str | Path | None,
     output: str | Path,
     phenotype_path: str | Path | None = None,
     selected_phenotypes: list[str] | None = None,
@@ -148,6 +191,7 @@ def build_project(
     eggnog_data_dir: str | Path | None = None,
     annotation_cpu: int = 1,
     progress=None,
+    pirate: str | Path | None = None,
 ) -> dict[str, object]:
     progress = progress or (lambda message: None)
     report = validate_inputs(
@@ -156,16 +200,19 @@ def build_project(
         selected_phenotypes,
         species_tree_path,
         gtdb_taxonomy_path,
+        pirate,
     )
     if not report["ok"]:
         raise InputError("; ".join(report["errors"]))
-    found = find_orthofinder_files(orthofinder)
+    input_format, found = _resolve_input_files(orthofinder, pirate)
     if annotate and annotation_path:
         raise InputError("Use either --annotate or --annotations, not both")
-    if annotate == "eggnog" and not proteomes:
+    if annotate == "eggnog" and input_format == "orthofinder" and not proteomes:
         raise InputError("--proteomes is required with --annotate eggnog")
     if (annotate or annotation_path) and not found["members"]:
-        raise InputError("Orthogroups.tsv is required for functional annotation")
+        raise InputError("A gene-family membership table is required for functional annotation")
+    if annotate == "eggnog" and input_format == "pirate" and not found.get("representatives"):
+        raise InputError("representative_sequences.faa is required with PIRATE --annotate eggnog")
     if annotation_path and not Path(annotation_path).is_file():
         raise InputError(f"Annotation file was not found: {annotation_path}")
     if go_obo_path and not Path(go_obo_path).is_file():
@@ -183,7 +230,14 @@ def build_project(
     root = parse_newick(tree_path)
     nodes = preorder(root)
     species = leaf_labels(root)
-    count_species, _ = read_count_header(found["counts"])
+    count_species, _ = (
+        read_count_header(found["counts"])
+        if input_format == "orthofinder"
+        else read_pirate_header(found["counts"])
+    )
+    count_iterator = (
+        iter_gene_counts if input_format == "orthofinder" else iter_pirate_counts
+    )
     reconstruction = Reconstruction(root, gain_cost=gain_cost, loss_cost=loss_cost)
     taxonomy_data: dict[str, dict[str, str]] = {}
     taxonomy_report: dict[str, object] | None = None
@@ -225,7 +279,7 @@ def build_project(
         )
         event_batch: list[tuple[str, str, str, int, int]] = []
         family_batch: list[tuple[str]] = []
-        for family_id, counts in iter_gene_counts(found["counts"]):
+        for family_id, counts in count_iterator(found["counts"]):
             family_count += 1
             states = {
                 species_id: int(count >= presence_threshold)
@@ -307,17 +361,26 @@ def build_project(
 
     if include_members and found["members"]:
         progress("Indexing gene IDs for interactive lookup")
-        _import_members(connection, found["members"], progress)
+        if input_format == "orthofinder":
+            _import_members(connection, found["members"], progress)
+        else:
+            _import_pirate_members(connection, found["members"], progress)
 
     annotation_report: dict[str, int] | None = None
     imported_annotation: Path | None = None
     if annotate == "eggnog":
         annotation_dir = output_path / "annotations"
-        representative_path = annotation_dir / "orthogroup_representatives.faa"
-        progress("Selecting one representative protein per orthogroup")
-        representative_count = write_representative_fasta(
-            found["members"], proteomes, representative_path
-        )
+        if input_format == "orthofinder":
+            representative_path = annotation_dir / "orthogroup_representatives.faa"
+            progress("Selecting one representative protein per orthogroup")
+            representative_count = write_representative_fasta(
+                found["members"], proteomes, representative_path
+            )
+        else:
+            representative_path = found["representatives"]
+            with representative_path.open("r", encoding="utf-8") as handle:
+                representative_count = sum(1 for line in handle if line.startswith(">"))
+            progress("Using PIRATE representative_sequences.faa for annotation")
         progress(f"Running eggNOG-mapper for {representative_count:,} representatives")
         imported_annotation = run_eggnog_mapper(
             representative_path,
@@ -376,6 +439,7 @@ def build_project(
         "tool": "species-innovation-map",
         "tool_version": __version__,
         "title": "Gene Gain/Loss Viewer",
+        "input_format": input_format,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "species_count": len(species),
         "family_count": family_count,
@@ -406,7 +470,9 @@ def build_project(
         "tool_version": __version__,
         "python": sys.version,
         "platform": platform.platform(),
-        "orthofinder_directory": str(Path(orthofinder).resolve()),
+        "input_format": input_format,
+        "orthofinder_directory": str(Path(orthofinder).resolve()) if orthofinder else None,
+        "pirate_directory": str(Path(pirate).resolve()) if pirate else None,
         "tree_file": str(tree_path),
         "gene_count_file": str(found["counts"]),
         "gene_members_file": str(found["members"]) if found["members"] else None,
@@ -557,6 +623,50 @@ def _import_members(connection: sqlite3.Connection, path: Path, progress) -> Non
         if batch:
             connection.executemany(
                 "UPDATE families SET members_json=? WHERE family_id=?", batch
+            )
+
+
+def _import_pirate_members(connection: sqlite3.Connection, path: Path, progress) -> None:
+    with path.open("r", encoding="utf-8-sig", newline="") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        header = next(reader)
+        species = header[PIRATE_METADATA_COLUMNS:]
+        batch = []
+        for row_number, row in enumerate(reader, start=2):
+            if not row:
+                continue
+            members: dict[str, list[str]] = {}
+            for species_id, cell in zip(species, row[PIRATE_METADATA_COLUMNS:]):
+                genes = split_pirate_loci(cell)
+                if genes:
+                    members[species_id] = genes
+            encoded = json.dumps(
+                members, ensure_ascii=False, separators=(",", ":")
+            ).encode("utf-8")
+            preferred_name = row[2].strip()
+            description = row[3].strip()
+            batch.append(
+                (
+                    sqlite3.Binary(zlib.compress(encoded, level=6)),
+                    "" if preferred_name in {"-", "NA"} else preferred_name,
+                    "" if description in {"-", "NA"} else description,
+                    row[1],
+                )
+            )
+            if len(batch) >= 500:
+                connection.executemany(
+                    "UPDATE families SET members_json=?,preferred_name=?,description=? "
+                    "WHERE family_id=?",
+                    batch,
+                )
+                batch.clear()
+            if row_number % 10000 == 0:
+                progress(f"  indexed {row_number - 1:,} PIRATE gene families")
+        if batch:
+            connection.executemany(
+                "UPDATE families SET members_json=?,preferred_name=?,description=? "
+                "WHERE family_id=?",
+                batch,
             )
 
 

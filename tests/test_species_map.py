@@ -24,6 +24,7 @@ from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxon
 
 HERE = Path(__file__).parent
 FIXTURE = HERE / "fixtures" / "orthofinder"
+PIRATE_FIXTURE = HERE / "fixtures" / "pirate"
 PHENOTYPES = HERE / "fixtures" / "phenotypes.tsv"
 GTDB_TAXONOMY = HERE / "fixtures" / "gtdb_taxonomy.tsv"
 EGGNOG_ANNOTATIONS = HERE / "fixtures" / "eggnog.emapper.annotations"
@@ -60,6 +61,62 @@ class TreeTests(unittest.TestCase):
 
 
 class ProjectTests(unittest.TestCase):
+    def test_validate_requires_exactly_one_input_format(self):
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            validate_inputs(None)
+        with self.assertRaisesRegex(ValueError, "exactly one"):
+            validate_inputs(FIXTURE, pirate=PIRATE_FIXTURE)
+
+    def test_build_project_from_pirate(self):
+        report = validate_inputs(None, pirate=PIRATE_FIXTURE)
+        self.assertTrue(report["ok"])
+        self.assertEqual(report["input_format"], "pirate")
+        self.assertTrue(any("gene-content tree" in warning for warning in report["warnings"]))
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            result = build_project(None, output, pirate=PIRATE_FIXTURE)
+            self.assertEqual(result["families"], 4)
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project["input_format"], "pirate")
+            metadata = json.loads((output / "run_metadata.json").read_text(encoding="utf-8"))
+            self.assertEqual(metadata["input_format"], "pirate")
+            self.assertIsNone(metadata["orthofinder_directory"])
+            self.assertEqual(Path(metadata["pirate_directory"]), PIRATE_FIXTURE.resolve())
+            with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
+                family = connection.execute(
+                    "SELECT preferred_name,description,members_json FROM families WHERE family_id='g000002'"
+                ).fetchone()
+                self.assertEqual(family[:2], ("trbI", "Bacterial conjugation TrbI-like protein"))
+                members = json.loads(zlib.decompress(family[2]).decode("utf-8"))
+                self.assertEqual(members["species_A"], ["gene_A2", "gene_A3"])
+            html = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('Gene Gain/Loss Viewer · ${inputName}', html)
+
+    def test_pirate_eggnog_alleles_map_back_to_gene_family(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            annotation = root / "pirate.emapper.annotations"
+            annotation.write_text(
+                "#query\tPreferred_name\tDescription\tGOs\tKEGG_ko\tKEGG_Pathway\t"
+                "KEGG_Module\tKEGG_Reaction\tCOG_category\tPFAMs\n"
+                "g000001_1\tnifH\tnitrogenase iron protein\tGO:0009399\tko:K02588\t"
+                "map00910\tM00175\tR00001\tC\tFer4_NifH\n",
+                encoding="utf-8",
+            )
+            output = root / "map"
+            result = build_project(
+                None,
+                output,
+                pirate=PIRATE_FIXTURE,
+                annotation_path=annotation,
+            )
+            self.assertEqual(result["annotated_families"], 1)
+            with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
+                terms = connection.execute(
+                    "SELECT COUNT(*) FROM family_terms WHERE family_id='g000001'"
+                ).fetchone()[0]
+                self.assertGreater(terms, 0)
+
     def test_validate_fixture(self):
         report = validate_inputs(FIXTURE, PHENOTYPES, ["nitrogen_fixation"])
         self.assertTrue(report["ok"])
@@ -437,6 +494,18 @@ class ProjectTests(unittest.TestCase):
 
 
 class TaxonomyTests(unittest.TestCase):
+    def test_read_normalized_rank_columns(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "taxonomy.tsv"
+            path.write_text(
+                "species_id\tdomain\tfamily\tgenus\tspecies\n"
+                "species_A\tBacteria\tFamily_A\tGenus_A\tGenus_A species_A\n",
+                encoding="utf-8",
+            )
+            mapped, report = read_gtdb_taxonomy(path, ["species_A"])
+            self.assertEqual(mapped["species_A"]["genus"], "Genus_A")
+            self.assertEqual(report["mapped_species"], 1)
+
     def test_parse_and_match_taxonomy(self):
         parsed = parse_gtdb_taxonomy("d__Bacteria;f__Nostocaceae;g__Nostoc;s__")
         self.assertEqual(parsed, {"domain": "Bacteria", "family": "Nostocaceae", "genus": "Nostoc"})

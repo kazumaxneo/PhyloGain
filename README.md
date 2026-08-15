@@ -1,6 +1,6 @@
 # Gene Gain/Loss Viewer
 
-**Gene Gain/Loss Viewer** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) result directory into an interactive species tree annotated with gene-family gains and losses.
+**Gene Gain/Loss Viewer** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) or [PIRATE](https://github.com/SionBayliss/PIRATE) result directory into an interactive species tree annotated with gene-family gains and losses. OrthoFinder is the recommended and primary input.
 
 Each branch shows `+gains / −losses`. Click a branch to inspect its orthogroups, then click an orthogroup to see member gene IDs. An optional phenotype table marks inferred phenotype transitions and ranks gene families gained on the same branches.
 
@@ -37,6 +37,19 @@ Open it:
 ```bash
 species-map serve species_innovation_map
 ```
+
+The input options are mutually exclusive: specify exactly one of `--orthofinder` or `--pirate`.
+
+For PIRATE, provide the PIRATE output directory and preferably a rooted external species tree. The tree tips must match the genome columns in `PIRATE.gene_families.tsv`.
+
+```bash
+species-map build \
+  --pirate pyrites_ANI95_PIRATE_output \
+  --species-tree rooted_core_gene_tree.nwk \
+  --output pirate_gain_loss_map
+```
+
+If `--species-tree` is omitted, the program can use PIRATE's `binary_presence_absence.nwk`, but reports a warning because that tree is inferred from the same gene-content matrix being mapped. PIRATE consensus gene names, products, copy counts, duplicated loci, and parenthesized fission loci are retained in the interactive lookup.
 
 The output directory contains:
 
@@ -96,6 +109,19 @@ species-map serve annotated_map
 ```
 
 The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Gene Gain/Loss Viewer selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. `--fetch-kegg-names` retrieves official KO, pathway, module, and reaction names from the KEGG REST API once during the build and stores them in SQLite and `annotations/kegg_term_names.tsv`; viewing the map then requires no KEGG API calls. The KEGG REST API is limited to academic use by academic users.
+
+With PIRATE input, `--annotate eggnog` uses PIRATE's own `representative_sequences.faa`; `--proteomes` is not needed. Because PIRATE may retain several alleles for one family, all returned terms are merged into the corresponding PIRATE `gene_family`.
+
+```bash
+species-map build \
+  --pirate pyrites_ANI95_PIRATE_output \
+  --species-tree rooted_core_gene_tree.nwk \
+  --annotate eggnog \
+  --eggnog-data-dir /path/to/eggnog_data \
+  --go-obo /path/to/go-basic.obo \
+  --fetch-kegg-names \
+  --output pirate_annotated_map
+```
 
 If eggNOG-mapper was run separately, import its standard output without repeating the search:
 
@@ -169,8 +195,10 @@ species-map validate \
 --loss-cost FLOAT          Cost of a 1→0 transition (default: 1)
 --root-state auto|0|1      Root family/phenotype state (default: auto)
 --presence-threshold INT   Copies required for presence (default: 1)
---no-members               Skip Orthogroups.tsv to make a smaller output
---species-tree FILE        Rooted Newick tree replacing the OrthoFinder tree
+--orthofinder DIR          OrthoFinder results directory (recommended)
+--pirate DIR               PIRATE output directory (exclusive with --orthofinder)
+--no-members               Skip gene-family member IDs for a smaller output
+--species-tree FILE        Rooted Newick tree replacing the input tool's default tree
 --gtdb-taxonomy FILE       GTDB/GTDB-Tk taxonomy TSV for rank collapsing
 --annotate eggnog          Run eggNOG-mapper for orthogroup representatives
 --annotations FILE         Import an existing .emapper.annotations file
