@@ -1,0 +1,5 @@
+Orthogroup	species_A	species_B	species_C	species_D
+OG0000001	gene_A1	gene_B1
+OG0000002	gene_A2	gene_B2	gene_C2	gene_D2
+OG0000003			gene_C3
+OG0000004	gene_A4		gene_C4

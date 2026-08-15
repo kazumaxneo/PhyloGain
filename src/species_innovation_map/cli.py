@@ -1,0 +1,105 @@
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+
+from . import __version__
+from .project import InputError, build_project, validate_inputs
+from .server import serve_project
+
+
+def parser() -> argparse.ArgumentParser:
+    root = argparse.ArgumentParser(
+        prog="species-map",
+        description="Build interactive branch-level gene-family gain/loss maps from OrthoFinder results.",
+    )
+    root.add_argument("--version", action="version", version=__version__)
+    commands = root.add_subparsers(dest="command", required=True)
+
+    validate = commands.add_parser("validate", help="Validate OrthoFinder and phenotype inputs")
+    _input_arguments(validate)
+    validate.add_argument("--json", action="store_true", help="Print machine-readable JSON")
+
+    build = commands.add_parser("build", help="Infer events and build an interactive map")
+    _input_arguments(build)
+    build.add_argument("--output", required=True, help="New or empty output directory")
+    build.add_argument("--gain-cost", type=float, default=1.0)
+    build.add_argument("--loss-cost", type=float, default=1.0)
+    build.add_argument("--root-state", choices=["auto", "0", "1"], default="auto")
+    build.add_argument("--presence-threshold", type=int, default=1)
+    build.add_argument(
+        "--no-members",
+        action="store_true",
+        help="Skip indexing Orthogroups.tsv gene IDs for a smaller output",
+    )
+
+    serve = commands.add_parser("serve", help="Open a generated map in a local web server")
+    serve.add_argument("project", help="Generated Species Innovation Map directory")
+    serve.add_argument("--host", default="127.0.0.1")
+    serve.add_argument("--port", type=int, default=8000)
+    serve.add_argument("--no-open", action="store_true", help="Do not open a browser")
+    return root
+
+
+def _input_arguments(command: argparse.ArgumentParser) -> None:
+    command.add_argument("--orthofinder", required=True, help="OrthoFinder results directory")
+    command.add_argument("--phenotypes", help="Optional wide TSV with species_id in the first column")
+    command.add_argument(
+        "--phenotype",
+        action="append",
+        help="Phenotype column to analyze; repeat to select several (default: all)",
+    )
+
+
+def main(argv: list[str] | None = None) -> None:
+    args = parser().parse_args(argv)
+    try:
+        if args.command == "validate":
+            report = validate_inputs(args.orthofinder, args.phenotypes, args.phenotype)
+            if args.json:
+                print(json.dumps(report, ensure_ascii=False, indent=2))
+            else:
+                _print_validation(report)
+            if not report["ok"]:
+                raise SystemExit(2)
+        elif args.command == "build":
+            result = build_project(
+                orthofinder=args.orthofinder,
+                output=args.output,
+                phenotype_path=args.phenotypes,
+                selected_phenotypes=args.phenotype,
+                gain_cost=args.gain_cost,
+                loss_cost=args.loss_cost,
+                root_state=args.root_state,
+                presence_threshold=args.presence_threshold,
+                include_members=not args.no_members,
+                progress=lambda message: print(message, flush=True),
+            )
+            print(
+                f"Built {result['output']} ({result['species']} species, "
+                f"{result['families']} families, {result['branches']} branches)."
+            )
+            print(f"Open it with: species-map serve \"{result['output']}\"")
+            for warning in result["warnings"]:
+                print(f"WARNING: {warning}", file=sys.stderr)
+        elif args.command == "serve":
+            serve_project(args.project, args.host, args.port, not args.no_open)
+    except (InputError, ValueError, OSError) as exc:
+        print(f"ERROR: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+
+
+def _print_validation(report: dict[str, object]) -> None:
+    if "tree_tips" in report:
+        print(f"Species tree tips:  {report['tree_tips']}")
+        print(f"Gene-count species: {report['count_species']}")
+        print(f"Matched species IDs: {report['matched_species']}")
+    phenotypes = report.get("phenotypes") or []
+    if phenotypes:
+        print(f"Phenotypes:         {', '.join(phenotypes)}")
+    for warning in report["warnings"]:
+        print(f"WARNING: {warning}")
+    for error in report["errors"]:
+        print(f"ERROR: {error}")
+    print("Validation passed." if report["ok"] else "Validation failed.")

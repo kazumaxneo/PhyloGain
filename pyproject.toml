@@ -1,0 +1,37 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "species-innovation-map"
+version = "0.1.0"
+description = "Interactive branch-level gene family gain/loss maps from OrthoFinder results"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{ name = "kazu" }]
+keywords = ["comparative-genomics", "orthofinder", "phylogenetics", "gene-family", "gain-loss"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Bio-Informatics",
+]
+dependencies = []
+
+[project.scripts]
+species-map = "species_innovation_map.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/kazumaxneo/species-innovation-map"
+Repository = "https://github.com/kazumaxneo/species-innovation-map"
+Issues = "https://github.com/kazumaxneo/species-innovation-map/issues"
+
+[tool.setuptools.package-data]
+species_innovation_map = ["templates/*.html"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
