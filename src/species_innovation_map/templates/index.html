@@ -177,15 +177,16 @@
     .enrichment-method { margin-left: auto; color: var(--muted); font-size: 10px; }
     .enrichment-section { margin-bottom: 26px; }
     .chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 74px; gap: 14px; align-items: start; }
-    .enrichment-chart { display: grid; gap: 7px; margin: 8px 0 14px; }
+    .enrichment-chart { --term-column: minmax(150px, 220px); display: grid; gap: 7px; margin: 8px 0 14px; }
+    .enrichment-chart.long-term-labels { --term-column: minmax(320px, 42%); }
     .chart-caption { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
-    .chart-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 42px; align-items: center; gap: 9px; min-height: 25px; }
+    .chart-row { display: grid; grid-template-columns: var(--term-column) minmax(180px, 1fr) 42px; align-items: center; gap: 9px; min-height: 25px; }
     .chart-term { color: var(--ink); font-size: 11px; line-height: 1.15; white-space: normal; }
     .chart-track { position: relative; height: 16px; background: transparent; border-left: 1px solid var(--muted); }
     .chart-grid-line { position: absolute; z-index: 0; top: 0; bottom: 0; width: 1px; background: var(--line); }
     .chart-bar { position: relative; z-index: 1; height: 100%; min-width: 2px; }
     .chart-score { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
-    .chart-axis-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 42px; align-items: start; gap: 9px; min-height: 25px; }
+    .chart-axis-row { display: grid; grid-template-columns: var(--term-column) minmax(180px, 1fr) 42px; align-items: start; gap: 9px; min-height: 25px; }
     .chart-axis { position: relative; height: 24px; border-top: 1px solid var(--muted); }
     .chart-tick { position: absolute; top: -4px; height: 5px; border-left: 1px solid var(--muted); }
     .chart-tick span { position: absolute; top: 7px; transform: translateX(-50%); color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -490,7 +491,7 @@
       const fdrMinimum = Math.min(...fdrValues);
       const fdrMaximum = 0.05;
       const layout = document.createElement("div"); layout.className = "chart-layout";
-      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}; bar length is gene-family count and color is FDR`);
+      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.classList.toggle("long-term-labels", enrichment.source === "KEGG reaction"); chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}; bar length is gene-family count and color is FDR`);
       const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
       plotted.forEach((row, index) => {
         const chartRow = document.createElement("div"); chartRow.className = "chart-row";

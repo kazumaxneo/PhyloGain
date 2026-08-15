@@ -182,6 +182,8 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("grid-template-columns: 34px 92px minmax(0, 1fr)", html)
             self.assertIn("text-overflow: ellipsis", html)
             self.assertIn("enrichmentTermLabel(row)", html)
+            self.assertIn('enrichment.source === "KEGG reaction"', html)
+            self.assertIn("--term-column: minmax(320px, 42%)", html)
             self.assertIn("officialTermUrl(source, termId)", html)
             self.assertIn("https://www.kegg.jp/entry/", html)
             self.assertIn("https://www.kegg.jp/module/", html)

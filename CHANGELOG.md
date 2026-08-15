@@ -19,6 +19,7 @@
 - Fetch and cache official KEGG KO, pathway, module, and reaction names at build time.
 - Link KEGG and GO term identifiers in branch and orthogroup panels to their official database pages.
 - Mark legacy module IDs missing from the current KEGG release instead of leaving unexplained bare IDs.
+- Give KEGG reaction charts a wider label column and a more compact plotting area for long reaction descriptions.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
