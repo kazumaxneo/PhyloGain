@@ -359,6 +359,13 @@
           <option value="circular">Circular</option>
         </select>
       </span>
+      <span class="header-field">
+        <label for="branchLengthSelect">Branches</label>
+        <select id="branchLengthSelect" title="Horizontal branch scale" aria-label="Horizontal branch scale">
+          <option value="cladogram">Cladogram</option>
+          <option value="phylogram">Phylogram</option>
+        </select>
+      </span>
     </div>
     <div class="summary" aria-label="Dataset summary">
       <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
@@ -423,7 +430,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -634,6 +641,19 @@
       }
       collect(root);
       const visibleIds = new Set(visibleNodes.map(node => node.id));
+      function assignPhylogeneticDistance(node, parentDistance = 0) {
+        const length = Number(node.length);
+        const branchLength = node.parent_id && Number.isFinite(length) ? Math.max(0, length) : 0;
+        node.phylogeneticDistance = parentDistance + branchLength;
+        if (!node.collapsed) childNodes(node).forEach(child => assignPhylogeneticDistance(child, node.phylogeneticDistance));
+      }
+      assignPhylogeneticDistance(root);
+      const maximumDepth = Math.max(1, ...visibleNodes.map(node => node.depth));
+      const maximumPhylogeneticDistance = Math.max(0, ...visibleNodes.map(node => node.phylogeneticDistance || 0));
+      const useBranchLengths = state.branchLengthMode === "phylogram" && maximumPhylogeneticDistance > 0;
+      const horizontalUnits = node => useBranchLengths
+        ? (node.phylogeneticDistance || 0) / maximumPhylogeneticDistance * maximumDepth
+        : node.depth;
       if (state.treeLayout !== "rectangular") {
         const terminals = [];
         function assignAngles(node) {
@@ -652,15 +672,14 @@
           if (children.length) node.angle = children.reduce((sum, child) => sum + child.angle, 0) / children.length;
         }
         averageAngles(root);
-        const maxDepth = Math.max(1, ...visibleNodes.map(node => node.depth));
         const circumferenceRadius = terminals.length * 18 * state.verticalSpacing / (Math.PI * 2);
-        const radialStep = Math.max(55 * state.horizontalSpacing, circumferenceRadius / maxDepth);
-        const outerRadius = 28 + maxDepth * radialStep;
+        const radialStep = Math.max(55 * state.horizontalSpacing, circumferenceRadius / maximumDepth);
+        const outerRadius = 28 + maximumDepth * radialStep;
         const margin = 230;
         const baseSize = Math.max(760, (outerRadius + margin) * 2);
         const center = baseSize / 2;
         visibleNodes.forEach(node => {
-          node.radius = 28 + node.depth * radialStep;
+          node.radius = 28 + horizontalUnits(node) * radialStep;
           node.x = center + node.radius * Math.cos(node.angle);
           node.y = center + node.radius * Math.sin(node.angle);
         });
@@ -735,23 +754,22 @@
         visibleNodes.forEach(node => appendCladeTaxonomyLabel(node, true));
         return;
       }
-      svg.style.backgroundImage = "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
+      svg.style.backgroundImage = useBranchLengths ? "none" : "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
       let leafIndex = 0;
       const spacing = 25 * state.verticalSpacing;
       const depthSpacing = 110 * state.horizontalSpacing;
       function position(node) {
         const children = node.collapsed ? [] : childNodes(node);
         children.forEach(position);
-        node.x = 35 + node.depth * depthSpacing;
+        node.x = 35 + horizontalUnits(node) * depthSpacing;
         node.y = children.length ? children.reduce((sum, child) => sum + child.y, 0) / children.length : 24 + leafIndex++ * spacing;
       }
       position(root);
-      const maxDepth = Math.max(...visibleNodes.map(node => node.depth));
-      const baseWidth = Math.max(900, depthSpacing * maxDepth + 440);
+      const baseWidth = Math.max(900, depthSpacing * maximumDepth + 440);
       const baseHeight = Math.max(500, leafIndex * spacing + 40);
       svg.setAttribute("width", baseWidth * zoom);
       svg.setAttribute("height", baseHeight * zoom);
-      svg.style.backgroundSize = `${depthSpacing * zoom}px 100%`;
+      svg.style.backgroundSize = useBranchLengths ? "auto" : `${depthSpacing * zoom}px 100%`;
       for (const node of visibleNodes) {
         const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
         if (children.length > 1) {
@@ -871,6 +889,16 @@
           top: Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2)
         });
       });
+      const storedBranchLengthMode = localStorage.getItem("species-map-branch-length-mode");
+      if (storedBranchLengthMode === "cladogram" || storedBranchLengthMode === "phylogram") {
+        state.branchLengthMode = storedBranchLengthMode;
+      }
+      $("branchLengthSelect").value = state.branchLengthMode;
+      $("branchLengthSelect").addEventListener("change", event => {
+        state.branchLengthMode = event.target.value;
+        localStorage.setItem("species-map-branch-length-mode", state.branchLengthMode);
+        rerenderKeepingCenter();
+      });
     }
     function downloadCurrentTreeSvg() {
       if (!state.project) return;
@@ -916,7 +944,7 @@
       const blob = new Blob([markup], {type: "image/svg+xml;charset=utf-8"});
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `gene-gain-loss-tree-${state.treeLayout}.svg`;
+      link.download = `gene-gain-loss-tree-${state.treeLayout}-${state.branchLengthMode}.svg`;
       document.body.append(link);
       link.click();
       link.remove();

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Add a Cladogram/Phylogram switch that optionally scales rectangular and circular trees by Newick branch lengths.
+
 ## 0.4.0 — 2026-08-15
 
 - Add a database selector for KEGG pathway/module/KO, GO, Pfam, COG, and KEGG reaction enrichment.

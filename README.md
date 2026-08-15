@@ -220,6 +220,9 @@ after collapsing a large clade. Tip labels adjusts label text from 6 to 16 px.
 Layout switches between Rectangular and Circular views without changing the
 topology, branch events, or collapsed-node state. Circular tip names follow their
 terminal-branch angles and reverse orientation on the left side for readability.
+Branches switches between a default Cladogram with equal depth intervals and a
+Phylogram whose horizontal or radial distances reflect non-negative branch lengths
+from the selected Newick tree. Gain/Loss labels remain centered on their branches.
 Download SVG saves the complete currently rendered tree, including its layout,
 collapsed clades, Gain/Loss labels, support values, filters, and active color theme.
 Each significant enrichment section also provides Download plot (SVG) and
