@@ -158,6 +158,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('id="detailBack"', html)
             self.assertIn("Back to ${returnContext.branchId}", html)
             self.assertIn("font-size: 9px", html)
+            self.assertNotIn('textContent = "Inferred events"', html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

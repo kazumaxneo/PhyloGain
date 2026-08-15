@@ -566,8 +566,6 @@
         if (result.description) { const description = document.createElement("div"); description.className = "function-description"; description.textContent = result.description; body.append(description); }
         if (result.annotations?.length) { const terms = document.createElement("div"); terms.className = "annotation-list"; terms.textContent = result.annotations.map(item => `${item.source}: ${item.term_name || item.term_id}`).join(" · "); body.append(terms); }
       }
-      const eventTitle = document.createElement("div"); eventTitle.className = "section-title"; eventTitle.textContent = "Inferred events"; body.append(eventTitle);
-      const eventText = document.createElement("div"); eventText.textContent = result.events.map(e => `${e.branch_id} ${e.event}`).join(" · ") || "No transitions"; body.append(eventText);
       const memberTitle = document.createElement("div"); memberTitle.className = "section-title"; memberTitle.textContent = "Genes by species"; body.append(memberTitle);
       const entries = Object.entries(result.members);
       if (!entries.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Gene members were not indexed."; body.append(empty); }
