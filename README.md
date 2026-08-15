@@ -2,7 +2,7 @@
 
 **Gene Gain/Loss Viewer** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) or [PIRATE](https://github.com/SionBayliss/PIRATE) result directory into an interactive species tree annotated with gene-family gains and losses. OrthoFinder is the recommended and primary input.
 
-Each branch shows `+gains / −losses`. Click a branch to inspect its orthogroups, then click an orthogroup to see member gene IDs. An optional phenotype table marks inferred phenotype transitions and ranks gene families gained on the same branches.
+Each branch shows `+gains / −losses`. The viewer can switch these numbers to gain/loss pie charts: slice proportions show the relative gain/loss composition, while circle size follows the total event count with a capped threefold diameter range. Click a branch event to inspect its orthogroups, then click an orthogroup to see member gene IDs. An optional phenotype table marks inferred phenotype transitions and ranks gene families gained on the same branches.
 
 > Alpha software. The current release uses weighted Sankoff parsimony on orthogroup presence/absence. Treat inferred events as hypotheses, especially for incomplete or contaminated genomes.
 
