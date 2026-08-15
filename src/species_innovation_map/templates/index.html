@@ -108,18 +108,18 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-tools { grid-column: 2; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 16px; }
+    .tree-tools { grid-column: 3; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 10px; }
     .tree-zoom { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
-    .tree-zoom input { width: 120px; accent-color: var(--accent); }
+    .tree-zoom input { width: 100px; accent-color: var(--accent); }
     .tree-zoom output { width: 34px; color: var(--ink); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: minmax(390px, 590px) minmax(120px, 1fr) max-content; grid-template-rows: auto auto; align-items: center; gap: 6px 18px; min-height: 72px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
-    .range-filter { display: grid; grid-template-columns: 42px minmax(210px, 1fr) 112px; align-items: center; gap: 10px; }
+    .branch-filters { display: grid; grid-template-columns: 285px 285px minmax(190px, 1fr) max-content max-content; grid-template-rows: auto; align-items: center; gap: 10px 14px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: 34px 150px 82px; align-items: center; gap: 7px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
-    .loss-filter { grid-column: 1; grid-row: 2; }
+    .loss-filter { grid-column: 2; grid-row: 1; }
     .range-filter-name { color: var(--ink); font-size: 13px; font-weight: 600; }
     .range-filter output { color: var(--muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .dual-range { --low: 0%; --high: 100%; position: relative; width: 100%; height: 18px; background: linear-gradient(to right, var(--line) 0 var(--low), var(--accent) var(--low) var(--high), var(--line) var(--high) 100%); background-size: 100% 3px; background-position: center; background-repeat: no-repeat; }
@@ -128,8 +128,8 @@
     .dual-range input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; appearance: none; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
     .dual-range input::-moz-range-track { height: 3px; background: transparent; }
     .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
-    .filter-reset { grid-column: 3; grid-row: 1 / 3; align-self: center; justify-self: end; border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
-    .filter-match-count { grid-column: 2; grid-row: 2; align-self: center; justify-self: end; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .filter-reset { grid-column: 5; grid-row: 1; align-self: center; justify-self: end; border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
+    .filter-match-count { grid-column: 4; grid-row: 1; align-self: center; justify-self: end; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
@@ -264,10 +264,10 @@
       .detail-panel { left: 20px; width: auto; }
       .detail-resize-handle { display: none; }
       .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
-      .branch-filters { grid-template-columns: minmax(300px, 1fr) max-content; }
-      .tree-tools { grid-column: 1; grid-row: 3; justify-self: start; }
-      .filter-reset { grid-column: 2; grid-row: 1; }
-      .filter-match-count { grid-column: 2; grid-row: 2 / 4; justify-self: end; }
+      .branch-filters { grid-template-columns: 285px 285px minmax(100px, 1fr); grid-template-rows: auto auto; }
+      .tree-tools { grid-column: 1 / 3; grid-row: 2; justify-self: start; }
+      .filter-reset { grid-column: 3; grid-row: 1; }
+      .filter-match-count { grid-column: 3; grid-row: 2; justify-self: end; }
     }
     @media (max-width: 1180px) {
       .header-controls > label, .header-controls .header-field > label { display: none; }

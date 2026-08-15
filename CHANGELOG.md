@@ -30,6 +30,7 @@
 - Show Newick internal-node support values below branches on a normalized 0–1 scale.
 - Add a persistent 60–200% phylogenetic-tree zoom slider that keeps the current viewport centered.
 - Move phenotype, candidate-gene, and collapse controls into the title bar and remove the separate toolbar.
+- Arrange shorter Gain and Loss sliders with Zoom in one horizontal row to maximize tree height.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
