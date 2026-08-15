@@ -140,7 +140,7 @@
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
     .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
-    #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
+    #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; will-change: transform; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
@@ -380,7 +380,7 @@
         <div class="tree-tools">
           <div class="tree-scale-control">
             <label for="treeZoom">Zoom</label>
-            <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
+            <input id="treeZoom" type="range" min="10" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
             <output id="treeZoomValue" for="treeZoom">100%</output>
           </div>
           <div class="tree-scale-control">
@@ -430,7 +430,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -511,6 +511,7 @@
       $("filterReset").addEventListener("click", () => {
         $("gainMin").value = 0; $("gainMax").value = maxima.gain;
         $("lossMin").value = 0; $("lossMax").value = maxima.loss;
+        state.treePanX = 0; state.treePanY = 0; applyTreePan();
         syncBranchFilters();
       });
       syncBranchFilters(null, null, false);
@@ -546,8 +547,11 @@
       if (!Number.isFinite(value) || value < 0 || value > 100) return null;
       return value > 1 ? value / 100 : value;
     }
+    function applyTreePan() {
+      $("treeSvg").style.transform = `translate(${state.treePanX}px, ${state.treePanY}px)`;
+    }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren();
+      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan();
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -826,7 +830,7 @@
       const input = $("treeZoom");
       const output = $("treeZoomValue");
       const stored = Number(localStorage.getItem("species-map-tree-zoom"));
-      if (Number.isFinite(stored) && stored >= 60 && stored <= 200) input.value = stored;
+      if (Number.isFinite(stored) && stored >= 10 && stored <= 200) input.value = stored;
       state.treeZoom = Number(input.value) / 100;
       output.textContent = `${input.value}%`;
       input.addEventListener("input", () => {
@@ -1430,8 +1434,8 @@
       let moved = false;
       let startX = 0;
       let startY = 0;
-      let startLeft = 0;
-      let startTop = 0;
+      let startPanX = 0;
+      let startPanY = 0;
       let pendingBranch = null;
       let pendingEvent = null;
       let pendingExpandNode = null;
@@ -1451,8 +1455,8 @@
         pendingEvent = hasTreeAction ? null : (event.target.closest("[data-event]")?.dataset.event || null);
         startX = event.clientX;
         startY = event.clientY;
-        startLeft = viewport.scrollLeft;
-        startTop = viewport.scrollTop;
+        startPanX = state.treePanX;
+        startPanY = state.treePanY;
         viewport.setPointerCapture(event.pointerId);
         viewport.classList.add("dragging");
       });
@@ -1462,8 +1466,9 @@
         const dy = event.clientY - startY;
         if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
         if (!moved) return;
-        viewport.scrollLeft = startLeft - dx;
-        viewport.scrollTop = startTop - dy;
+        state.treePanX = startPanX + dx;
+        state.treePanY = startPanY + dy;
+        applyTreePan();
         event.preventDefault();
       });
       viewport.addEventListener("pointermove", event => {
