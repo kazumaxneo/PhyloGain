@@ -801,7 +801,7 @@
           const loss = svgEl("tspan", {class: lossClass, "data-branch": node.branch_id, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${node.branch_id}`, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
           label.append(gain, loss); canvas.append(label);
           const support = normalizedBranchSupport(node);
-          if (support != null) {
+          if (!node.is_leaf && support != null) {
             const supportLabel = svgEl("text", {x: middleX, y: middleY + 11, "text-anchor": "middle", class: "support-label"});
             supportLabel.textContent = support.toFixed(3);
             canvas.append(supportLabel);
@@ -904,7 +904,7 @@
         const loss = svgEl("tspan", {class: lossClass, "data-branch": node.branch_id, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${node.branch_id}`, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
         label.append(gain, loss); canvas.append(label);
         const support = normalizedBranchSupport(node);
-        if (support != null) {
+        if (!node.is_leaf && support != null) {
           const supportLabel = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y + 11, "text-anchor": "middle", class: "support-label"});
           supportLabel.textContent = support.toFixed(3);
           canvas.append(supportLabel);

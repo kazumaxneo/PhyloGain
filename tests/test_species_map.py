@@ -321,6 +321,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("normalizedBranchSupport(node)", html)
             self.assertIn('class: "support-label"', html)
             self.assertIn("support.toFixed(3)", html)
+            self.assertEqual(html.count("if (!node.is_leaf && support != null)"), 2)
             self.assertIn('id="treeZoom"', html)
             self.assertIn('id="treeZoom" type="range" min="10" max="200"', html)
             self.assertIn("function enableTreeZoom()", html)
