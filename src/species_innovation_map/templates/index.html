@@ -9,16 +9,24 @@
     :root {
       --ink: #17212b;
       --muted: #66727f;
-      --paper: #f6f4ee;
-      --panel: #fffefa;
-      --line: #d9d6cc;
+      --paper: #f4f6f8;
+      --panel: #ffffff;
+      --line: #d9dee3;
       --gain: #087f5b;
       --gain-soft: #dff5ec;
       --loss: #b42345;
       --loss-soft: #fde8ee;
       --accent: #214f72;
-      --shadow: 0 12px 34px rgba(32, 45, 54, .08);
+      --header: #ffffff;
+      --header-ink: #17212b;
+      --control: #ffffff;
+      --tree-grid: rgba(33,79,114,.025);
+      --shadow: 0 8px 24px rgba(32, 45, 54, .07);
     }
+    html[data-theme="black"] { --ink: #f1f3f5; --muted: #aeb6bf; --paper: #111315; --panel: #1b1e21; --line: #353b40; --gain-soft: #123c30; --loss-soft: #47202b; --accent: #8bb8d5; --header: #0c0d0e; --header-ink: #ffffff; --control: #24282c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="brown"] { --ink: #2d2824; --muted: #756a61; --paper: #eee8df; --panel: #faf7f2; --line: #d7cdc0; --accent: #76553b; --header: #4b392c; --header-ink: #ffffff; --control: #fffdf9; --tree-grid: rgba(91,65,45,.04); }
+    html[data-theme="green"] { --ink: #edf4f0; --muted: #a9bbb1; --paper: #102019; --panel: #182b22; --line: #355044; --gain-soft: #214c3b; --loss-soft: #4b2730; --accent: #93c9ae; --header: #0a1912; --header-ink: #ffffff; --control: #21372c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="blue"] { --ink: #edf3f8; --muted: #aab8c5; --paper: #101c26; --panel: #192a38; --line: #354c5f; --gain-soft: #174638; --loss-soft: #4a2632; --accent: #91c1df; --header: #0a1721; --header-ink: #ffffff; --control: #213746; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -30,14 +38,17 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 24px;
+      gap: 20px;
       padding: 22px 28px;
-      color: white;
-      background: #18384d;
+      color: var(--header-ink);
+      background: var(--header);
+      border-bottom: 1px solid var(--line);
     }
     h1 { margin: 0; font: 650 24px/1.1 Georgia, serif; letter-spacing: .01em; }
-    header p { margin: 5px 0 0; color: #d7e6ef; font-size: 13px; }
-    .header-mark { font: 700 11px/1 monospace; letter-spacing: .12em; color: #b8d7e8; }
+    .theme-picker { display: flex; align-items: center; gap: 5px; }
+    .theme-picker span { margin-right: 3px; color: var(--muted); font-size: 11px; }
+    .theme-picker button { padding: 4px 8px; font-size: 11px; }
+    .theme-picker button.active { color: var(--panel); border-color: var(--accent); background: var(--accent); }
     .summary {
       display: grid;
       grid-template-columns: repeat(4, minmax(120px, 1fr));
@@ -79,7 +90,7 @@
     select, button {
       border: 1px solid #bfc5c8;
       border-radius: 6px;
-      background: white;
+      background: var(--control);
       color: var(--ink);
       padding: 7px 10px;
       font: inherit;
@@ -91,12 +102,12 @@
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
     #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; }
-    #treeSvg { display: block; background: linear-gradient(90deg, rgba(33,79,114,.025) 1px, transparent 1px); background-size: 110px 100%; }
+    #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch { stroke: #83909a; stroke-width: 1.5; cursor: pointer; transition: stroke .12s, stroke-width .12s; }
     .branch:hover, .branch.selected { stroke: var(--accent); stroke-width: 4; }
     .connector { stroke: #a6afb5; stroke-width: 1.2; }
     .branch-label { font: 600 10px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
-    .tip-label { font-size: 11px; fill: #273643; }
+    .tip-label { font-size: 11px; fill: var(--ink); }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
     .phenotype-gain { fill: var(--gain); stroke: white; stroke-width: 2; }
     .phenotype-loss { fill: var(--loss); stroke: white; stroke-width: 2; }
@@ -121,7 +132,7 @@
     .tabs button.active { color: white; border-color: var(--accent); background: var(--accent); }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { color: var(--muted); text-align: left; font-weight: 600; border-bottom: 1px solid var(--line); padding: 7px 5px; }
-    td { border-bottom: 1px solid #ebe8df; padding: 7px 5px; }
+    td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     .member-species { margin: 10px 0 4px; color: var(--accent); font-weight: 650; word-break: break-all; }
     .genes { color: #46545f; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
@@ -131,13 +142,22 @@
       .map-panel { height: 70vh; }
       .detail-panel { min-height: 400px; }
       .summary { grid-template-columns: repeat(2, 1fr); }
+      header { align-items: flex-start; flex-direction: column; }
+      .theme-picker { flex-wrap: wrap; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div><h1>Species Innovation Map</h1><p>Branch-level gene-family gains and losses from OrthoFinder</p></div>
-    <div class="header-mark">EVOLUTION, BRANCH BY BRANCH</div>
+    <h1>Species Innovation Map</h1>
+    <div class="theme-picker" aria-label="Color theme">
+      <span>Theme</span>
+      <button type="button" data-theme-value="white">White</button>
+      <button type="button" data-theme-value="black">Black</button>
+      <button type="button" data-theme-value="brown">Brown</button>
+      <button type="button" data-theme-value="green">Green</button>
+      <button type="button" data-theme-value="blue">Blue</button>
+    </div>
   </header>
   <section class="summary">
     <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
@@ -301,6 +321,19 @@
     }
     $("phenotypeSelect").addEventListener("change", phenotypeChanged);
     $("candidateButton").addEventListener("click", showCandidates);
+    const themes = new Set(["white", "black", "brown", "green", "blue"]);
+    function applyTheme(theme) {
+      const selected = themes.has(theme) ? theme : "white";
+      document.documentElement.dataset.theme = selected;
+      document.querySelectorAll("[data-theme-value]").forEach(button => {
+        const active = button.dataset.themeValue === selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      localStorage.setItem("species-map-theme", selected);
+    }
+    document.querySelectorAll("[data-theme-value]").forEach(button => button.addEventListener("click", () => applyTheme(button.dataset.themeValue)));
+    applyTheme(localStorage.getItem("species-map-theme") || "white");
     start();
   </script>
 </body>
