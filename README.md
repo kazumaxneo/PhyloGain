@@ -213,6 +213,10 @@ species-map validate \
 Numeric internal-node support labels in the selected Newick tree are shown below
 their branches on a 0–1 scale. Values supplied as percentages (for example, `95`)
 are normalized to `0.950`; branches without support labels remain unlabelled.
+The floating control window is divided into Basic, Filters, and Output tabs. Basic
+contains analysis, tree, and display settings; Filters contains the independent
+Gain/Loss ranges; Output contains reset and tree-SVG controls. The selected tab is
+remembered in the browser.
 The Zoom slider scales the complete tree while preserving the current viewport center.
 Use H−/H+ to change the distance between successive tree depths and V−/V+ to
 change the spacing between displayed tips. These controls are especially useful

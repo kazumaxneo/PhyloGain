@@ -116,6 +116,12 @@
     .tree-control-window-toggle { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
     .tree-control-window-body { max-height: min(78vh, 760px); overflow: auto; border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
     .tree-control-window.minimized .tree-control-window-body { display: none; }
+    .control-tabs { position: sticky; z-index: 2; top: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: color-mix(in srgb, var(--panel) 96%, transparent); border-bottom: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); }
+    .control-tab { min-height: 34px; border: 0; border-right: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); border-radius: 0; padding: 7px 8px 6px; background: transparent; color: var(--muted); font-size: 11px; }
+    .control-tab:last-child { border-right: 0; }
+    .control-tab[aria-selected="true"] { background: color-mix(in srgb, var(--control) 78%, transparent); color: var(--ink); font-weight: 650; box-shadow: inset 0 -2px var(--accent); }
+    .control-tab:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+    .control-tab-panel[hidden] { display: none; }
     .control-section-title { padding: 7px 15px 4px; color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
     .tree-control-window .header-controls { display: grid; gap: 0; padding: 0; border-bottom: 0; }
     .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 124px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 37px; padding: 5px 15px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
@@ -424,7 +430,16 @@
           <span class="tree-control-window-title">Controls</span>
           <button class="tree-control-window-toggle" id="treeControlWindowToggle" type="button" aria-controls="treeControlWindowBody" aria-expanded="true">Minimize</button>
         </div>
-        <div class="tree-control-window-body" id="treeControlWindowBody"></div>
+        <div class="tree-control-window-body" id="treeControlWindowBody">
+          <div class="control-tabs" role="tablist" aria-label="Control categories">
+            <button class="control-tab" id="controlTabBasicButton" type="button" role="tab" aria-selected="true" aria-controls="controlTabBasic" data-control-tab="basic">Basic</button>
+            <button class="control-tab" id="controlTabFiltersButton" type="button" role="tab" aria-selected="false" aria-controls="controlTabFilters" data-control-tab="filters" tabindex="-1">Filters</button>
+            <button class="control-tab" id="controlTabOutputButton" type="button" role="tab" aria-selected="false" aria-controls="controlTabOutput" data-control-tab="output" tabindex="-1">Output</button>
+          </div>
+          <div class="control-tab-panel" id="controlTabBasic" role="tabpanel" aria-labelledby="controlTabBasicButton"></div>
+          <div class="control-tab-panel" id="controlTabFilters" role="tabpanel" aria-labelledby="controlTabFiltersButton" hidden></div>
+          <div class="control-tab-panel" id="controlTabOutput" role="tabpanel" aria-labelledby="controlTabOutputButton" hidden></div>
+        </div>
       </div>
       <div class="branch-filters" aria-label="Branch event filters">
         <div class="control-section-title">Display</div>
@@ -497,7 +512,6 @@
           <output id="lossRangeValue"></output>
         </div>
         <div class="filter-actions">
-          <div class="control-section-title">Output</div>
           <div class="control-row"><span class="control-row-label">Settings</span><button class="filter-reset" id="filterReset" type="button">Reset</button></div>
           <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
         </div>
@@ -2078,7 +2092,12 @@
       const toggle = $("treeControlWindowToggle");
       const header = panel.querySelector(".tree-control-window-head");
       const container = panel.parentElement;
-      body.append(document.querySelector(".header-controls"), document.querySelector(".branch-filters"));
+      const staging = document.querySelector(".branch-filters");
+      const sectionTitles = [...staging.children].filter(child => child.classList.contains("control-section-title"));
+      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), staging.querySelector(".tree-tools"));
+      $("controlTabFilters").append(sectionTitles[1], staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
+      $("controlTabOutput").append(staging.querySelector(".filter-actions"));
+      staging.remove();
       const clampPosition = position => ({
         x: Math.max(0, Math.min(Number(position.x) || 0, Math.max(0, container.clientWidth - panel.offsetWidth))),
         y: Math.max(0, Math.min(Number(position.y) || 0, Math.max(0, container.clientHeight - panel.offsetHeight)))
@@ -2093,6 +2112,31 @@
       try {
         savedPosition = {...savedPosition, ...JSON.parse(localStorage.getItem("species-map-controls-position") || "{}")};
       } catch (_) {}
+      const tabNames = ["basic", "filters", "output"];
+      const tabButtons = [...body.querySelectorAll("[data-control-tab]")];
+      const activateTab = (name, focus = false) => {
+        const selected = tabNames.includes(name) ? name : "basic";
+        tabButtons.forEach(button => {
+          const active = button.dataset.controlTab === selected;
+          button.setAttribute("aria-selected", String(active));
+          button.tabIndex = active ? 0 : -1;
+          if (active && focus) button.focus();
+        });
+        tabNames.forEach(tabName => { $(`controlTab${tabName[0].toUpperCase()}${tabName.slice(1)}`).hidden = tabName !== selected; });
+        localStorage.setItem("species-map-control-tab", selected);
+        requestAnimationFrame(() => { savedPosition = applyPosition(savedPosition); });
+      };
+      tabButtons.forEach(button => {
+        button.addEventListener("click", () => activateTab(button.dataset.controlTab));
+        button.addEventListener("keydown", event => {
+          if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+          const current = tabNames.indexOf(button.dataset.controlTab);
+          const next = event.key === "Home" ? 0 : event.key === "End" ? tabNames.length - 1 : (current + (event.key === "ArrowRight" ? 1 : -1) + tabNames.length) % tabNames.length;
+          event.preventDefault();
+          activateTab(tabNames[next], true);
+        });
+      });
+      activateTab(localStorage.getItem("species-map-control-tab") || "basic");
       requestAnimationFrame(() => { savedPosition = applyPosition(savedPosition); });
       const setMinimized = minimized => {
         panel.classList.toggle("minimized", minimized);
