@@ -32,6 +32,7 @@
 - Move phenotype, candidate-gene, and collapse controls into the title bar and remove the separate toolbar.
 - Arrange shorter Gain and Loss sliders with Zoom in one horizontal row to maximize tree height.
 - Make Gain and Loss label fading independent and enlarge the displayed filter ranges.
+- Open event-specific branch panels: Gain numbers show only gained-family enrichment and lists, while Loss numbers show only lost-family results.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

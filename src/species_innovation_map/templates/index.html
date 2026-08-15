@@ -340,7 +340,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, collapseRank: "", expandedGroups: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", expandedGroups: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -495,8 +495,8 @@
         const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
         const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
         const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
-        const gain = svgEl("tspan", {class: gainClass}); gain.textContent = `+${branch.gain_count}`;
-        const loss = svgEl("tspan", {class: lossClass, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
+        const gain = svgEl("tspan", {class: gainClass, "data-branch": node.branch_id, "data-event": "gain", role: "button", tabindex: "0", "aria-label": `Gained gene families on branch ${node.branch_id}`}); gain.textContent = `+${branch.gain_count}`;
+        const loss = svgEl("tspan", {class: lossClass, "data-branch": node.branch_id, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${node.branch_id}`, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
         label.append(gain, loss); canvas.append(label);
         const support = normalizedBranchSupport(node);
         if (support != null) {
@@ -548,6 +548,7 @@
       document.querySelector(".workspace").classList.remove("detail-open");
       document.querySelector(".detail-panel").setAttribute("aria-hidden", "true");
       state.selectedBranch = null;
+      state.selectedEvent = null;
       if (state.project) renderTree();
     }
     function resetDetailScroll() { document.querySelector(".detail-scroll").scrollTop = 0; }
@@ -557,24 +558,30 @@
       button.textContent = label || "← Back";
       button.onclick = action || null;
     }
-    async function selectBranch(branchId) {
+    async function selectBranch(branchId, eventKind = null) {
       openDetailPanel();
       configureDetailBack("", null);
       resetDetailScroll();
-      state.selectedBranch = branchId; renderTree();
+      state.selectedBranch = branchId;
+      state.selectedEvent = eventKind;
+      renderTree();
       const branch = state.branches.get(branchId);
       $("detailTitle").classList.remove("family-title");
       $("detailTitle").textContent = branchId;
       $("detailSubtitle").hidden = false;
-      $("detailSubtitle").textContent = branch.tip_label || `${branch.parent_node} → ${branch.child_node}`;
+      const branchDescription = branch.tip_label || `${branch.parent_node} → ${branch.child_node}`;
+      const eventDescription = eventKind === "gain" ? "Gained gene families" : eventKind === "loss" ? "Lost gene families" : "";
+      $("detailSubtitle").textContent = [branchDescription, eventDescription].filter(Boolean).join(" · ");
       const body = $("detailBody"); body.replaceChildren();
       const counts = document.createElement("div"); counts.className = "counts";
-      counts.innerHTML = `<div class="count">Gain <strong>+${number(branch.gain_count)}</strong></div><div class="count">Loss <strong>−${number(branch.loss_count)}</strong></div>`;
+      const countItems = eventKind ? [eventKind] : ["gain", "loss"];
+      counts.innerHTML = countItems.map(kind => `<div class="count">${kind === "gain" ? "Gain" : "Loss"} <strong>${kind === "gain" ? "+" : "−"}${number(branch[`${kind}_count`])}</strong></div>`).join("");
       body.append(counts);
       const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading branch analysis…"; body.append(loading);
       const annotated = state.project.settings?.annotation_engine;
-      const result = await api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500`);
-      if (state.selectedBranch !== branchId) return;
+      const eventQuery = eventKind ? `&event=${eventKind}` : "";
+      const result = await api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500${eventQuery}`);
+      if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind) return;
       loading.remove();
       if (annotated && state.annotationSources.length) {
         const toolbar = document.createElement("div"); toolbar.className = "enrichment-toolbar";
@@ -588,38 +595,39 @@
         const enrichmentBody = document.createElement("div"); body.append(enrichmentBody);
         select.addEventListener("change", () => {
           state.enrichmentSource = select.value;
-          renderBranchEnrichment(enrichmentBody, branchId, select.value);
+          renderBranchEnrichment(enrichmentBody, branchId, select.value, eventKind);
         });
-        await renderBranchEnrichment(enrichmentBody, branchId, state.enrichmentSource);
+        await renderBranchEnrichment(enrichmentBody, branchId, state.enrichmentSource, eventKind);
       }
-      if (state.selectedBranch !== branchId) return;
-      const title = document.createElement("div"); title.className = "section-title"; title.textContent = `Gene-family events (${number(result.total)})`; body.append(title);
+      if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind) return;
+      const listHeading = eventKind === "gain" ? "Gained gene families" : eventKind === "loss" ? "Lost gene families" : "Gene-family events";
+      const title = document.createElement("div"); title.className = "section-title"; title.textContent = `${listHeading} (${number(result.total)})`; body.append(title);
       const list = document.createElement("div"); list.className = "event-list";
       for (const event of result.events) {
         const button = document.createElement("button"); button.className = "family-button";
-        const eventKind = document.createElement("span"); eventKind.className = "event-kind"; eventKind.textContent = event.event;
+        const eventLabel = document.createElement("span"); eventLabel.className = "event-kind"; eventLabel.textContent = event.event;
         const familyId = document.createElement("span"); familyId.className = "family-id"; familyId.textContent = event.family_id;
         const annotation = event.preferred_name || event.description;
         const description = document.createElement("span"); description.className = "family-description"; description.textContent = annotation ? [event.preferred_name, event.description].filter(Boolean).join(" — ") : ""; description.title = description.textContent;
-        button.append(eventKind, familyId, description); button.addEventListener("click", () => showFamily(event.family_id, {type: "branch", branchId})); list.append(button);
+        button.append(eventLabel, familyId, description); button.addEventListener("click", () => showFamily(event.family_id, {type: "branch", branchId, eventKind})); list.append(button);
       }
       body.append(list);
       if (result.total > result.events.length) {
         const note = document.createElement("div"); note.className = "empty"; note.textContent = `Showing the first ${number(result.events.length)} events. Complete results are in gene_gain_loss.tsv.`; body.append(note);
       }
     }
-    async function renderBranchEnrichment(container, branchId, source) {
+    async function renderBranchEnrichment(container, branchId, source, eventKind = null) {
       container.replaceChildren();
       const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = `Calculating ${source} enrichment…`; container.append(loading);
       const sourceQuery = encodeURIComponent(source);
-      const [gain, loss] = await Promise.all([
-        api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=gain&limit=20&source=${sourceQuery}`),
-        api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=loss&limit=20&source=${sourceQuery}`)
-      ]);
-      if (state.selectedBranch !== branchId || state.enrichmentSource !== source) return;
+      const eventKinds = eventKind ? [eventKind] : ["gain", "loss"];
+      const enrichments = await Promise.all(eventKinds.map(kind => api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=${kind}&limit=20&source=${sourceQuery}`)));
+      if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind || state.enrichmentSource !== source) return;
       container.replaceChildren();
-      appendEnrichment(container, gain, "Functional enrichment of gained gene families");
-      appendEnrichment(container, loss, "Functional enrichment of lost gene families");
+      enrichments.forEach((enrichment, index) => {
+        const kind = eventKinds[index];
+        appendEnrichment(container, enrichment, kind === "gain" ? "Functional enrichment of gained gene families" : "Functional enrichment of lost gene families");
+      });
     }
     function appendEnrichment(body, enrichment, heading) {
       const section = document.createElement("section"); section.className = "enrichment-section";
@@ -740,7 +748,7 @@
     async function showFamily(familyId, returnContext = null) {
       openDetailPanel();
       resetDetailScroll();
-      if (returnContext?.type === "branch") configureDetailBack("Back", () => selectBranch(returnContext.branchId));
+      if (returnContext?.type === "branch") configureDetailBack("Back", () => selectBranch(returnContext.branchId, returnContext.eventKind || null));
       else if (returnContext?.type === "candidates") configureDetailBack("Back", showCandidates);
       else configureDetailBack("", null);
       const result = await api(`/api/family?id=${encodeURIComponent(familyId)}`);
@@ -882,6 +890,7 @@
       let startLeft = 0;
       let startTop = 0;
       let pendingBranch = null;
+      let pendingEvent = null;
       let pendingExpandNode = null;
       let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
@@ -890,6 +899,7 @@
         moved = false;
         pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
         pendingBranch = pendingExpandNode ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
+        pendingEvent = pendingExpandNode ? null : (event.target.closest("[data-event]")?.dataset.event || null);
         startX = event.clientX;
         startY = event.clientY;
         startLeft = viewport.scrollLeft;
@@ -917,9 +927,10 @@
           renderTree();
         } else if (!moved && pendingBranch) {
           lastPointerSelection = Date.now();
-          selectBranch(pendingBranch);
+          selectBranch(pendingBranch, pendingEvent);
         }
         pendingBranch = null;
+        pendingEvent = null;
         pendingExpandNode = null;
       };
       viewport.addEventListener("pointerup", finishPan);
@@ -927,12 +938,14 @@
       viewport.addEventListener("click", event => {
         if (Date.now() - lastPointerSelection < 250) return;
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
-        if (branch) selectBranch(branch);
+        const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
+        if (branch) selectBranch(branch, eventKind);
       });
       viewport.addEventListener("keydown", event => {
         if (event.key !== "Enter" && event.key !== " ") return;
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
-        if (branch) { event.preventDefault(); selectBranch(branch); }
+        const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
+        if (branch) { event.preventDefault(); selectBranch(branch, eventKind); }
       });
     }
     enableTreePan();
