@@ -21,7 +21,7 @@
 - Mark legacy module IDs missing from the current KEGG release instead of leaving unexplained bare IDs.
 - Give KEGG reaction charts a wider label column and a more compact plotting area for long reaction descriptions.
 - Widen term-label columns across all enrichment databases while keeping KEGG reaction labels widest.
-- Add independent Gain and Loss range filters with hide/dim modes, live match counts, and reset control.
+- Add independent Gain and Loss range filters that fade only unmatched count labels while preserving every branch, node, and tip.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
