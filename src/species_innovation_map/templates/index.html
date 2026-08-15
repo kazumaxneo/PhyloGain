@@ -1905,6 +1905,8 @@
       let pendingFlipNode = null;
       let draggedTaxonomyLabel = null;
       let lastPointerSelection = 0;
+      let lastTaxonomyClickKey = null;
+      let lastTaxonomyClickTime = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         if (event.target === labelEditor) return;
@@ -1913,9 +1915,7 @@
         if (taxonomyLabel) {
           const key = taxonomyLabel.dataset.taxonomyLabelKey;
           const current = state.taxonomyLabelOffsets.get(key) || {x: 0, y: 0};
-          draggedTaxonomyLabel = {key, group: taxonomyLabel, startX: event.clientX, startY: event.clientY, x: Number(current.x) || 0, y: Number(current.y) || 0};
-          viewport.setPointerCapture(event.pointerId);
-          event.preventDefault();
+          draggedTaxonomyLabel = {key, group: taxonomyLabel, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: Number(current.x) || 0, y: Number(current.y) || 0, moved: false};
           return;
         }
         active = true;
@@ -1937,6 +1937,11 @@
         if (draggedTaxonomyLabel) {
           const dx = (event.clientX - draggedTaxonomyLabel.startX) / state.treeZoom;
           const dy = (event.clientY - draggedTaxonomyLabel.startY) / state.treeZoom;
+          if (!draggedTaxonomyLabel.moved && Math.hypot(dx, dy) < 4) return;
+          if (!draggedTaxonomyLabel.moved) {
+            draggedTaxonomyLabel.moved = true;
+            viewport.setPointerCapture(event.pointerId);
+          }
           const next = {x: Math.round((draggedTaxonomyLabel.x + dx) * 10) / 10, y: Math.round((draggedTaxonomyLabel.y + dy) * 10) / 10};
           state.taxonomyLabelOffsets.set(draggedTaxonomyLabel.key, next);
           draggedTaxonomyLabel.group.setAttribute("transform", `translate(${next.x} ${next.y})`);
@@ -1966,7 +1971,22 @@
       viewport.addEventListener("pointerleave", () => { actionHint.hidden = true; });
       const finishPan = event => {
         if (draggedTaxonomyLabel) {
-          localStorage.setItem("species-map-taxonomy-label-offsets", JSON.stringify(Object.fromEntries(state.taxonomyLabelOffsets)));
+          const interaction = draggedTaxonomyLabel;
+          if (interaction.moved) {
+            localStorage.setItem("species-map-taxonomy-label-offsets", JSON.stringify(Object.fromEntries(state.taxonomyLabelOffsets)));
+            lastTaxonomyClickKey = null;
+            lastTaxonomyClickTime = 0;
+          } else {
+            const now = Date.now();
+            if (lastTaxonomyClickKey === interaction.key && now - lastTaxonomyClickTime <= 500) {
+              openTaxonomyLabelEditor(interaction.group, event.clientX, event.clientY);
+              lastTaxonomyClickKey = null;
+              lastTaxonomyClickTime = 0;
+            } else {
+              lastTaxonomyClickKey = interaction.key;
+              lastTaxonomyClickTime = now;
+            }
+          }
           draggedTaxonomyLabel = null;
           if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
           return;
@@ -2051,13 +2071,16 @@
         else if (event.key === "Escape") { event.preventDefault(); closeLabelEditor(false); }
       });
       labelEditor.addEventListener("blur", () => closeLabelEditor(true));
+      function openTaxonomyLabelEditor(taxonomyLabel, clientX, clientY) {
+        const key = taxonomyLabel.dataset.taxonomyLabelKey;
+        const defaultLabel = taxonomyLabel.dataset.taxonomyLabelDefault || "";
+        const currentLabel = state.taxonomyLabelOverrides.get(key) || defaultLabel;
+        openLabelEditor({kind: "taxonomy", key, defaultLabel, currentLabel, clientX, clientY});
+      }
       const editLabelFromEvent = event => {
         const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
         if (taxonomyLabel) {
-          const key = taxonomyLabel.dataset.taxonomyLabelKey;
-          const defaultLabel = taxonomyLabel.dataset.taxonomyLabelDefault || "";
-          const currentLabel = state.taxonomyLabelOverrides.get(key) || defaultLabel;
-          openLabelEditor({kind: "taxonomy", key, defaultLabel, currentLabel, clientX: event.clientX, clientY: event.clientY});
+          openTaxonomyLabelEditor(taxonomyLabel, event.clientX, event.clientY);
           event.preventDefault();
           event.stopPropagation();
           return true;
