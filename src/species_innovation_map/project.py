@@ -21,6 +21,7 @@ from .analysis import (
     read_phenotypes,
 )
 from .tree import as_project_nodes, leaf_labels, parse_newick, preorder
+from .taxonomy import read_gtdb_taxonomy
 
 
 class InputError(ValueError):
@@ -31,18 +32,21 @@ def validate_inputs(
     orthofinder: str | Path,
     phenotype_path: str | Path | None = None,
     selected_phenotypes: list[str] | None = None,
+    species_tree_path: str | Path | None = None,
+    gtdb_taxonomy_path: str | Path | None = None,
 ) -> dict[str, object]:
     found = find_orthofinder_files(orthofinder)
     errors: list[str] = []
     warnings: list[str] = []
-    if found["tree"] is None:
+    tree_path = Path(species_tree_path) if species_tree_path else found["tree"]
+    if tree_path is None or not tree_path.is_file():
         errors.append("No rooted species tree found in Species_Tree/")
     if found["counts"] is None:
         errors.append("Orthogroups/Orthogroups.GeneCount.tsv was not found")
     if errors:
         return {"ok": False, "errors": errors, "warnings": warnings}
 
-    root = parse_newick(found["tree"])
+    root = parse_newick(tree_path)
     tips = leaf_labels(root)
     if not all(tips):
         errors.append("Every species-tree tip must have a label")
@@ -82,6 +86,25 @@ def validate_inputs(
             "Orthogroups/Orthogroups.tsv was not found; gene IDs cannot be shown in the HTML"
         )
 
+    taxonomy_report: dict[str, object] | None = None
+    if gtdb_taxonomy_path:
+        taxonomy_file = Path(gtdb_taxonomy_path)
+        if not taxonomy_file.is_file():
+            errors.append(f"GTDB taxonomy TSV was not found: {taxonomy_file}")
+        else:
+            _, taxonomy_report = read_gtdb_taxonomy(taxonomy_file, tips)
+            if taxonomy_report["mapped_species"] == 0:
+                errors.append("GTDB taxonomy TSV did not match any species-tree tips")
+            elif taxonomy_report["unmapped_species"]:
+                warnings.append(
+                    "GTDB taxonomy TSV omits or cannot match "
+                    f"{taxonomy_report['unmapped_species']} tree species"
+                )
+            if taxonomy_report["ambiguous_rows"]:
+                warnings.append(
+                    f"GTDB taxonomy TSV has {taxonomy_report['ambiguous_rows']} ambiguous ID rows"
+                )
+
     return {
         "ok": not errors,
         "errors": errors,
@@ -90,9 +113,10 @@ def validate_inputs(
         "count_species": len(count_species),
         "matched_species": len(set(tips) & set(count_species)),
         "phenotypes": phenotype_names,
-        "tree": str(found["tree"]),
+        "tree": str(tree_path),
         "counts": str(found["counts"]),
         "members": str(found["members"]) if found["members"] else None,
+        "taxonomy": taxonomy_report,
     }
 
 
@@ -106,10 +130,18 @@ def build_project(
     root_state: str | int = "auto",
     presence_threshold: int = 1,
     include_members: bool = True,
+    species_tree_path: str | Path | None = None,
+    gtdb_taxonomy_path: str | Path | None = None,
     progress=None,
 ) -> dict[str, object]:
     progress = progress or (lambda message: None)
-    report = validate_inputs(orthofinder, phenotype_path, selected_phenotypes)
+    report = validate_inputs(
+        orthofinder,
+        phenotype_path,
+        selected_phenotypes,
+        species_tree_path,
+        gtdb_taxonomy_path,
+    )
     if not report["ok"]:
         raise InputError("; ".join(report["errors"]))
     found = find_orthofinder_files(orthofinder)
@@ -118,11 +150,17 @@ def build_project(
         raise InputError(f"Output directory is not empty: {output_path}")
     output_path.mkdir(parents=True, exist_ok=True)
 
-    root = parse_newick(found["tree"])
+    tree_path = Path(report["tree"])
+    root = parse_newick(tree_path)
     nodes = preorder(root)
     species = leaf_labels(root)
     count_species, _ = read_count_header(found["counts"])
     reconstruction = Reconstruction(root, gain_cost=gain_cost, loss_cost=loss_cost)
+    taxonomy_data: dict[str, dict[str, str]] = {}
+    taxonomy_report: dict[str, object] | None = None
+    if gtdb_taxonomy_path:
+        taxonomy_data, taxonomy_report = read_gtdb_taxonomy(gtdb_taxonomy_path, species)
+        _write_taxonomy(output_path / "gtdb_taxonomy.tsv", species, taxonomy_data)
 
     database_path = output_path / "species_map.sqlite"
     connection = sqlite3.connect(database_path)
@@ -271,6 +309,12 @@ def build_project(
         "family_count": family_count,
         "phenotypes": phenotype_names,
         "nodes": as_project_nodes(root),
+        "taxonomy": {
+            "source": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
+            "ranks": taxonomy_report["ranks"] if taxonomy_report else [],
+            "mapped_species": len(taxonomy_data),
+            "species": taxonomy_data,
+        },
         "settings": {
             "gain_cost": gain_cost,
             "loss_cost": loss_cost,
@@ -287,10 +331,11 @@ def build_project(
         "python": sys.version,
         "platform": platform.platform(),
         "orthofinder_directory": str(Path(orthofinder).resolve()),
-        "tree_file": str(found["tree"]),
+        "tree_file": str(tree_path),
         "gene_count_file": str(found["counts"]),
         "gene_members_file": str(found["members"]) if found["members"] else None,
         "phenotype_file": str(Path(phenotype_path).resolve()) if phenotype_path else None,
+        "gtdb_taxonomy_file": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
         "warnings": report["warnings"],
     }
     (output_path / "run_metadata.json").write_text(
@@ -304,6 +349,7 @@ def build_project(
         "families": family_count,
         "branches": len(branch_rows),
         "phenotypes": phenotype_names,
+        "taxonomy_species": len(taxonomy_data),
         "warnings": report["warnings"],
     }
 
@@ -347,6 +393,20 @@ def _create_schema(connection: sqlite3.Connection) -> None:
         );
         """
     )
+
+
+def _write_taxonomy(
+    path: Path,
+    species: list[str],
+    taxonomy: dict[str, dict[str, str]],
+) -> None:
+    ranks = ["domain", "phylum", "class", "order", "family", "genus", "species"]
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(["species_id", *ranks])
+        for species_id in species:
+            values = taxonomy.get(species_id, {})
+            writer.writerow([species_id, *(values.get(rank, "") for rank in ranks)])
 
 
 def _write_branches(path: Path, rows, counts) -> None:

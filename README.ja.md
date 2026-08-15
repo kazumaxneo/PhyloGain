@@ -56,3 +56,26 @@ phenotypeの獲得branchと同じbranchでGainしたgene familyが`candidate_gen
 ## 注意
 
 現在のバージョンはpresence/absenceに対するSankoff parsimonyを使用します。不完全なMAGでは、未検出遺伝子が偽のLossとして推定される可能性があります。
+
+## GTDB分類で系統樹を折り畳む
+
+GTDB-Tkのsummary TSV、または`species_id`と`gtdb_taxonomy`列を持つTSVを指定すると、Phylum、Class、Order、Family、Genus単位で単系統クレードを折り畳めます。
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
+  --output gtdb_collapsible_map
+```
+
+折り畳み名をクリックすると、その分類群だけ展開されます。同じ分類群名が複数表示される場合、その分類群は入力系統樹上で単系統ではありません。折り畳み表示のGain/Lossは、そのクレードへ入るbranchの値であり、内部の全イベントの合計ではありません。
+
+OrthoFinder treeの代わりに、tip名をOrthoFinder species IDへ揃えたrooted Newickを指定することもできます。
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --species-tree gtdb_pruned_rooted.nwk \
+  --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
+  --output gtdb_tree_map
+```

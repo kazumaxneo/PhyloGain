@@ -115,6 +115,8 @@
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
+    .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
+    .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
     .phenotype-gain { fill: var(--gain); stroke: white; stroke-width: 2; }
     .phenotype-loss { fill: var(--loss); stroke: white; stroke-width: 2; }
@@ -188,6 +190,10 @@
         <label for="phenotypeSelect">Phenotype</label>
         <select id="phenotypeSelect"><option value="">None</option></select>
         <button id="candidateButton" type="button">Candidate genes</button>
+        <span id="taxonomyControl" hidden>
+          <label for="collapseSelect">Collapse</label>
+          <select id="collapseSelect"><option value="">None</option></select>
+        </span>
         <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
@@ -199,7 +205,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, collapseRank: "", expandedGroups: new Set() };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -224,6 +230,13 @@
           const option = document.createElement("option"); option.value = phenotype; option.textContent = phenotype;
           $("phenotypeSelect").append(option);
         }
+        const rankLabels = {domain: "Domain", phylum: "Phylum", class: "Class", order: "Order", family: "Family", genus: "Genus", species: "Species"};
+        const ranks = (project.taxonomy?.ranks || []).filter(rank => rank !== "domain" && rank !== "species");
+        for (const rank of ranks) {
+          const option = document.createElement("option"); option.value = rank; option.textContent = rankLabels[rank] || rank;
+          $("collapseSelect").append(option);
+        }
+        $("taxonomyControl").hidden = ranks.length === 0;
         $("status").remove();
         renderTree();
       } catch (error) {
@@ -235,23 +248,49 @@
       const svg = $("treeSvg"); svg.replaceChildren();
       const nodes = new Map(state.project.nodes.map(node => [node.id, {...node}]));
       const root = [...nodes.values()].find(node => !node.parent_id);
+      const taxonomy = state.project.taxonomy?.species || {};
+      const rank = state.collapseRank;
+      function summarize(node) {
+        const children = node.children.map(id => nodes.get(id));
+        if (!children.length) {
+          node.leafCount = 1;
+          node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
+          return;
+        }
+        children.forEach(summarize);
+        node.leafCount = children.reduce((sum, child) => sum + child.leafCount, 0);
+        const values = new Set(children.map(child => child.rankValue));
+        node.rankValue = values.size === 1 && !values.has("") ? [...values][0] : "";
+        node.collapsed = Boolean(
+          rank && node.parent_id && node.rankValue && node.leafCount > 1 &&
+          !state.expandedGroups.has(`${rank}:${node.id}`)
+        );
+      }
+      summarize(root);
+      const visibleNodes = [];
+      function collect(node) {
+        visibleNodes.push(node);
+        if (!node.collapsed) node.children.map(id => nodes.get(id)).forEach(collect);
+      }
+      collect(root);
+      const visibleIds = new Set(visibleNodes.map(node => node.id));
       let leafIndex = 0;
       const spacing = 25;
       function position(node) {
-        const children = node.children.map(id => nodes.get(id));
+        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id));
         children.forEach(position);
         node.x = 35 + node.depth * 110;
         node.y = children.length ? children.reduce((sum, child) => sum + child.y, 0) / children.length : 24 + leafIndex++ * spacing;
       }
       position(root);
-      const maxDepth = Math.max(...[...nodes.values()].map(node => node.depth));
+      const maxDepth = Math.max(...visibleNodes.map(node => node.depth));
       svg.setAttribute("width", Math.max(900, 110 * maxDepth + 440));
       svg.setAttribute("height", Math.max(500, leafIndex * spacing + 40));
-      for (const node of nodes.values()) {
-        const children = node.children.map(id => nodes.get(id));
+      for (const node of visibleNodes) {
+        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id)).filter(child => visibleIds.has(child.id));
         if (children.length > 1) svg.append(svgEl("line", {x1: node.x, y1: Math.min(...children.map(c => c.y)), x2: node.x, y2: Math.max(...children.map(c => c.y)), class: "connector"}));
       }
-      for (const node of nodes.values()) {
+      for (const node of visibleNodes) {
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
@@ -266,7 +305,12 @@
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
         if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
         else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
-        if (node.is_leaf) {
+        if (node.collapsed) {
+          const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
+          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
+          tip.textContent = `${node.rankValue} (${number(node.leafCount)})`;
+          svg.append(marker, tip);
+        } else if (node.is_leaf) {
           const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: "tip-label"}); tip.textContent = node.label; svg.append(tip);
         }
       }
@@ -353,6 +397,13 @@
     }
     $("phenotypeSelect").addEventListener("change", phenotypeChanged);
     $("candidateButton").addEventListener("click", showCandidates);
+    $("collapseSelect").addEventListener("change", event => {
+      state.collapseRank = event.target.value;
+      state.expandedGroups.clear();
+      closeDetailPanel();
+      $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
     $("detailClose").addEventListener("click", closeDetailPanel);
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
     function enableTreePan() {
@@ -364,11 +415,13 @@
       let startLeft = 0;
       let startTop = 0;
       let pendingBranch = null;
+      let pendingExpandNode = null;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         active = true;
         moved = false;
-        pendingBranch = event.target.closest("[data-branch]")?.dataset.branch || null;
+        pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
+        pendingBranch = pendingExpandNode ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
         startX = event.clientX;
         startY = event.clientY;
         startLeft = viewport.scrollLeft;
@@ -391,8 +444,14 @@
         active = false;
         viewport.classList.remove("dragging");
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
-        if (!moved && pendingBranch) selectBranch(pendingBranch);
+        if (!moved && pendingExpandNode) {
+          state.expandedGroups.add(`${state.collapseRank}:${pendingExpandNode}`);
+          renderTree();
+        } else if (!moved && pendingBranch) {
+          selectBranch(pendingBranch);
+        }
         pendingBranch = null;
+        pendingExpandNode = null;
       };
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);

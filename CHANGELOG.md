@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 — 2026-08-15
+
+- Accept optional GTDB/GTDB-Tk taxonomy TSV files.
+- Collapse monophyletic clades interactively by phylum, class, order, family, or genus.
+- Expand individual collapsed groups without leaving the selected rank view.
+- Accept an optional rooted Newick tree in place of the OrthoFinder species tree.
+- Add selectable interface themes, a sliding branch-details panel, and drag-to-pan navigation.
+- Simplify branch labels and Gain/Loss summaries for readability.
+
 ## 0.1.0 — 2026-08-15
 
 - Read rooted species trees and orthogroup tables directly from OrthoFinder results.

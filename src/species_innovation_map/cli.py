@@ -44,6 +44,14 @@ def parser() -> argparse.ArgumentParser:
 
 def _input_arguments(command: argparse.ArgumentParser) -> None:
     command.add_argument("--orthofinder", required=True, help="OrthoFinder results directory")
+    command.add_argument(
+        "--species-tree",
+        help="Optional rooted Newick tree replacing the OrthoFinder species tree",
+    )
+    command.add_argument(
+        "--gtdb-taxonomy",
+        help="Optional GTDB or GTDB-Tk taxonomy TSV for rank-based clade collapsing",
+    )
     command.add_argument("--phenotypes", help="Optional wide TSV with species_id in the first column")
     command.add_argument(
         "--phenotype",
@@ -56,7 +64,13 @@ def main(argv: list[str] | None = None) -> None:
     args = parser().parse_args(argv)
     try:
         if args.command == "validate":
-            report = validate_inputs(args.orthofinder, args.phenotypes, args.phenotype)
+            report = validate_inputs(
+                args.orthofinder,
+                args.phenotypes,
+                args.phenotype,
+                args.species_tree,
+                args.gtdb_taxonomy,
+            )
             if args.json:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
             else:
@@ -74,6 +88,8 @@ def main(argv: list[str] | None = None) -> None:
                 root_state=args.root_state,
                 presence_threshold=args.presence_threshold,
                 include_members=not args.no_members,
+                species_tree_path=args.species_tree,
+                gtdb_taxonomy_path=args.gtdb_taxonomy,
                 progress=lambda message: print(message, flush=True),
             )
             print(
@@ -98,6 +114,9 @@ def _print_validation(report: dict[str, object]) -> None:
     phenotypes = report.get("phenotypes") or []
     if phenotypes:
         print(f"Phenotypes:         {', '.join(phenotypes)}")
+    taxonomy = report.get("taxonomy") or {}
+    if taxonomy:
+        print(f"GTDB taxonomy:      {taxonomy['mapped_species']} species mapped")
     for warning in report["warnings"]:
         print(f"WARNING: {warning}")
     for error in report["errors"]:
