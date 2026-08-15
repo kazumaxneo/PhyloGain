@@ -315,7 +315,7 @@
       <button type="button" data-theme-value="green" aria-label="Green theme" title="Green"></button>
       <button type="button" data-theme-value="blue" aria-label="Blue theme" title="Blue"></button>
     </div>
-    <h1>Gene Gain/Loss Viewer</h1>
+    <h1 id="viewerTitle">Gene Gain/Loss Viewer</h1>
     <div class="header-controls" aria-label="Tree controls">
       <label for="phenotypeSelect">Phenotype</label>
       <select id="phenotypeSelect" title="Phenotype"><option value="">None</option></select>
@@ -444,6 +444,9 @@
       try {
         const [project, branches, annotationSources] = await Promise.all([api("/api/project"), api("/api/branches"), api("/api/annotation-sources")]);
         state.project = project;
+        const inputName = project.input_format === "pirate" ? "PIRATE" : "OrthoFinder";
+        $("viewerTitle").textContent = `Gene Gain/Loss Viewer · ${inputName}`;
+        document.title = `Gene Gain/Loss Viewer · ${inputName}`;
         state.branches = new Map(branches.map(branch => [branch.branch_id, branch]));
         initializeBranchFilters(branches);
         state.annotationSources = annotationSources;

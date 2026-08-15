@@ -12,12 +12,12 @@ from .server import serve_project
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
         prog="species-map",
-        description="Build interactive branch-level gene-family gain/loss maps from OrthoFinder results.",
+        description="Build interactive branch-level gene-family gain/loss maps from OrthoFinder or PIRATE results.",
     )
     root.add_argument("--version", action="version", version=__version__)
     commands = root.add_subparsers(dest="command", required=True)
 
-    validate = commands.add_parser("validate", help="Validate OrthoFinder and phenotype inputs")
+    validate = commands.add_parser("validate", help="Validate comparative-genomics and phenotype inputs")
     _input_arguments(validate)
     validate.add_argument("--json", action="store_true", help="Print machine-readable JSON")
 
@@ -31,7 +31,7 @@ def parser() -> argparse.ArgumentParser:
     build.add_argument(
         "--no-members",
         action="store_true",
-        help="Skip indexing Orthogroups.tsv gene IDs for a smaller output",
+        help="Skip indexing gene-family member IDs for a smaller output",
     )
     build.add_argument(
         "--annotate",
@@ -68,10 +68,12 @@ def parser() -> argparse.ArgumentParser:
 
 
 def _input_arguments(command: argparse.ArgumentParser) -> None:
-    command.add_argument("--orthofinder", required=True, help="OrthoFinder results directory")
+    source = command.add_mutually_exclusive_group(required=True)
+    source.add_argument("--orthofinder", help="OrthoFinder results directory (recommended)")
+    source.add_argument("--pirate", help="PIRATE output directory")
     command.add_argument(
         "--species-tree",
-        help="Optional rooted Newick tree replacing the OrthoFinder species tree",
+        help="Optional rooted Newick tree replacing the input tool's default tree",
     )
     command.add_argument(
         "--gtdb-taxonomy",
@@ -95,6 +97,7 @@ def main(argv: list[str] | None = None) -> None:
                 args.phenotype,
                 args.species_tree,
                 args.gtdb_taxonomy,
+                args.pirate,
             )
             if args.json:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -124,6 +127,7 @@ def main(argv: list[str] | None = None) -> None:
                 eggnog_data_dir=args.eggnog_data_dir,
                 annotation_cpu=args.annotation_cpu,
                 progress=lambda message: print(message, flush=True),
+                pirate=args.pirate,
             )
             print(
                 f"Built {result['output']} ({result['species']} species, "
@@ -140,6 +144,7 @@ def main(argv: list[str] | None = None) -> None:
 
 
 def _print_validation(report: dict[str, object]) -> None:
+    print(f"Input format:       {str(report.get('input_format', '')).upper()}")
     if "tree_tips" in report:
         print(f"Species tree tips:  {report['tree_tips']}")
         print(f"Gene-count species: {report['count_species']}")

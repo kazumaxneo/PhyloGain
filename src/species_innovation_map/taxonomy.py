@@ -72,15 +72,24 @@ def read_gtdb_taxonomy(
         taxonomy_column = next(
             (column for column in TAXONOMY_COLUMNS if column in fields), None
         )
-        if not id_column or not taxonomy_column:
+        wide_rank_columns = [rank for rank in RANKS if rank in fields]
+        if not id_column or (not taxonomy_column and not wide_rank_columns):
             raise ValueError(
                 "GTDB taxonomy TSV needs an ID column "
                 f"({', '.join(ID_COLUMNS)}) and a taxonomy column "
-                f"({', '.join(TAXONOMY_COLUMNS)})"
+                f"({', '.join(TAXONOMY_COLUMNS)}) or rank columns ({', '.join(RANKS)})"
             )
         for row in reader:
             row_id = (row.get(id_column) or "").strip()
-            taxonomy = parse_gtdb_taxonomy(row.get(taxonomy_column) or "")
+            taxonomy = (
+                parse_gtdb_taxonomy(row.get(taxonomy_column) or "")
+                if taxonomy_column
+                else {
+                    rank: (row.get(rank) or "").strip()
+                    for rank in wide_rank_columns
+                    if (row.get(rank) or "").strip()
+                }
+            )
             if not row_id or not taxonomy:
                 continue
             matches: set[str] = set()

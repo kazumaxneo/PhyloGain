@@ -162,6 +162,7 @@ def import_eggnog_annotations(
     valid_families = {row[0] for row in connection.execute("SELECT family_id FROM families")}
     header: list[str] | None = None
     family_rows: list[tuple[str, str, str]] = []
+    annotated_families: set[str] = set()
     term_rows: set[tuple[str, str, str]] = set()
     link_rows: set[tuple[str, str, str]] = set()
     with Path(annotation_path).open("r", encoding="utf-8-sig", newline="") as handle:
@@ -176,11 +177,16 @@ def import_eggnog_annotations(
             values = line.rstrip("\r\n").split("\t")
             row = dict(zip(header, values))
             family = row.get("query", "").strip()
+            if family not in valid_families and "_" in family:
+                pirate_family = family.rsplit("_", 1)[0]
+                if pirate_family in valid_families:
+                    family = pirate_family
             if not family or family not in valid_families:
                 continue
             preferred = _clean(row.get("Preferred_name", ""))
             description = _clean(row.get("Description", ""))
             family_rows.append((preferred, description, family))
+            annotated_families.add(family)
             for source, term_id, term_name in _row_terms(row):
                 term_rows.add((source, term_id, term_name))
                 link_rows.add((family, source, term_id))
@@ -207,7 +213,7 @@ def import_eggnog_annotations(
         )
         """
     )
-    return {"annotated_families": len(family_rows), "family_term_links": len(link_rows)}
+    return {"annotated_families": len(annotated_families), "family_term_links": len(link_rows)}
 
 
 def import_go_term_names(
