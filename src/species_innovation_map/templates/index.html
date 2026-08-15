@@ -139,6 +139,7 @@
     .branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
     .connector { stroke: #a6afb5; stroke-width: 1.2; }
     .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
+    .support-label { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
@@ -410,6 +411,13 @@
       const gain = Number(branch.gain_count || 0); const loss = Number(branch.loss_count || 0); const filter = state.branchFilter;
       return gain >= filter.gainMin && gain <= filter.gainMax && loss >= filter.lossMin && loss <= filter.lossMax;
     }
+    function normalizedBranchSupport(node) {
+      let value = node.support;
+      if (value == null && !node.is_leaf && /^\s*\d+(?:\.\d+)?\s*$/.test(node.label || "")) value = Number(node.label);
+      value = Number(value);
+      if (!Number.isFinite(value) || value < 0 || value > 100) return null;
+      return value > 1 ? value / 100 : value;
+    }
     function renderTree() {
       const svg = $("treeSvg"); svg.replaceChildren();
       const nodes = new Map(state.project.nodes.map(node => [node.id, {...node}]));
@@ -469,6 +477,12 @@
         const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
         const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
         label.append(gain, loss); svg.append(label);
+        const support = normalizedBranchSupport(node);
+        if (support != null) {
+          const supportLabel = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y + 11, "text-anchor": "middle", class: "support-label"});
+          supportLabel.textContent = support.toFixed(3);
+          svg.append(supportLabel);
+        }
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
         if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
         else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));

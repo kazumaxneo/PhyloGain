@@ -178,6 +178,10 @@ species-map validate \
 --annotation-cpu INT       CPUs used by eggNOG-mapper (default: 1)
 ```
 
+Numeric internal-node support labels in the selected Newick tree are shown below
+their branches on a 0–1 scale. Values supplied as percentages (for example, `95`)
+are normalized to `0.950`; branches without support labels remain unlabelled.
+
 Example with gains penalized relative to losses:
 
 ```bash

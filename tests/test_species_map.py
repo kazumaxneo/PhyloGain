@@ -18,7 +18,7 @@ from species_innovation_map.annotation import (
     write_representative_fasta,
 )
 from species_innovation_map.project import build_project, validate_inputs
-from species_innovation_map.tree import leaf_labels, parse_newick
+from species_innovation_map.tree import as_project_nodes, leaf_labels, parse_newick
 from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxonomy
 
 
@@ -35,6 +35,18 @@ class TreeTests(unittest.TestCase):
         root = parse_newick(FIXTURE / "Species_Tree" / "SpeciesTree_rooted_node_labels.txt")
         self.assertEqual(leaf_labels(root), ["species_A", "species_B", "species_C", "species_D"])
         self.assertEqual(len({node.branch_id for node in root.children}), 2)
+
+    def test_parse_and_normalize_branch_support(self):
+        with tempfile.TemporaryDirectory() as directory:
+            tree_path = Path(directory) / "supported_tree.nwk"
+            tree_path.write_text("((A:1,B:1)95:1,C:1)0.875;", encoding="utf-8")
+            root = parse_newick(tree_path)
+            self.assertEqual(root.support, 0.875)
+            self.assertEqual(root.children[0].support, 0.95)
+            self.assertIsNone(root.children[1].support)
+            project_nodes = as_project_nodes(root)
+            supported = {node["label"]: node["support"] for node in project_nodes}
+            self.assertEqual(supported["95"], 0.95)
 
     def test_sankoff_finds_single_clade_gain(self):
         root = parse_newick(FIXTURE / "Species_Tree" / "SpeciesTree_rooted_node_labels.txt")
@@ -200,6 +212,9 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('row.source === "COG category"', html)
             self.assertNotIn('id="hideUnmatched"', html)
             self.assertIn("filtered-branch-label", html)
+            self.assertIn("normalizedBranchSupport(node)", html)
+            self.assertIn('class: "support-label"', html)
+            self.assertIn("support.toFixed(3)", html)
             self.assertIn('id="filterReset"', html)
             self.assertIn(".gain-filter { grid-column: 1; grid-row: 1; }", html)
             self.assertIn(".loss-filter { grid-column: 1; grid-row: 2; }", html)
