@@ -166,6 +166,7 @@
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
+    .tree-label-editor { position: absolute; z-index: 8; width: min(280px, calc(100% - 24px)); border: 1px solid var(--accent); border-radius: 3px; padding: 4px 6px; background: var(--panel); color: var(--ink); font: 12px var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); box-shadow: 0 3px 10px rgba(15, 23, 30, .16); transform: translateY(-50%); }
     .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; will-change: transform; }
     .branch-hit { fill: transparent; cursor: pointer; }
@@ -179,8 +180,8 @@
     .support-label { fill: var(--muted); font: 9px var(--tree-label-font, ui-monospace, SFMono-Regular, Consolas, monospace); pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
-    .tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; fill: var(--ink); }
-    .taxonomy-tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); }
+    .tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; fill: var(--ink); cursor: text; }
+    .taxonomy-tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); cursor: text; }
     .clade-taxonomy-band { fill-opacity: .16; pointer-events: none; }
     .clade-taxonomy-band.species { fill-opacity: .20; }
     .taxonomy-label-badge { cursor: move; }
@@ -492,7 +493,7 @@
           <span class="filter-match-count" id="filterMatchCount"></span>
         </div>
       </div>
-      <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
+      <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><input class="tree-label-editor" id="treeLabelEditor" type="text" aria-label="Edit tree label" hidden><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
       <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
@@ -510,7 +511,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -586,6 +587,16 @@
           state.taxonomyLabelOffsets = new Map(Object.entries(storedOffsets));
         } catch (_) {
           state.taxonomyLabelOffsets = new Map();
+        }
+        try {
+          state.taxonomyLabelOverrides = new Map(Object.entries(JSON.parse(localStorage.getItem("species-map-taxonomy-label-overrides") || "{}")));
+        } catch (_) {
+          state.taxonomyLabelOverrides = new Map();
+        }
+        try {
+          state.tipLabelOverrides = new Map(Object.entries(JSON.parse(localStorage.getItem("species-map-tip-label-overrides") || "{}")));
+        } catch (_) {
+          state.tipLabelOverrides = new Map();
         }
         $("status").remove();
         renderTree();
@@ -797,6 +808,12 @@
           return [{rank: taxonomyRank, value}];
         });
       }
+      const taxonomyRankTitle = taxonomyRank => ({family: "Family", genus: "Genus", species: "Species"})[taxonomyRank] || taxonomyRank;
+      const taxonomyLabelKey = (node, taxonomyRank) => `${taxonomyRank}:${node.id}`;
+      const taxonomyLabelText = (node, item) => {
+        const key = taxonomyLabelKey(node, item.rank);
+        return state.taxonomyLabelOverrides.get(key) || `${taxonomyRankTitle(item.rank)}: ${item.value}`;
+      };
       function appendCladeTaxonomyLabel(node, circular = false) {
         const labels = cladeTaxonomyLabels(node);
         if (!labels.length) return;
@@ -810,14 +827,14 @@
             const offset = (index - (labels.length - 1) / 2) * 12 * labelScale;
             const x = node.x + ux * 9 * labelScale + px * offset;
             const y = node.y + uy * 9 * labelScale + py * offset;
-            const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
-            appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, x, y, anchor, `rotate(${angle} ${x} ${y})`);
+            const text = taxonomyLabelText(node, item);
+            appendTaxonomyBadge(text, item.rank, item.value, taxonomyLabelKey(node, item.rank), x, y, anchor, `rotate(${angle} ${x} ${y})`);
           });
           return;
         }
         labels.forEach((item, index) => {
-          const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
-          appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, node.x + 7, node.y + 15 * labelScale + index * 15 * labelScale);
+          const text = taxonomyLabelText(node, item);
+          appendTaxonomyBadge(text, item.rank, item.value, taxonomyLabelKey(node, item.rank), node.x + 7, node.y + 15 * labelScale + index * 15 * labelScale);
         });
       }
       function taxonomyColorIndex(taxonomyRank, value, occurrenceKey = "") {
@@ -846,7 +863,8 @@
         const height = 14 * scale;
         const left = anchor === "end" ? x - width : x;
         const offset = state.taxonomyLabelOffsets.get(key) || {x: 0, y: 0};
-        const group = svgEl("g", {class: "taxonomy-label-badge", "data-taxonomy-label-key": key, transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
+        const group = svgEl("g", {class: "taxonomy-label-badge", "data-taxonomy-label-key": key, "data-taxonomy-label-default": `${taxonomyRankTitle(taxonomyRank)}: ${value}`, transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
+        addSvgTooltip(group, "Drag to move · Double-click to rename");
         const rotated = svgEl("g", transform ? {transform} : {});
         rotated.append(svgEl("rect", {x: left - 4 * scale, y: y - 10 * scale, width, height, rx: 2 * scale, class: "clade-taxonomy-label-bg", style: `fill:${taxonomyLabelColor(taxonomyRank, value, key)}`}));
         rotated.append(svgEl("rect", {x: left - 4 * scale, y: y - 10 * scale, width: 3 * scale, height, rx: scale, class: "clade-taxonomy-label-accent", style: `fill:${taxonomyColor(taxonomyRank, value, key)}`}));
@@ -911,7 +929,7 @@
         const outerRadius = 28 + maximumDepth * radialStep;
         const taxonomyLabelScale = state.taxonomyLabelFontSize / 9;
         const maximumTaxonomyLabelWidth = Math.max(0, ...visibleNodes.flatMap(node => cladeTaxonomyLabels(node).map(item => {
-          const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
+          const text = taxonomyLabelText(node, item);
           return Math.max(44 * taxonomyLabelScale, text.length * 5.4 * taxonomyLabelScale + 10 * taxonomyLabelScale);
         })));
         const taxonomyBandOuterRadius = outerRadius + (state.cladeLabelMode ? maximumTaxonomyLabelWidth + 20 * taxonomyLabelScale : 65);
@@ -1005,12 +1023,14 @@
             addSvgTooltip(tip, "Expand clade");
             canvas.append(marker, tip);
           } else if (node.is_leaf) {
-            const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+            const defaultTipLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+            const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultTipLabel;
             const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
             const labelX = node.x + ux * 10;
             const labelY = node.y + uy * 10;
-            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass});
+            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultTipLabel});
             tip.textContent = taxonomyLabel;
+            addSvgTooltip(tip, "Double-click to rename");
             canvas.append(tip);
           }
         }
@@ -1096,9 +1116,10 @@
           addSvgTooltip(tip, "Expand clade");
           canvas.append(marker, tip);
         } else if (node.is_leaf) {
-          const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+          const defaultTipLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+          const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultTipLabel;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass}); tip.textContent = taxonomyLabel; canvas.append(tip);
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultTipLabel}); tip.textContent = taxonomyLabel; addSvgTooltip(tip, "Double-click to rename"); canvas.append(tip);
         }
       }
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
@@ -1765,6 +1786,7 @@
     function enableTreePan() {
       const viewport = $("treeViewport");
       const actionHint = $("treeActionHint");
+      const labelEditor = $("treeLabelEditor");
       let active = false;
       let moved = false;
       let startX = 0;
@@ -1780,6 +1802,7 @@
       let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
+        if (event.target === labelEditor) return;
         actionHint.hidden = true;
         const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
         if (taxonomyLabel) {
@@ -1874,6 +1897,7 @@
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);
       viewport.addEventListener("click", event => {
+        if (event.detail > 1 && editLabelFromEvent(event)) return;
         if (Date.now() - lastPointerSelection < 250) return;
         const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
         const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
@@ -1885,6 +1909,65 @@
         const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
         if (branch) selectBranch(branch, eventKind);
       });
+      const openLabelEditor = ({kind, key, defaultLabel, currentLabel, clientX, clientY}) => {
+        const bounds = viewport.getBoundingClientRect();
+        labelEditor.dataset.kind = kind;
+        labelEditor.dataset.key = key;
+        labelEditor.dataset.defaultLabel = defaultLabel;
+        labelEditor.value = currentLabel;
+        labelEditor.style.left = `${clientX - bounds.left + viewport.scrollLeft + 6}px`;
+        labelEditor.style.top = `${clientY - bounds.top + viewport.scrollTop}px`;
+        labelEditor.hidden = false;
+        labelEditor.focus();
+        labelEditor.select();
+      };
+      const closeLabelEditor = save => {
+        if (labelEditor.hidden) return;
+        if (save) {
+          const next = labelEditor.value.trim();
+          if (labelEditor.dataset.kind === "taxonomy") {
+            if (next) state.taxonomyLabelOverrides.set(labelEditor.dataset.key, next);
+            else state.taxonomyLabelOverrides.delete(labelEditor.dataset.key);
+            localStorage.setItem("species-map-taxonomy-label-overrides", JSON.stringify(Object.fromEntries(state.taxonomyLabelOverrides)));
+          } else {
+            if (next) state.tipLabelOverrides.set(labelEditor.dataset.key, next);
+            else state.tipLabelOverrides.delete(labelEditor.dataset.key);
+            localStorage.setItem("species-map-tip-label-overrides", JSON.stringify(Object.fromEntries(state.tipLabelOverrides)));
+          }
+          renderTree();
+        }
+        labelEditor.hidden = true;
+        labelEditor.removeAttribute("data-kind");
+        labelEditor.removeAttribute("data-key");
+        labelEditor.removeAttribute("data-default-label");
+      };
+      labelEditor.addEventListener("keydown", event => {
+        if (event.key === "Enter") { event.preventDefault(); closeLabelEditor(true); }
+        else if (event.key === "Escape") { event.preventDefault(); closeLabelEditor(false); }
+      });
+      labelEditor.addEventListener("blur", () => closeLabelEditor(true));
+      const editLabelFromEvent = event => {
+        const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
+        if (taxonomyLabel) {
+          const key = taxonomyLabel.dataset.taxonomyLabelKey;
+          const defaultLabel = taxonomyLabel.dataset.taxonomyLabelDefault || "";
+          const currentLabel = state.taxonomyLabelOverrides.get(key) || defaultLabel;
+          openLabelEditor({kind: "taxonomy", key, defaultLabel, currentLabel, clientX: event.clientX, clientY: event.clientY});
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
+        const tip = event.target.closest("[data-tip-node]");
+        if (!tip) return false;
+        const nodeId = tip.dataset.tipNode;
+        const defaultLabel = tip.dataset.tipLabelDefault || "";
+        const currentLabel = state.tipLabelOverrides.get(nodeId) || defaultLabel;
+        openLabelEditor({kind: "tip", key: nodeId, defaultLabel, currentLabel, clientX: event.clientX, clientY: event.clientY});
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+      };
+      viewport.addEventListener("dblclick", editLabelFromEvent);
       viewport.addEventListener("keydown", event => {
         if (event.key !== "Enter" && event.key !== " ") return;
         const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
