@@ -154,8 +154,8 @@
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
     .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
-    .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .10; pointer-events: none; }
-    .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .08; pointer-events: none; }
+    .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .15; pointer-events: none; }
+    .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .18; pointer-events: none; }
     .taxonomy-label-badge { cursor: move; }
     .clade-taxonomy-label-bg { fill: #252b31; fill-opacity: .82; pointer-events: all; cursor: move; }
     .clade-taxonomy-label-accent { pointer-events: none; }
@@ -380,7 +380,7 @@
         <div class="tree-tools">
           <div class="tree-scale-control">
             <label for="treeZoom">Zoom</label>
-            <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
+            <input id="treeZoom" type="range" min="10" max="200" step="5" value="100" aria-label="Phylogenetic tree zoom">
             <output id="treeZoomValue" for="treeZoom">100%</output>
           </div>
           <div class="tree-scale-control">
@@ -652,16 +652,21 @@
       }
       function taxonomyColor(taxonomyRank, value, occurrenceKey = "") {
         const index = taxonomyColorIndex(taxonomyRank, value, occurrenceKey);
-        const hue = Math.round((index * 137.508 + (taxonomyRank === "family" ? 17 : 0)) % 360);
-        const saturation = [58, 72, 84][index % 3];
-        const lightness = [43, 53, 63][Math.floor(index / 3) % 3];
+        const hueCycle = [0, 210, 110, 300, 45, 255, 155, 335, 80, 230, 20, 185, 130, 280, 60, 320, 165, 240];
+        const tier = Math.floor(index / hueCycle.length);
+        const hue = (hueCycle[index % hueCycle.length] + tier * 9 + (taxonomyRank === "family" ? 4 : 0)) % 360;
+        const saturation = [82, 92, 70, 86][tier % 4];
+        const lightness = [46, 58, 38, 52][tier % 4];
         return `hsl(${hue} ${saturation}% ${lightness}%)`;
       }
       function taxonomyLabelColor(taxonomyRank, value, occurrenceKey = "") {
         const index = taxonomyColorIndex(taxonomyRank, value, occurrenceKey);
-        const hue = Math.round((index * 137.508 + (taxonomyRank === "family" ? 17 : 0)) % 360);
-        const saturation = Math.max(48, [58, 72, 84][index % 3] - 8);
-        return `hsl(${hue} ${saturation}% 23%)`;
+        const hueCycle = [0, 210, 110, 300, 45, 255, 155, 335, 80, 230, 20, 185, 130, 280, 60, 320, 165, 240];
+        const tier = Math.floor(index / hueCycle.length);
+        const hue = (hueCycle[index % hueCycle.length] + tier * 9 + (taxonomyRank === "family" ? 4 : 0)) % 360;
+        const saturation = [74, 84, 66, 78][tier % 4];
+        const lightness = [23, 27, 20, 25][tier % 4];
+        return `hsl(${hue} ${saturation}% ${lightness}%)`;
       }
       function appendTaxonomyBadge(text, taxonomyRank, value, key, x, y, anchor = "start", transform = "") {
         const width = Math.max(44, text.length * 5.4 + 10);
@@ -1010,8 +1015,8 @@
         .filtered-branch-label { opacity: .1; }
         .tip-label { font: 11px sans-serif; fill: ${color("--ink")}; }
         .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
-        .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .10; }
-        .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .08; }
+        .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .15; }
+        .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .18; }
         .clade-taxonomy-label-bg { fill: #252b31; fill-opacity: .82; }
         .clade-taxonomy-label { fill: #fff; font: 600 9px sans-serif; }
         .clade-taxonomy-label.genus { font-style: italic; }
