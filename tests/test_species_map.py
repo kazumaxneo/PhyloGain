@@ -7,8 +7,10 @@ import unittest
 import zlib
 from contextlib import closing
 from pathlib import Path
+from unittest.mock import patch
 
 from species_innovation_map.analysis import Reconstruction
+from species_innovation_map.annotation import branch_enrichment, write_representative_fasta
 from species_innovation_map.project import build_project, validate_inputs
 from species_innovation_map.tree import leaf_labels, parse_newick
 from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxonomy
@@ -18,6 +20,8 @@ HERE = Path(__file__).parent
 FIXTURE = HERE / "fixtures" / "orthofinder"
 PHENOTYPES = HERE / "fixtures" / "phenotypes.tsv"
 GTDB_TAXONOMY = HERE / "fixtures" / "gtdb_taxonomy.tsv"
+EGGNOG_ANNOTATIONS = HERE / "fixtures" / "eggnog.emapper.annotations"
+PROTEOMES = HERE / "fixtures" / "proteomes"
 
 
 class TreeTests(unittest.TestCase):
@@ -91,6 +95,64 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('`${node.rankValue} (1)`', html)
             self.assertIn(".taxonomy-tip-label", html)
             self.assertIn('tipClass = rank && node.rankValue ? "taxonomy-tip-label"', html)
+
+    def test_build_project_with_existing_eggnog_annotations(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            result = build_project(FIXTURE, output, annotation_path=EGGNOG_ANNOTATIONS)
+            self.assertEqual(result["annotated_families"], 4)
+            with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
+                connection.row_factory = sqlite3.Row
+                family = connection.execute(
+                    "SELECT preferred_name,description FROM families WHERE family_id='OG0000001'"
+                ).fetchone()
+                self.assertEqual(family["preferred_name"], "nifH")
+                terms = connection.execute(
+                    "SELECT COUNT(*) FROM family_terms WHERE family_id='OG0000001'"
+                ).fetchone()[0]
+                self.assertGreaterEqual(terms, 5)
+                branch = connection.execute(
+                    "SELECT branch_id FROM events WHERE family_id='OG0000001' AND event='gain'"
+                ).fetchone()[0]
+                enrichment = branch_enrichment(connection, branch, "gain", min_overlap=1)
+                self.assertTrue(enrichment["results"])
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project["settings"]["annotation_engine"], "eggnog")
+            self.assertTrue((output / "annotations" / "eggnog.emapper.annotations").is_file())
+            self.assertTrue((output / "functional_annotations.tsv").is_file())
+            html = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn("Gained-family enrichment", html)
+            self.assertIn("/api/enrichment?branch=", html)
+            self.assertIn("Functional annotation", html)
+
+    def test_build_project_runs_optional_eggnog_annotation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            with patch(
+                "species_innovation_map.project.run_eggnog_mapper",
+                return_value=EGGNOG_ANNOTATIONS,
+            ) as runner:
+                result = build_project(
+                    FIXTURE,
+                    output,
+                    annotate="eggnog",
+                    proteomes=PROTEOMES,
+                    annotation_cpu=3,
+                )
+            self.assertEqual(result["annotated_families"], 4)
+            self.assertTrue((output / "annotations" / "orthogroup_representatives.faa").is_file())
+            self.assertEqual(runner.call_args.kwargs["cpu"], 3)
+
+    def test_write_orthogroup_representatives(self):
+        with tempfile.TemporaryDirectory() as directory:
+            fasta = Path(directory) / "representatives.faa"
+            count = write_representative_fasta(
+                FIXTURE / "Orthogroups" / "Orthogroups.tsv", PROTEOMES, fasta
+            )
+            self.assertEqual(count, 4)
+            text = fasta.read_text(encoding="utf-8")
+            self.assertIn(">OG0000001\n", text)
+            self.assertNotIn(">gene_A1", text)
 
 
 class TaxonomyTests(unittest.TestCase):

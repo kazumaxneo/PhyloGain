@@ -147,8 +147,16 @@
     .count { padding: 0; }
     .count strong { margin-left: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
     .section-title { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .enrichment-table td:first-child { width: 100%; }
+    .term-source { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .number-cell { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
     .event-list { display: grid; gap: 5px; }
-    .family-button { display: flex; justify-content: space-between; width: 100%; text-align: left; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .family-button { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; text-align: left; }
+    .family-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .family-description { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.3; }
+    .function-name { margin-bottom: 5px; font-weight: 650; }
+    .function-description { color: var(--muted); font-size: 12px; line-height: 1.45; }
+    .annotation-list { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
     .tag { padding: 1px 6px; border-radius: 10px; font: 700 10px/1.5 sans-serif; text-transform: uppercase; }
     .tag.gain { color: var(--gain); background: var(--gain-soft); }
     .tag.loss { color: var(--loss); background: var(--loss-soft); }
@@ -299,7 +307,7 @@
         svg.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
         svg.append(line);
-        const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id});
+        const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
         const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
         const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
         label.append(gain, loss); svg.append(label);
@@ -338,14 +346,28 @@
       const counts = document.createElement("div"); counts.className = "counts";
       counts.innerHTML = `<div class="count">Gain <strong>+${number(branch.gain_count)}</strong></div><div class="count">Loss <strong>−${number(branch.loss_count)}</strong></div>`;
       body.append(counts);
-      const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading gene families…"; body.append(loading);
-      const result = await api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500`);
+      const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading branch analysis…"; body.append(loading);
+      const annotated = state.project.settings?.annotation_engine;
+      const requests = [api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500`)];
+      if (annotated) {
+        requests.push(api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=gain&limit=20`));
+        requests.push(api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=loss&limit=20`));
+      }
+      const responses = await Promise.all(requests);
+      const result = responses[0];
       loading.remove();
+      if (annotated) {
+        appendEnrichment(body, responses[1], "Gained-family enrichment");
+        appendEnrichment(body, responses[2], "Lost-family enrichment");
+      }
       const title = document.createElement("div"); title.className = "section-title"; title.textContent = `Gene-family events (${number(result.total)})`; body.append(title);
       const list = document.createElement("div"); list.className = "event-list";
       for (const event of result.events) {
         const button = document.createElement("button"); button.className = "family-button";
-        const family = document.createElement("span"); family.textContent = event.family_id;
+        const family = document.createElement("span");
+        const familyId = document.createElement("span"); familyId.className = "family-id"; familyId.textContent = event.family_id; family.append(familyId);
+        const annotation = event.preferred_name || event.description;
+        if (annotation) { const description = document.createElement("span"); description.className = "family-description"; description.textContent = [event.preferred_name, event.description].filter(Boolean).join(" — "); family.append(description); }
         const tag = document.createElement("span"); tag.className = `tag ${event.event}`; tag.textContent = event.event;
         button.append(family, tag); button.addEventListener("click", () => showFamily(event.family_id)); list.append(button);
       }
@@ -354,11 +376,37 @@
         const note = document.createElement("div"); note.className = "empty"; note.textContent = `Showing the first ${number(result.events.length)} events. Complete results are in gene_gain_loss.tsv.`; body.append(note);
       }
     }
+    function appendEnrichment(body, enrichment, heading) {
+      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; body.append(title);
+      if (!enrichment.foreground) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No gene-family events on this branch."; body.append(empty); return; }
+      const significant = enrichment.results.filter(row => row.q_value <= 0.05);
+      if (!significant.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No enriched terms at FDR ≤ 0.05."; body.append(empty); return; }
+      const table = document.createElement("table"); table.className = "enrichment-table";
+      table.innerHTML = "<thead><tr><th>Term</th><th>Hits</th><th>FDR</th></tr></thead>";
+      const tbody = document.createElement("tbody");
+      for (const row of significant) {
+        const tr = document.createElement("tr");
+        const term = document.createElement("td"); term.textContent = row.term_name || row.term_id;
+        const source = document.createElement("span"); source.className = "term-source"; source.textContent = `${row.source} · ${row.term_id} · ${formatFold(row.fold_enrichment)}×`; term.append(source);
+        const hits = document.createElement("td"); hits.className = "number-cell"; hits.textContent = `${row.overlap}/${row.foreground}`;
+        const fdr = document.createElement("td"); fdr.className = "number-cell"; fdr.textContent = formatProbability(row.q_value);
+        tr.append(term, hits, fdr); tbody.append(tr);
+      }
+      table.append(tbody); body.append(table);
+    }
+    function formatProbability(value) { return value < 0.001 ? Number(value).toExponential(1) : Number(value).toFixed(3); }
+    function formatFold(value) { return value >= 10 ? Number(value).toFixed(0) : Number(value).toFixed(1); }
     async function showFamily(familyId) {
       openDetailPanel();
       const result = await api(`/api/family?id=${encodeURIComponent(familyId)}`);
       $("detailTitle").textContent = familyId; $("detailSubtitle").textContent = "Gene-family members";
       const body = $("detailBody"); body.replaceChildren();
+      if (result.preferred_name || result.description || result.annotations?.length) {
+        const functionTitle = document.createElement("div"); functionTitle.className = "section-title"; functionTitle.textContent = "Functional annotation"; body.append(functionTitle);
+        if (result.preferred_name) { const name = document.createElement("div"); name.className = "function-name"; name.textContent = result.preferred_name; body.append(name); }
+        if (result.description) { const description = document.createElement("div"); description.className = "function-description"; description.textContent = result.description; body.append(description); }
+        if (result.annotations?.length) { const terms = document.createElement("div"); terms.className = "annotation-list"; terms.textContent = result.annotations.map(item => `${item.source}: ${item.term_name || item.term_id}`).join(" · "); body.append(terms); }
+      }
       const eventTitle = document.createElement("div"); eventTitle.className = "section-title"; eventTitle.textContent = "Inferred events"; body.append(eventTitle);
       const eventText = document.createElement("div"); eventText.textContent = result.events.map(e => `${e.branch_id} ${e.event}`).join(" · ") || "No transitions"; body.append(eventText);
       const memberTitle = document.createElement("div"); memberTitle.className = "section-title"; memberTitle.textContent = "Genes by species"; body.append(memberTitle);
@@ -419,6 +467,7 @@
       let startTop = 0;
       let pendingBranch = null;
       let pendingExpandNode = null;
+      let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         active = true;
@@ -451,6 +500,7 @@
           state.expandedGroups.add(`${state.collapseRank}:${pendingExpandNode}`);
           renderTree();
         } else if (!moved && pendingBranch) {
+          lastPointerSelection = Date.now();
           selectBranch(pendingBranch);
         }
         pendingBranch = null;
@@ -458,6 +508,16 @@
       };
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);
+      viewport.addEventListener("click", event => {
+        if (Date.now() - lastPointerSelection < 250) return;
+        const branch = event.target.closest("[data-branch]")?.dataset.branch;
+        if (branch) selectBranch(branch);
+      });
+      viewport.addEventListener("keydown", event => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        const branch = event.target.closest("[data-branch]")?.dataset.branch;
+        if (branch) { event.preventDefault(); selectBranch(branch); }
+      });
     }
     enableTreePan();
     const themes = new Set(["white", "black", "brown", "green", "blue"]);

@@ -1,0 +1,6 @@
+## emapper-2.1.13
+#query	Preferred_name	Description	GOs	KEGG_ko	KEGG_Pathway	KEGG_Module	KEGG_Reaction	COG_category	PFAMs
+OG0000001	nifH	nitrogenase iron protein	GO:0009399	ko:K02588	map00910	M00175	R00001	C	Fer4_NifH
+OG0000002	rpoB	DNA-directed RNA polymerase beta subunit	GO:0003677	ko:K03043	-	-	-	K	RNA_pol_Rpb2
+OG0000003	fdx	ferredoxin	GO:0009055	ko:K05524	map00910	-	-	C	Fer4
+OG0000004	-	hypothetical protein	-	-	-	-	-	S	-

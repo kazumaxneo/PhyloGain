@@ -33,6 +33,22 @@ def parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip indexing Orthogroups.tsv gene IDs for a smaller output",
     )
+    build.add_argument(
+        "--annotate",
+        choices=["eggnog"],
+        help="Run optional functional annotation (currently: eggnog)",
+    )
+    build.add_argument(
+        "--annotations",
+        help="Import an existing eggNOG-mapper .emapper.annotations file",
+    )
+    build.add_argument(
+        "--proteomes",
+        help="Protein FASTA directory used by OrthoFinder (required with --annotate eggnog)",
+    )
+    build.add_argument("--eggnog-emapper", default="emapper.py")
+    build.add_argument("--eggnog-data-dir")
+    build.add_argument("--annotation-cpu", type=int, default=1)
 
     serve = commands.add_parser("serve", help="Open a generated map in a local web server")
     serve.add_argument("project", help="Generated Species Innovation Map directory")
@@ -90,6 +106,12 @@ def main(argv: list[str] | None = None) -> None:
                 include_members=not args.no_members,
                 species_tree_path=args.species_tree,
                 gtdb_taxonomy_path=args.gtdb_taxonomy,
+                annotate=args.annotate,
+                annotation_path=args.annotations,
+                proteomes=args.proteomes,
+                eggnog_emapper=args.eggnog_emapper,
+                eggnog_data_dir=args.eggnog_data_dir,
+                annotation_cpu=args.annotation_cpu,
                 progress=lambda message: print(message, flush=True),
             )
             print(

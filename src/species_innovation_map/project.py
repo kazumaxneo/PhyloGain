@@ -20,6 +20,11 @@ from .analysis import (
     read_count_header,
     read_phenotypes,
 )
+from .annotation import (
+    import_eggnog_annotations,
+    run_eggnog_mapper,
+    write_representative_fasta,
+)
 from .tree import as_project_nodes, leaf_labels, parse_newick, preorder
 from .taxonomy import read_gtdb_taxonomy
 
@@ -132,6 +137,12 @@ def build_project(
     include_members: bool = True,
     species_tree_path: str | Path | None = None,
     gtdb_taxonomy_path: str | Path | None = None,
+    annotate: str | None = None,
+    annotation_path: str | Path | None = None,
+    proteomes: str | Path | None = None,
+    eggnog_emapper: str = "emapper.py",
+    eggnog_data_dir: str | Path | None = None,
+    annotation_cpu: int = 1,
     progress=None,
 ) -> dict[str, object]:
     progress = progress or (lambda message: None)
@@ -145,6 +156,14 @@ def build_project(
     if not report["ok"]:
         raise InputError("; ".join(report["errors"]))
     found = find_orthofinder_files(orthofinder)
+    if annotate and annotation_path:
+        raise InputError("Use either --annotate or --annotations, not both")
+    if annotate == "eggnog" and not proteomes:
+        raise InputError("--proteomes is required with --annotate eggnog")
+    if (annotate or annotation_path) and not found["members"]:
+        raise InputError("Orthogroups.tsv is required for functional annotation")
+    if annotation_path and not Path(annotation_path).is_file():
+        raise InputError(f"Annotation file was not found: {annotation_path}")
     output_path = Path(output).resolve()
     if output_path.exists() and any(output_path.iterdir()):
         raise InputError(f"Output directory is not empty: {output_path}")
@@ -280,10 +299,39 @@ def build_project(
         progress("Indexing gene IDs for interactive lookup")
         _import_members(connection, found["members"], progress)
 
+    annotation_report: dict[str, int] | None = None
+    imported_annotation: Path | None = None
+    if annotate == "eggnog":
+        annotation_dir = output_path / "annotations"
+        representative_path = annotation_dir / "orthogroup_representatives.faa"
+        progress("Selecting one representative protein per orthogroup")
+        representative_count = write_representative_fasta(
+            found["members"], proteomes, representative_path
+        )
+        progress(f"Running eggNOG-mapper for {representative_count:,} representatives")
+        imported_annotation = run_eggnog_mapper(
+            representative_path,
+            annotation_dir,
+            emapper=eggnog_emapper,
+            data_dir=eggnog_data_dir,
+            cpu=annotation_cpu,
+        )
+    elif annotation_path:
+        annotation_dir = output_path / "annotations"
+        annotation_dir.mkdir(parents=True, exist_ok=True)
+        imported_annotation = annotation_dir / "eggnog.emapper.annotations"
+        shutil.copyfile(annotation_path, imported_annotation)
+    if imported_annotation:
+        progress("Importing functional annotations")
+        annotation_report = import_eggnog_annotations(connection, imported_annotation)
+        _write_functional_annotations(connection, output_path / "functional_annotations.tsv")
+
     connection.executescript(
         """
         CREATE INDEX idx_events_branch ON events(branch_id, event);
         CREATE INDEX idx_events_family ON events(family_id, event);
+        CREATE INDEX idx_family_terms_family ON family_terms(family_id);
+        CREATE INDEX idx_family_terms_term ON family_terms(source, term_id, family_id);
         CREATE INDEX idx_phenotype_branch ON phenotype_events(phenotype_id, branch_id, event);
         """
     )
@@ -321,6 +369,8 @@ def build_project(
             "root_state": root_state,
             "presence_threshold": presence_threshold,
             "gene_members_indexed": bool(include_members and found["members"]),
+            "annotation_engine": "eggnog" if imported_annotation else None,
+            "annotated_families": annotation_report["annotated_families"] if annotation_report else 0,
         },
     }
     (output_path / "project.json").write_text(
@@ -336,6 +386,8 @@ def build_project(
         "gene_members_file": str(found["members"]) if found["members"] else None,
         "phenotype_file": str(Path(phenotype_path).resolve()) if phenotype_path else None,
         "gtdb_taxonomy_file": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
+        "annotation_file": str(imported_annotation) if imported_annotation else None,
+        "proteomes_directory": str(Path(proteomes).resolve()) if proteomes else None,
         "warnings": report["warnings"],
     }
     (output_path / "run_metadata.json").write_text(
@@ -350,6 +402,7 @@ def build_project(
         "branches": len(branch_rows),
         "phenotypes": phenotype_names,
         "taxonomy_species": len(taxonomy_data),
+        "annotated_families": annotation_report["annotated_families"] if annotation_report else 0,
         "warnings": report["warnings"],
     }
 
@@ -367,7 +420,12 @@ def _create_schema(connection: sqlite3.Connection) -> None:
           gain_count INTEGER NOT NULL DEFAULT 0,
           loss_count INTEGER NOT NULL DEFAULT 0
         );
-        CREATE TABLE families(family_id TEXT PRIMARY KEY, members_json BLOB);
+        CREATE TABLE families(
+          family_id TEXT PRIMARY KEY,
+          members_json BLOB,
+          preferred_name TEXT NOT NULL DEFAULT '',
+          description TEXT NOT NULL DEFAULT ''
+        );
         CREATE TABLE events(
           branch_id TEXT NOT NULL,
           family_id TEXT NOT NULL,
@@ -390,6 +448,19 @@ def _create_schema(connection: sqlite3.Connection) -> None:
           phenotype_gains INTEGER NOT NULL,
           family_gains INTEGER NOT NULL,
           PRIMARY KEY(phenotype_id, family_id)
+        );
+        CREATE TABLE annotation_terms(
+          source TEXT NOT NULL,
+          term_id TEXT NOT NULL,
+          term_name TEXT NOT NULL,
+          family_count INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY(source, term_id)
+        );
+        CREATE TABLE family_terms(
+          family_id TEXT NOT NULL,
+          source TEXT NOT NULL,
+          term_id TEXT NOT NULL,
+          PRIMARY KEY(family_id, source, term_id)
         );
         """
     )
@@ -500,5 +571,25 @@ def _write_candidates(connection: sqlite3.Connection, path: Path) -> None:
         writer.writerows(
             connection.execute(
                 "SELECT phenotype_id,family_id,score,coincident_gains,phenotype_gains,family_gains FROM candidates ORDER BY phenotype_id,score DESC,family_id"
+            )
+        )
+
+
+def _write_functional_annotations(connection: sqlite3.Connection, path: Path) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(
+            ["family_id", "preferred_name", "description", "source", "term_id", "term_name"]
+        )
+        writer.writerows(
+            connection.execute(
+                """
+                SELECT f.family_id,f.preferred_name,f.description,
+                       ft.source,ft.term_id,at.term_name
+                FROM families f
+                LEFT JOIN family_terms ft ON ft.family_id=f.family_id
+                LEFT JOIN annotation_terms at ON at.source=ft.source AND at.term_id=ft.term_id
+                ORDER BY f.family_id,ft.source,ft.term_id
+                """
             )
         )
