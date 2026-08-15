@@ -181,6 +181,7 @@ species-map validate \
 Numeric internal-node support labels in the selected Newick tree are shown below
 their branches on a 0–1 scale. Values supplied as percentages (for example, `95`)
 are normalized to `0.950`; branches without support labels remain unlabelled.
+The Zoom slider scales the complete tree while preserving the current viewport center.
 
 Example with gains penalized relative to losses:
 

@@ -28,6 +28,7 @@
 - Move the four dataset statistics into the title bar to preserve vertical space on laptop screens.
 - Clarify the gained- and lost-family functional-enrichment headings in the branch detail panel.
 - Show Newick internal-node support values below branches on a normalized 0–1 scale.
+- Add a persistent 60–200% phylogenetic-tree zoom slider that keeps the current viewport centered.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15
