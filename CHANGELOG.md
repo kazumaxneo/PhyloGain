@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — 2026-08-15
+
+- Add a database selector for KEGG pathway/module/KO, GO, Pfam, COG, and KEGG reaction enrichment.
+- Correct multiple testing separately within the selected annotation database.
+- Add a labelled −log10(FDR) axis, tick marks, and guide lines to enrichment charts.
+- Add background frequencies to the exact enrichment tables.
+
 ## 0.3.1 — 2026-08-15
 
 - Widen the branch-detail panel for enrichment results.

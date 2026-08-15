@@ -205,6 +205,7 @@ def branch_enrichment(
     event: str,
     limit: int = 20,
     min_overlap: int = 2,
+    source: str | None = None,
 ) -> dict[str, object]:
     if event not in {"gain", "loss"}:
         raise ValueError("event must be gain or loss")
@@ -213,25 +214,36 @@ def branch_enrichment(
         "SELECT COUNT(DISTINCT family_id) FROM events WHERE branch_id=? AND event=?",
         (branch_id, event),
     ).fetchone()[0]
+    if source is not None:
+        available = {
+            row[0]
+            for row in connection.execute("SELECT DISTINCT source FROM annotation_terms")
+        }
+        if source not in available:
+            raise ValueError(f"Unknown annotation database: {source}")
+    source_filter = " AND ft.source=?" if source is not None else ""
+    parameters: list[object] = [branch_id, event]
+    if source is not None:
+        parameters.append(source)
     rows = connection.execute(
-        """
+        f"""
         SELECT ft.source,ft.term_id,at.term_name,
                COUNT(DISTINCT ft.family_id) AS overlap,at.family_count
         FROM events e
         JOIN family_terms ft ON ft.family_id=e.family_id
         JOIN annotation_terms at ON at.source=ft.source AND at.term_id=ft.term_id
-        WHERE e.branch_id=? AND e.event=?
+        WHERE e.branch_id=? AND e.event=?{source_filter}
         GROUP BY ft.source,ft.term_id,at.term_name,at.family_count
         """,
-        (branch_id, event),
+        parameters,
     ).fetchall()
     tested = []
-    for source, term_id, term_name, overlap, term_total in rows:
+    for row_source, term_id, term_name, overlap, term_total in rows:
         p_value = _hypergeom_sf(overlap, universe, term_total, foreground)
         fold = (overlap / foreground) / (term_total / universe) if foreground else 0.0
         tested.append(
             {
-                "source": source,
+                "source": row_source,
                 "term_id": term_id,
                 "term_name": term_name,
                 "overlap": overlap,
@@ -248,11 +260,44 @@ def branch_enrichment(
     return {
         "branch_id": branch_id,
         "event": event,
+        "source": source,
         "foreground": foreground,
         "universe": universe,
         "tested_terms": len(tested),
         "results": results[:limit],
     }
+
+
+def annotation_sources(connection: sqlite3.Connection) -> list[dict[str, object]]:
+    preferred_order = {
+        name: index
+        for index, name in enumerate(
+            [
+                "KEGG pathway",
+                "KEGG module",
+                "KEGG KO",
+                "GO",
+                "Pfam",
+                "COG category",
+                "KEGG reaction",
+            ]
+        )
+    }
+    rows = connection.execute(
+        """
+        SELECT at.source,COUNT(DISTINCT at.term_id) AS term_count,
+               COUNT(DISTINCT ft.family_id) AS family_count
+        FROM annotation_terms at
+        LEFT JOIN family_terms ft ON ft.source=at.source AND ft.term_id=at.term_id
+        GROUP BY at.source
+        """
+    ).fetchall()
+    results = [
+        {"source": row[0], "term_count": row[1], "family_count": row[2]}
+        for row in rows
+    ]
+    results.sort(key=lambda row: (preferred_order.get(row["source"], 999), row["source"]))
+    return results
 
 
 def _read_wanted_fasta(path: Path, wanted: dict[str, str]):

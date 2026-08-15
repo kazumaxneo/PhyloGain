@@ -8,7 +8,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
-from .annotation import branch_enrichment
+from .annotation import annotation_sources, branch_enrichment
 
 
 class ProjectHandler(SimpleHTTPRequestHandler):
@@ -77,11 +77,16 @@ class ProjectHandler(SimpleHTTPRequestHandler):
                 event = _required(query, "event")
                 limit = min(max(int(query.get("limit", ["20"])[0]), 1), 100)
                 min_overlap = min(max(int(query.get("min_overlap", ["2"])[0]), 1), 1000)
+                source = query.get("source", [None])[0]
                 if not _has_table(connection, "family_terms"):
                     return {"branch_id": branch, "event": event, "results": [], "available": False}
-                payload = branch_enrichment(connection, branch, event, limit, min_overlap)
+                payload = branch_enrichment(connection, branch, event, limit, min_overlap, source)
                 payload["available"] = True
                 return payload
+            if path == "/api/annotation-sources":
+                if not _has_table(connection, "family_terms"):
+                    return []
+                return annotation_sources(connection)
             if path == "/api/family":
                 family = _required(query, "id")
                 annotated = _has_column(connection, "families", "preferred_name")

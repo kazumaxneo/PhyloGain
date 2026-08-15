@@ -10,7 +10,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from species_innovation_map.analysis import Reconstruction
-from species_innovation_map.annotation import branch_enrichment, write_representative_fasta
+from species_innovation_map.annotation import (
+    annotation_sources,
+    branch_enrichment,
+    write_representative_fasta,
+)
 from species_innovation_map.project import build_project, validate_inputs
 from species_innovation_map.tree import leaf_labels, parse_newick
 from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxonomy
@@ -116,6 +120,20 @@ class ProjectTests(unittest.TestCase):
                 ).fetchone()[0]
                 enrichment = branch_enrichment(connection, branch, "gain", min_overlap=1)
                 self.assertTrue(enrichment["results"])
+                self.assertIsNone(enrichment["source"])
+                source = enrichment["results"][0]["source"]
+                source_enrichment = branch_enrichment(
+                    connection, branch, "gain", min_overlap=1, source=source
+                )
+                self.assertEqual(source_enrichment["source"], source)
+                self.assertTrue(
+                    all(row["source"] == source for row in source_enrichment["results"])
+                )
+                self.assertIn(source, [item["source"] for item in annotation_sources(connection)])
+                with self.assertRaisesRegex(ValueError, "Unknown annotation database"):
+                    branch_enrichment(
+                        connection, branch, "gain", min_overlap=1, source="Not a database"
+                    )
             project = json.loads((output / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project["settings"]["annotation_engine"], "eggnog")
             self.assertTrue((output / "annotations" / "eggnog.emapper.annotations").is_file())
@@ -124,7 +142,10 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("Gained-family enrichment", html)
             self.assertIn("/api/enrichment?branch=", html)
             self.assertIn("Functional annotation", html)
-            self.assertIn("bar length = −log10(FDR)", html)
+            self.assertIn("FDR corrected within database", html)
+            self.assertIn("/api/annotation-sources", html)
+            self.assertIn("chart-axis", html)
+            self.assertIn("Background", html)
             self.assertIn("width: min(760px", html)
             self.assertIn('className = `chart-bar ${eventType}`', html)
 
