@@ -41,6 +41,8 @@
 - Offer bootstrap-collapse thresholds from 0.10 through 1.00 in 0.10 increments.
 - Add labelled horizontal and vertical spacing sliders plus Rectangular and Circular display layouts.
 - Rotate Circular tip labels with their terminal branches, keep left-side labels readable, and add a 6–16 px tip-font slider.
+- Widen the Zoom, spacing, and tip-font slider tracks by moving their values above the gauges.
+- Align Gain/Loss with the other controls by placing their labels and values above full-width gauges.
 - Export the complete current tree view as a self-contained SVG from the upper-right control row.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
