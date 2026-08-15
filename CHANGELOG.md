@@ -48,6 +48,9 @@
 - Keep Gain/Loss gauges at fixed widths on wide displays and leave surplus space on the right.
 - Download each enrichment bar plot as SVG and its complete significant-term table as UTF-8 TSV.
 - Include a labelled FDR color legend and Count axis title in downloaded enrichment SVGs.
+- Rename Gain/Loss controls to Filter (gain)/Filter (loss), enlarge their labels, and use pure white text in the black theme.
+- Match downloaded enrichment SVGs to the web view with a vertical FDR legend on the plot's right side.
+- Shorten the spacing-control labels to Horizontal and Vertical.
 - Export the complete current tree view as a self-contained SVG from the upper-right control row.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
