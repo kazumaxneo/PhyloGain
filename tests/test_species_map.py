@@ -113,6 +113,16 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('`${node.rankValue} (1)`', html)
             self.assertIn(".taxonomy-tip-label", html)
             self.assertIn('tipClass = rank && node.rankValue ? "taxonomy-tip-label"', html)
+            self.assertIn('filter(rank => rank !== "domain")', html)
+            self.assertIn(".clade-taxonomy-band.family", html)
+            self.assertIn('function appendTaxonomyLegend(x, y)', html)
+            self.assertIn("margin: 35vh 45vw", html)
+            self.assertIn('function taxonomyColor(taxonomyRank, value, occurrenceKey = "")', html)
+            self.assertIn('function taxonomyLabelColor(taxonomyRank, value, occurrenceKey = "")', html)
+            self.assertIn("const taxonomyDisplayColorIndex = new Map()", html)
+            self.assertIn("137.508", html)
+            self.assertIn('data-taxonomy-label-key', html)
+            self.assertIn('species-map-taxonomy-label-offsets', html)
 
     def test_build_project_with_existing_eggnog_annotations(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -140,7 +140,7 @@
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
     .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
-    #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
+    #treeSvg { display: block; margin: 35vh 45vw; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
@@ -154,9 +154,16 @@
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
     .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
-    .clade-taxonomy-label { font: 600 9px/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
-    .clade-taxonomy-label.family { fill: #4f8fc9; }
-    .clade-taxonomy-label.genus { fill: #a477c7; font-style: italic; }
+    .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .10; pointer-events: none; }
+    .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .08; pointer-events: none; }
+    .taxonomy-label-badge { cursor: move; }
+    .clade-taxonomy-label-bg { fill: #252b31; fill-opacity: .82; pointer-events: all; cursor: move; }
+    .clade-taxonomy-label-accent { pointer-events: none; }
+    .clade-taxonomy-label { fill: #fff; font: 600 9px/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+    .clade-taxonomy-label.genus { font-style: italic; }
+    .taxonomy-legend-label { fill: var(--muted); font: 9px Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+    .taxonomy-legend-swatch.family { fill: #4f8fc9; fill-opacity: .45; }
+    .taxonomy-legend-swatch.genus { fill: #a477c7; fill-opacity: .40; }
     .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
@@ -423,7 +430,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -458,7 +465,7 @@
           $("phenotypeSelect").append(option);
         }
         const rankLabels = {domain: "Domain", phylum: "Phylum", class: "Class", order: "Order", family: "Family", genus: "Genus", species: "Species"};
-        const ranks = (project.taxonomy?.ranks || []).filter(rank => rank !== "domain" && rank !== "species");
+        const ranks = (project.taxonomy?.ranks || []).filter(rank => rank !== "domain");
         for (const rank of ranks) {
           const option = document.createElement("option"); option.value = rank; option.textContent = rankLabels[rank] || rank;
           $("collapseSelect").append(option);
@@ -479,8 +486,20 @@
           $("cladeLabelSelect").value = storedCladeLabels;
         }
         $("cladeLabelControl").hidden = cladeRanks.length === 0;
+        try {
+          const storedOffsets = JSON.parse(localStorage.getItem("species-map-taxonomy-label-offsets") || "{}");
+          state.taxonomyLabelOffsets = new Map(Object.entries(storedOffsets));
+        } catch (_) {
+          state.taxonomyLabelOffsets = new Map();
+        }
         $("status").remove();
         renderTree();
+        requestAnimationFrame(() => {
+          const viewport = $("treeViewport");
+          const treeStyle = getComputedStyle($("treeSvg"));
+          viewport.scrollLeft = parseFloat(treeStyle.marginLeft) || 0;
+          viewport.scrollTop = parseFloat(treeStyle.marginTop) || 0;
+        });
       } catch (error) {
         $("status").textContent = "The viewer needs the local API. Run: species-map serve <output-directory>";
         console.error(error);
@@ -545,6 +564,10 @@
       const root = [...nodes.values()].find(node => !node.parent_id);
       const taxonomy = state.project.taxonomy?.species || {};
       const rank = state.collapseRank;
+      // Use one color per displayed clade occurrence. Disjoint occurrences of
+      // the same GTDB name remain distinguishable, while each badge keeps the
+      // same hue as its corresponding background band.
+      const taxonomyDisplayColorIndex = new Map();
       const cladeSizes = new Map();
       function cladeSize(node) {
         if (cladeSizes.has(node.id)) return cladeSizes.get(node.id);
@@ -612,17 +635,63 @@
             const offset = (index - (labels.length - 1) / 2) * 12;
             const x = node.x + ux * 9 + px * offset;
             const y = node.y + uy * 9 + py * offset;
-            const labelNode = svgEl("text", {x, y, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${angle} ${x} ${y})`, class: `clade-taxonomy-label ${item.rank}`});
-            labelNode.textContent = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
-            canvas.append(labelNode);
+            const text = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+            appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, x, y, anchor, `rotate(${angle} ${x} ${y})`);
           });
           return;
         }
         labels.forEach((item, index) => {
-          const labelNode = svgEl("text", {x: node.x + 7, y: node.y + 15 + index * 11, class: `clade-taxonomy-label ${item.rank}`});
-          labelNode.textContent = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
-          canvas.append(labelNode);
+          const text = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+          appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, node.x + 7, node.y + 15 + index * 15);
         });
+      }
+      function taxonomyColorIndex(taxonomyRank, value, occurrenceKey = "") {
+        const key = occurrenceKey || `${taxonomyRank}:${value}`;
+        if (!taxonomyDisplayColorIndex.has(key)) taxonomyDisplayColorIndex.set(key, taxonomyDisplayColorIndex.size);
+        return taxonomyDisplayColorIndex.get(key);
+      }
+      function taxonomyColor(taxonomyRank, value, occurrenceKey = "") {
+        const index = taxonomyColorIndex(taxonomyRank, value, occurrenceKey);
+        const hue = Math.round((index * 137.508 + (taxonomyRank === "family" ? 17 : 0)) % 360);
+        const saturation = [58, 72, 84][index % 3];
+        const lightness = [43, 53, 63][Math.floor(index / 3) % 3];
+        return `hsl(${hue} ${saturation}% ${lightness}%)`;
+      }
+      function taxonomyLabelColor(taxonomyRank, value, occurrenceKey = "") {
+        const index = taxonomyColorIndex(taxonomyRank, value, occurrenceKey);
+        const hue = Math.round((index * 137.508 + (taxonomyRank === "family" ? 17 : 0)) % 360);
+        const saturation = Math.max(48, [58, 72, 84][index % 3] - 8);
+        return `hsl(${hue} ${saturation}% 23%)`;
+      }
+      function appendTaxonomyBadge(text, taxonomyRank, value, key, x, y, anchor = "start", transform = "") {
+        const width = Math.max(44, text.length * 5.4 + 10);
+        const left = anchor === "end" ? x - width : x;
+        const offset = state.taxonomyLabelOffsets.get(key) || {x: 0, y: 0};
+        const group = svgEl("g", {class: "taxonomy-label-badge", "data-taxonomy-label-key": key, transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
+        const rotated = svgEl("g", transform ? {transform} : {});
+        rotated.append(svgEl("rect", {x: left - 4, y: y - 10, width, height: 14, rx: 2, class: "clade-taxonomy-label-bg", style: `fill:${taxonomyLabelColor(taxonomyRank, value, key)}`}));
+        rotated.append(svgEl("rect", {x: left - 4, y: y - 10, width: 3, height: 14, rx: 1, class: "clade-taxonomy-label-accent", style: `fill:${taxonomyColor(taxonomyRank, value, key)}`}));
+        const labelNode = svgEl("text", {x, y, "text-anchor": anchor, class: `clade-taxonomy-label ${taxonomyRank}`});
+        labelNode.textContent = text;
+        rotated.append(labelNode);
+        group.append(rotated);
+        canvas.append(group);
+      }
+      function appendTaxonomyLegend(x, y) {
+        if (!state.cladeLabelMode) return;
+        const group = svgEl("g", {"aria-label": "GTDB clade background legend"});
+        const title = svgEl("text", {x, y, class: "taxonomy-legend-label"});
+        title.textContent = "GTDB clades";
+        group.append(title);
+        const sampleEntries = [...taxonomyDisplayColorIndex.entries()].slice(0, 5);
+        sampleEntries.forEach(([key], index) => {
+          const taxonomyRank = key.startsWith("family:") ? "family" : "genus";
+          group.append(svgEl("rect", {x: x + 66 + index * 17, y: y - 9, width: 13, height: 10, rx: 1, style: `fill:${taxonomyColor(taxonomyRank, "", key)}`}));
+        });
+        const explanation = svgEl("text", {x: x + 66 + sampleEntries.length * 17 + 8, y, class: "taxonomy-legend-label"});
+        explanation.textContent = "one color per clade · label = darker shade";
+        group.append(explanation);
+        canvas.append(group);
       }
       const visibleNodes = [];
       function collect(node) {
@@ -671,6 +740,32 @@
           const largeArc = Math.abs(delta) > Math.PI ? 1 : 0;
           const sweep = delta >= 0 ? 1 : 0;
           return `M ${parent.x} ${parent.y} A ${parent.radius} ${parent.radius} 0 ${largeArc} ${sweep} ${turnX} ${turnY} L ${node.x} ${node.y}`;
+        }
+        function visibleTerminalAngles(node) {
+          const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+          return children.length ? children.flatMap(visibleTerminalAngles) : [node.angle];
+        }
+        function annularSectorPath(innerRadius, outerBandRadius, startAngle, endAngle) {
+          const point = (radius, angle) => [center + radius * Math.cos(angle), center + radius * Math.sin(angle)];
+          const outerStart = point(outerBandRadius, startAngle);
+          const outerEnd = point(outerBandRadius, endAngle);
+          const innerEnd = point(innerRadius, endAngle);
+          const innerStart = point(innerRadius, startAngle);
+          const largeArc = endAngle - startAngle > Math.PI ? 1 : 0;
+          return `M ${outerStart[0]} ${outerStart[1]} A ${outerBandRadius} ${outerBandRadius} 0 ${largeArc} 1 ${outerEnd[0]} ${outerEnd[1]} L ${innerEnd[0]} ${innerEnd[1]} A ${innerRadius} ${innerRadius} 0 ${largeArc} 0 ${innerStart[0]} ${innerStart[1]} Z`;
+        }
+        if (state.cladeLabelMode) {
+          for (const node of visibleNodes) {
+            if (!node.parent_id) continue;
+            const labels = cladeTaxonomyLabels(node);
+            if (!labels.length) continue;
+            const angles = visibleTerminalAngles(node);
+            const padding = Math.min(.035, Math.PI / Math.max(24, terminals.length));
+            const startAngle = Math.min(...angles) - padding;
+            const endAngle = Math.max(...angles) + padding;
+            const path = annularSectorPath(Math.max(18, node.radius - radialStep * .18), outerRadius + 65, startAngle, endAngle);
+            labels.forEach(item => canvas.append(svgEl("path", {d: path, class: `clade-taxonomy-band ${item.rank}`, style: `fill:${taxonomyColor(item.rank, item.value, `${item.rank}:${node.id}`)}`})));
+          }
         }
         for (const node of visibleNodes) {
           if (!node.parent_id) continue;
@@ -730,6 +825,7 @@
           }
         }
         visibleNodes.forEach(node => appendCladeTaxonomyLabel(node, true));
+        appendTaxonomyLegend(18, baseSize - 18);
         return;
       }
       svg.style.backgroundImage = "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
@@ -745,10 +841,28 @@
       position(root);
       const maxDepth = Math.max(...visibleNodes.map(node => node.depth));
       const baseWidth = Math.max(900, depthSpacing * maxDepth + 440);
-      const baseHeight = Math.max(500, leafIndex * spacing + 40);
+      const baseHeight = Math.max(500, leafIndex * spacing + 70);
       svg.setAttribute("width", baseWidth * zoom);
       svg.setAttribute("height", baseHeight * zoom);
       svg.style.backgroundSize = `${depthSpacing * zoom}px 100%`;
+      function visibleTerminalYs(node) {
+        const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+        return children.length ? children.flatMap(visibleTerminalYs) : [node.y];
+      }
+      if (state.cladeLabelMode) {
+        for (const node of visibleNodes) {
+          const labels = cladeTaxonomyLabels(node);
+          if (!labels.length) continue;
+          const terminalYs = visibleTerminalYs(node);
+          const top = Math.min(...terminalYs) - spacing * .44;
+          const bottom = Math.max(...terminalYs) + spacing * .44;
+          labels.forEach(item => canvas.append(svgEl("rect", {
+            x: Math.max(0, node.x - 4), y: top,
+            width: Math.max(24, baseWidth - node.x - 12), height: Math.max(12, bottom - top),
+            class: `clade-taxonomy-band ${item.rank}`, style: `fill:${taxonomyColor(item.rank, item.value, `${item.rank}:${node.id}`)}`
+          })));
+        }
+      }
       for (const node of visibleNodes) {
         const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
         if (children.length > 1) {
@@ -800,6 +914,7 @@
         }
       }
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
+      appendTaxonomyLegend(18, baseHeight - 18);
     }
     function enableTreeZoom() {
       const input = $("treeZoom");
@@ -895,9 +1010,14 @@
         .filtered-branch-label { opacity: .1; }
         .tip-label { font: 11px sans-serif; fill: ${color("--ink")}; }
         .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
-        .clade-taxonomy-label { font: 600 9px sans-serif; paint-order: stroke; stroke: ${color("--panel")}; stroke-width: 3px; stroke-linejoin: round; }
-        .clade-taxonomy-label.family { fill: #4f8fc9; }
-        .clade-taxonomy-label.genus { fill: #a477c7; font-style: italic; }
+        .clade-taxonomy-band.family { fill: #4f8fc9; fill-opacity: .10; }
+        .clade-taxonomy-band.genus { fill: #a477c7; fill-opacity: .08; }
+        .clade-taxonomy-label-bg { fill: #252b31; fill-opacity: .82; }
+        .clade-taxonomy-label { fill: #fff; font: 600 9px sans-serif; }
+        .clade-taxonomy-label.genus { font-style: italic; }
+        .taxonomy-legend-label { fill: ${color("--muted")}; font: 9px sans-serif; }
+        .taxonomy-legend-swatch.family { fill: #4f8fc9; fill-opacity: .45; }
+        .taxonomy-legend-swatch.genus { fill: #a477c7; fill-opacity: .40; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
         .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
         .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
@@ -1406,10 +1526,20 @@
       let pendingExpandNode = null;
       let pendingCollapseNode = null;
       let pendingFlipNode = null;
+      let draggedTaxonomyLabel = null;
       let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         actionHint.hidden = true;
+        const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
+        if (taxonomyLabel) {
+          const key = taxonomyLabel.dataset.taxonomyLabelKey;
+          const current = state.taxonomyLabelOffsets.get(key) || {x: 0, y: 0};
+          draggedTaxonomyLabel = {key, group: taxonomyLabel, startX: event.clientX, startY: event.clientY, x: Number(current.x) || 0, y: Number(current.y) || 0};
+          viewport.setPointerCapture(event.pointerId);
+          event.preventDefault();
+          return;
+        }
         active = true;
         moved = false;
         pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
@@ -1426,6 +1556,15 @@
         viewport.classList.add("dragging");
       });
       viewport.addEventListener("pointermove", event => {
+        if (draggedTaxonomyLabel) {
+          const dx = (event.clientX - draggedTaxonomyLabel.startX) / state.treeZoom;
+          const dy = (event.clientY - draggedTaxonomyLabel.startY) / state.treeZoom;
+          const next = {x: Math.round((draggedTaxonomyLabel.x + dx) * 10) / 10, y: Math.round((draggedTaxonomyLabel.y + dy) * 10) / 10};
+          state.taxonomyLabelOffsets.set(draggedTaxonomyLabel.key, next);
+          draggedTaxonomyLabel.group.setAttribute("transform", `translate(${next.x} ${next.y})`);
+          event.preventDefault();
+          return;
+        }
         if (!active) return;
         const dx = event.clientX - startX;
         const dy = event.clientY - startY;
@@ -1447,6 +1586,12 @@
       });
       viewport.addEventListener("pointerleave", () => { actionHint.hidden = true; });
       const finishPan = event => {
+        if (draggedTaxonomyLabel) {
+          localStorage.setItem("species-map-taxonomy-label-offsets", JSON.stringify(Object.fromEntries(state.taxonomyLabelOffsets)));
+          draggedTaxonomyLabel = null;
+          if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+          return;
+        }
         if (!active) return;
         active = false;
         viewport.classList.remove("dragging");
