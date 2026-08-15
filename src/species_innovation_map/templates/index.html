@@ -202,7 +202,6 @@
   <script>
     const SVG = "http://www.w3.org/2000/svg";
     const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null };
-    let suppressTreeClick = false;
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -259,13 +258,13 @@
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
         const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: "branch-hit", "data-branch": node.branch_id});
-        hitLine.addEventListener("click", () => { if (!suppressTreeClick) selectBranch(node.branch_id); }); svg.append(hitLine);
+        svg.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
         svg.append(line);
         const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id});
         const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
         const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
-        label.append(gain, loss); label.addEventListener("click", () => { if (!suppressTreeClick) selectBranch(node.branch_id); }); svg.append(label);
+        label.append(gain, loss); svg.append(label);
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
         if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
         else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
@@ -366,10 +365,12 @@
       let startY = 0;
       let startLeft = 0;
       let startTop = 0;
+      let pendingBranch = null;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         active = true;
         moved = false;
+        pendingBranch = event.target.closest("[data-branch]")?.dataset.branch || null;
         startX = event.clientX;
         startY = event.clientY;
         startLeft = viewport.scrollLeft;
@@ -392,10 +393,8 @@
         active = false;
         viewport.classList.remove("dragging");
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
-        if (moved) {
-          suppressTreeClick = true;
-          setTimeout(() => { suppressTreeClick = false; }, 0);
-        }
+        if (!moved && pendingBranch) selectBranch(pendingBranch);
+        pendingBranch = null;
       };
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);
