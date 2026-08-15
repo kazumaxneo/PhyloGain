@@ -87,6 +87,10 @@ class ProjectTests(unittest.TestCase):
             self.assertEqual(project["taxonomy"]["species"]["species_A"]["genus"], "Genus_A")
             self.assertIn("family", project["taxonomy"]["ranks"])
             self.assertTrue((output / "gtdb_taxonomy.tsv").is_file())
+            html = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('`${node.rankValue} (1)`', html)
+            self.assertIn(".taxonomy-tip-label", html)
+            self.assertIn('tipClass = rank && node.rankValue ? "taxonomy-tip-label"', html)
 
 
 class TaxonomyTests(unittest.TestCase):

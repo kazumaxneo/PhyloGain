@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.1 — 2026-08-15
+
+- Show taxonomy-assigned singleton tips as `Taxon (1)` in collapsed rank views.
+- Keep genome IDs only for tips without an assignment at the selected rank.
+
 ## 0.2.0 — 2026-08-15
 
 - Accept optional GTDB/GTDB-Tk taxonomy TSV files.
