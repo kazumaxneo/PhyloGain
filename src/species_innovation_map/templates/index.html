@@ -36,39 +36,40 @@
     }
     header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
-      gap: 20px;
-      padding: 22px 28px;
+      gap: 14px;
+      padding: 18px 24px;
       color: var(--header-ink);
       background: var(--header);
       border-bottom: 1px solid var(--line);
     }
-    h1 { margin: 0; font: 650 24px/1.1 Georgia, serif; letter-spacing: .01em; }
+    h1 { margin: 0; font: 650 21px/1.1 Georgia, serif; letter-spacing: .01em; }
     .theme-picker { display: flex; align-items: center; gap: 5px; }
-    .theme-picker span { margin-right: 3px; color: var(--muted); font-size: 11px; }
-    .theme-picker button { padding: 4px 8px; font-size: 11px; }
-    .theme-picker button.active { color: var(--panel); border-color: var(--accent); background: var(--accent); }
+    .theme-picker button { width: 18px; height: 18px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
+    .theme-picker button.active { border-color: var(--swatch); background: var(--swatch); box-shadow: 0 0 0 2px var(--header), 0 0 0 4px var(--accent); }
+    .theme-picker button[data-theme-value="white"] { --swatch: #ffffff; }
+    .theme-picker button[data-theme-value="black"] { --swatch: #17191b; }
+    .theme-picker button[data-theme-value="brown"] { --swatch: #6b4f3b; }
+    .theme-picker button[data-theme-value="green"] { --swatch: #173c2b; }
+    .theme-picker button[data-theme-value="blue"] { --swatch: #173c57; }
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr));
-      gap: 12px;
-      padding: 16px 20px 0;
+      grid-template-columns: 130px max-content;
+      column-gap: 18px;
+      row-gap: 1px;
+      padding: 10px 24px 0;
     }
     .card {
-      padding: 13px 15px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
+      display: contents;
     }
-    .card span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
-    .card strong { display: block; margin-top: 2px; font: 650 22px/1.2 Georgia, serif; }
+    .card span { color: var(--muted); font-size: 12px; }
+    .card strong { color: var(--ink); font-size: 12px; font-weight: 600; text-align: right; }
     .workspace {
       display: grid;
       grid-template-columns: minmax(600px, 1fr) 370px;
       gap: 14px;
-      height: calc(100vh - 171px);
+      height: calc(100vh - 145px);
       padding: 14px 20px 20px;
     }
     .map-panel, .detail-panel {
@@ -88,7 +89,7 @@
     }
     label { color: var(--muted); font-size: 12px; }
     select, button {
-      border: 1px solid #bfc5c8;
+      border: 1px solid var(--line);
       border-radius: 6px;
       background: var(--control);
       color: var(--ink);
@@ -135,29 +136,26 @@
     td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     .member-species { margin: 10px 0 4px; color: var(--accent); font-weight: 650; word-break: break-all; }
-    .genes { color: #46545f; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
+    .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
     #status { padding: 40px; color: var(--muted); }
     @media (max-width: 950px) {
       .workspace { grid-template-columns: 1fr; height: auto; }
       .map-panel { height: 70vh; }
       .detail-panel { min-height: 400px; }
-      .summary { grid-template-columns: repeat(2, 1fr); }
-      header { align-items: flex-start; flex-direction: column; }
-      .theme-picker { flex-wrap: wrap; }
+      .summary { grid-template-columns: 130px max-content; }
     }
   </style>
 </head>
 <body>
   <header>
-    <h1>Species Innovation Map</h1>
     <div class="theme-picker" aria-label="Color theme">
-      <span>Theme</span>
-      <button type="button" data-theme-value="white">White</button>
-      <button type="button" data-theme-value="black">Black</button>
-      <button type="button" data-theme-value="brown">Brown</button>
-      <button type="button" data-theme-value="green">Green</button>
-      <button type="button" data-theme-value="blue">Blue</button>
+      <button type="button" data-theme-value="white" aria-label="White theme" title="White"></button>
+      <button type="button" data-theme-value="black" aria-label="Black theme" title="Black"></button>
+      <button type="button" data-theme-value="brown" aria-label="Brown theme" title="Brown"></button>
+      <button type="button" data-theme-value="green" aria-label="Green theme" title="Green"></button>
+      <button type="button" data-theme-value="blue" aria-label="Blue theme" title="Blue"></button>
     </div>
+    <h1>Species Innovation Map</h1>
   </header>
   <section class="summary">
     <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
