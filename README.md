@@ -108,6 +108,8 @@ species-map build \
 
 Clicking a branch calculates gained- and lost-family enrichment on demand. The database selector separates KEGG pathway, KEGG module, KEGG KO, GO, Pfam, COG category, and KEGG reaction results. The test uses all orthogroups in the map as the background, a one-sided Fisher exact test, and Benjamini-Hochberg correction within the selected database. Results with FDR <= 0.05 appear as a horizontal bar chart and exact table above the gene-family list. Bar length is the number of foreground gene families and bar color encodes FDR on a logarithmic red-to-blue scale, with lower FDR shown in red. The table reports foreground hits, background frequency, fold enrichment, and FDR. The output also includes `functional_annotations.tsv` and the original eggNOG-mapper file under `annotations/`.
 
+Select `All` to rank significant terms from every available annotation database together while retaining separate Benjamini-Hochberg correction within each database. The plot selector switches between a bar plot (bar length = hits) and a dot plot (x = fold enrichment, dot size = hits); color represents FDR in both views.
+
 ## Collapse the tree by GTDB rank
 
 Add a GTDB taxonomy TSV to enable interactive collapse controls for phylum, class, order, family, and genus. Standard GTDB-Tk summary files are accepted directly (`user_genome` plus `classification`). A generic TSV may instead use `species_id` or `genome_id` plus `gtdb_taxonomy`.

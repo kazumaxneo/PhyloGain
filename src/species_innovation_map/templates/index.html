@@ -213,7 +213,9 @@
     .section-title { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
     .enrichment-toolbar { display: flex; align-items: center; gap: 10px; margin: 8px 0 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
     .enrichment-toolbar label { color: var(--muted); font-size: 11px; }
-    .enrichment-toolbar select { min-width: 210px; }
+    .enrichment-toolbar select { min-width: 0; }
+    .enrichment-source-select { width: 210px; }
+    .enrichment-plot-select { width: 110px; }
     .enrichment-method { margin-left: auto; color: var(--muted); font-size: 10px; }
     .enrichment-section { margin-bottom: 26px; }
     .enrichment-section-head { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 8px; }
@@ -230,6 +232,7 @@
     .chart-track { position: relative; height: 16px; background: transparent; border-left: 1px solid var(--muted); }
     .chart-grid-line { position: absolute; z-index: 0; top: 0; bottom: 0; width: 1px; background: var(--line); }
     .chart-bar { position: relative; z-index: 1; height: 100%; min-width: 2px; }
+    .chart-dot { position: absolute; z-index: 1; top: 50%; border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 50%; transform: translate(-50%, -50%); }
     .chart-score { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .chart-axis-row { display: grid; grid-template-columns: var(--term-column) minmax(180px, 1fr) 42px; align-items: start; gap: 9px; min-height: 25px; }
     .chart-axis { position: relative; height: 24px; border-top: 1px solid var(--muted); }
@@ -249,6 +252,7 @@
     .enrichment-table td { vertical-align: top; overflow-wrap: anywhere; }
     .enrichment-table td:first-child { font-weight: 550; }
     .term-id { display: block; margin-top: 2px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .term-source { display: block; margin-bottom: 2px; color: var(--muted); font-size: 9px; font-weight: 400; }
     .term-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
     .term-link:hover { color: var(--accent); }
     .inline-term-id { margin-left: 6px; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -419,7 +423,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -444,6 +448,8 @@
         initializeBranchFilters(branches);
         state.annotationSources = annotationSources;
         state.enrichmentSource = annotationSources.some(item => item.source === "KEGG pathway") ? "KEGG pathway" : (annotationSources[0]?.source || "");
+        const storedPlotType = localStorage.getItem("species-map-enrichment-plot");
+        if (storedPlotType === "bar" || storedPlotType === "dot") state.enrichmentPlotType = storedPlotType;
         $("speciesCount").textContent = number(project.species_count);
         $("familyCount").textContent = number(project.family_count);
         $("branchCount").textContent = number(branches.length);
@@ -959,15 +965,26 @@
       if (annotated && state.annotationSources.length) {
         const toolbar = document.createElement("div"); toolbar.className = "enrichment-toolbar";
         const label = document.createElement("label"); label.htmlFor = "enrichmentSource"; label.textContent = "Database";
-        const select = document.createElement("select"); select.id = "enrichmentSource";
+        const select = document.createElement("select"); select.id = "enrichmentSource"; select.className = "enrichment-source-select";
+        const allOption = document.createElement("option"); allOption.value = "All"; allOption.textContent = "All"; allOption.selected = state.enrichmentSource === "All"; select.append(allOption);
         for (const item of state.annotationSources) {
           const option = document.createElement("option"); option.value = item.source; option.textContent = item.source; option.selected = item.source === state.enrichmentSource; select.append(option);
         }
+        const plotLabel = document.createElement("label"); plotLabel.htmlFor = "enrichmentPlotType"; plotLabel.textContent = "Plot";
+        const plotSelect = document.createElement("select"); plotSelect.id = "enrichmentPlotType"; plotSelect.className = "enrichment-plot-select";
+        for (const [value, text] of [["bar", "Bar plot"], ["dot", "Dot plot"]]) {
+          const option = document.createElement("option"); option.value = value; option.textContent = text; option.selected = value === state.enrichmentPlotType; plotSelect.append(option);
+        }
         const method = document.createElement("span"); method.className = "enrichment-method"; method.textContent = "FDR corrected within database";
-        toolbar.append(label, select, method); body.append(toolbar);
+        toolbar.append(label, select, plotLabel, plotSelect, method); body.append(toolbar);
         const enrichmentBody = document.createElement("div"); body.append(enrichmentBody);
         select.addEventListener("change", () => {
           state.enrichmentSource = select.value;
+          renderBranchEnrichment(enrichmentBody, branchId, select.value, eventKind);
+        });
+        plotSelect.addEventListener("change", () => {
+          state.enrichmentPlotType = plotSelect.value;
+          localStorage.setItem("species-map-enrichment-plot", state.enrichmentPlotType);
           renderBranchEnrichment(enrichmentBody, branchId, select.value, eventKind);
         });
         await renderBranchEnrichment(enrichmentBody, branchId, state.enrichmentSource, eventKind);
@@ -994,7 +1011,7 @@
       const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = `Calculating ${source} enrichment…`; container.append(loading);
       const sourceQuery = encodeURIComponent(source);
       const eventKinds = eventKind ? [eventKind] : ["gain", "loss"];
-      const enrichments = await Promise.all(eventKinds.map(kind => api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=${kind}&limit=20&source=${sourceQuery}`)));
+      const enrichments = await Promise.all(eventKinds.map(kind => api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=${kind}&limit=100&source=${sourceQuery}`)));
       if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind || state.enrichmentSource !== source) return;
       container.replaceChildren();
       enrichments.forEach((enrichment, index) => {
@@ -1012,26 +1029,38 @@
       const plotted = significant.slice(0, 15);
       const downloads = document.createElement("div"); downloads.className = "enrichment-downloads";
       const plotDownload = document.createElement("button"); plotDownload.type = "button"; plotDownload.className = "enrichment-download"; plotDownload.textContent = "Download plot";
-      plotDownload.addEventListener("click", () => downloadEnrichmentPlot(plotted, enrichment, heading, branchId, eventKind));
+      plotDownload.addEventListener("click", () => downloadEnrichmentPlot(plotted, enrichment, heading, branchId, eventKind, state.enrichmentPlotType));
       const tableDownload = document.createElement("button"); tableDownload.type = "button"; tableDownload.className = "enrichment-download"; tableDownload.textContent = "Download table";
       tableDownload.addEventListener("click", () => downloadEnrichmentTable(significant, enrichment, branchId, eventKind));
       downloads.append(plotDownload, tableDownload); sectionHead.append(downloads);
       const counts = plotted.map(row => Number(row.overlap));
+      const folds = plotted.map(row => Number(row.fold_enrichment));
       const fdrValues = plotted.map(row => Math.max(Number(row.q_value), 1e-300));
-      const axis = niceCountAxis(Math.max(...counts, 1));
+      const plotType = state.enrichmentPlotType;
+      const plotValues = plotType === "dot" ? folds : counts;
+      const axis = niceCountAxis(Math.max(...plotValues, 1));
       const fdrMinimum = Math.min(...fdrValues);
       const fdrMaximum = 0.05;
       const layout = document.createElement("div"); layout.className = "chart-layout";
-      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.classList.toggle("long-term-labels", enrichment.source === "KEGG reaction"); chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}; bar length is gene-family count and color is FDR`);
-      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
+      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.classList.toggle("long-term-labels", enrichment.source === "KEGG reaction" || plotted.some(row => row.source === "KEGG reaction")); chart.setAttribute("role", "img"); chart.setAttribute("aria-label", plotType === "dot" ? `${heading}; x axis is fold enrichment, dot size is gene-family count, and color is FDR` : `${heading}; bar length is gene-family count and color is FDR`);
+      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = plotType === "dot" ? `Top significant ${enrichment.source} terms · x = fold enrichment · dot size = hits` : `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
+      const maximumCount = Math.max(...counts, 1);
       plotted.forEach((row, index) => {
         const chartRow = document.createElement("div"); chartRow.className = "chart-row";
-        const term = document.createElement("div"); term.className = "chart-term"; appendChartTerm(term, row); term.title = `${row.source}: ${row.term_id}`;
+        const term = document.createElement("div"); term.className = "chart-term";
+        if (enrichment.source === "All") { const sourceName = document.createElement("span"); sourceName.className = "term-source"; sourceName.textContent = row.source; term.append(sourceName); }
+        appendChartTerm(term, row); term.title = `${row.source}: ${row.term_id}`;
         const track = document.createElement("div"); track.className = "chart-track";
         for (let tick = axis.step; tick <= axis.maximum; tick += axis.step) {
           const gridLine = document.createElement("span"); gridLine.className = "chart-grid-line"; gridLine.style.left = `${tick / axis.maximum * 100}%`; track.append(gridLine);
         }
-        const bar = document.createElement("div"); bar.className = "chart-bar"; bar.style.width = `${Math.max(2, counts[index] / axis.maximum * 100)}%`; bar.style.backgroundColor = fdrColor(fdrValues[index], fdrMinimum, fdrMaximum); track.append(bar);
+        if (plotType === "dot") {
+          const dot = document.createElement("div"); dot.className = "chart-dot";
+          const diameter = 6 + Math.sqrt(counts[index] / maximumCount) * 13;
+          dot.style.left = `${folds[index] / axis.maximum * 100}%`; dot.style.width = `${diameter}px`; dot.style.height = `${diameter}px`; dot.style.backgroundColor = fdrColor(fdrValues[index], fdrMinimum, fdrMaximum); track.append(dot);
+        } else {
+          const bar = document.createElement("div"); bar.className = "chart-bar"; bar.style.width = `${Math.max(2, counts[index] / axis.maximum * 100)}%`; bar.style.backgroundColor = fdrColor(fdrValues[index], fdrMinimum, fdrMaximum); track.append(bar);
+        }
         const score = document.createElement("div"); score.className = "chart-score"; score.textContent = number(counts[index]);
         chartRow.append(term, track, score); chart.append(chartRow);
       });
@@ -1042,7 +1071,7 @@
         const tickNode = document.createElement("span"); tickNode.className = "chart-tick"; tickNode.style.left = `${tick / axis.maximum * 100}%`;
         const tickLabel = document.createElement("span"); tickLabel.textContent = formatAxisTick(tick, axis.step); tickNode.append(tickLabel); axisNode.append(tickNode);
       }
-      const axisLabel = document.createElement("span"); axisLabel.className = "chart-axis-label"; axisLabel.textContent = "Count";
+      const axisLabel = document.createElement("span"); axisLabel.className = "chart-axis-label"; axisLabel.textContent = plotType === "dot" ? "Fold\nenrichment" : "Count";
       axisRow.append(spacer, axisNode, axisLabel); chart.append(axisRow);
       layout.append(chart, createFdrLegend(fdrMinimum, fdrMaximum)); section.append(layout);
       const table = document.createElement("table"); table.className = "enrichment-table";
@@ -1050,7 +1079,9 @@
       const tbody = document.createElement("tbody");
       for (const row of significant) {
         const tr = document.createElement("tr");
-        const term = document.createElement("td"); appendTableTerm(term, row);
+        const term = document.createElement("td");
+        if (enrichment.source === "All") { const sourceName = document.createElement("span"); sourceName.className = "term-source"; sourceName.textContent = row.source; term.append(sourceName); }
+        appendTableTerm(term, row);
         const hits = document.createElement("td"); hits.className = "number-cell"; hits.textContent = `${row.overlap}/${row.foreground}`;
         const background = document.createElement("td"); background.className = "number-cell"; background.textContent = `${row.term_total}/${row.universe}`;
         const fold = document.createElement("td"); fold.className = "number-cell"; fold.textContent = `${formatFold(row.fold_enrichment)}×`;
@@ -1079,17 +1110,20 @@
       const blob = new Blob(["\ufeff", lines.join("\n") + "\n"], {type: "text/tab-separated-values;charset=utf-8"});
       triggerDownload(blob, enrichmentFilename(branchId, eventKind, enrichment.source, "tsv"));
     }
-    function downloadEnrichmentPlot(rows, enrichment, heading, branchId, eventKind) {
+    function downloadEnrichmentPlot(rows, enrichment, heading, branchId, eventKind, plotType = "bar") {
       const width = 1200;
-      const labelWidth = enrichment.source === "KEGG reaction" ? 610 : 470;
+      const labelWidth = enrichment.source === "KEGG reaction" || rows.some(row => row.source === "KEGG reaction") ? 610 : 470;
       const plotWidth = width - labelWidth - 120;
       const rowHeight = 34;
       const top = 76;
       const bottom = 58;
       const height = top + rows.length * rowHeight + bottom;
       const counts = rows.map(row => Number(row.overlap));
+      const folds = rows.map(row => Number(row.fold_enrichment));
+      const plotValues = plotType === "dot" ? folds : counts;
       const fdrValues = rows.map(row => Math.max(Number(row.q_value), 1e-300));
-      const axis = niceCountAxis(Math.max(...counts, 1));
+      const axis = niceCountAxis(Math.max(...plotValues, 1));
+      const maximumCount = Math.max(...counts, 1);
       const fdrMinimum = Math.min(...fdrValues);
       const fdrMaximum = 0.05;
       const rootStyle = getComputedStyle(document.documentElement);
@@ -1098,7 +1132,7 @@
       svg.setAttribute("xmlns", SVG); svg.setAttribute("width", width); svg.setAttribute("height", height); svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
       svg.append(svgEl("rect", {width, height, fill: color("--panel")}));
       const title = svgEl("text", {x: 24, y: 30, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 18, "font-weight": 600}); title.textContent = heading; svg.append(title);
-      const subtitle = svgEl("text", {x: 24, y: 52, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 12}); subtitle.textContent = `${branchId} · ${enrichment.source} · bar length = hits · color = FDR`; svg.append(subtitle);
+      const subtitle = svgEl("text", {x: 24, y: 52, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 12}); subtitle.textContent = plotType === "dot" ? `${branchId} · ${enrichment.source} · x = fold enrichment · dot size = hits · color = FDR` : `${branchId} · ${enrichment.source} · bar length = hits · color = FDR`; svg.append(subtitle);
       const legendX = labelWidth + plotWidth + 38;
       const legendY = top + 8;
       const legendTitle = svgEl("text", {x: legendX, y: top - 3, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); legendTitle.textContent = "FDR"; svg.append(legendTitle);
@@ -1117,13 +1151,19 @@
       }
       rows.forEach((row, index) => {
         const y = top + index * rowHeight;
-        const label = svgEl("text", {x: labelWidth - 14, y: y + 17, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 12, "text-anchor": "end"}); label.textContent = enrichmentTermLabel(row); svg.append(label);
-        svg.append(svgEl("rect", {x: labelWidth, y: y + 4, width: Math.max(2, counts[index] / axis.maximum * plotWidth), height: 20, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum)}));
-        const count = svgEl("text", {x: labelWidth + counts[index] / axis.maximum * plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = number(counts[index]); svg.append(count);
+        const label = svgEl("text", {x: labelWidth - 14, y: y + 17, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 12, "text-anchor": "end"}); label.textContent = `${enrichment.source === "All" ? `[${row.source}] ` : ""}${enrichmentTermLabel(row)}`; svg.append(label);
+        if (plotType === "dot") {
+          const radius = 3 + Math.sqrt(counts[index] / maximumCount) * 7;
+          svg.append(svgEl("circle", {cx: labelWidth + folds[index] / axis.maximum * plotWidth, cy: y + 14, r: radius, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum), stroke: color("--ink"), "stroke-opacity": .28, "stroke-width": 1}));
+          const count = svgEl("text", {x: labelWidth + plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = `n=${number(counts[index])}`; svg.append(count);
+        } else {
+          svg.append(svgEl("rect", {x: labelWidth, y: y + 4, width: Math.max(2, counts[index] / axis.maximum * plotWidth), height: 20, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum)}));
+          const count = svgEl("text", {x: labelWidth + counts[index] / axis.maximum * plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = number(counts[index]); svg.append(count);
+        }
       });
-      const axisTitle = svgEl("text", {x: labelWidth + plotWidth / 2, y: height - 5, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 11, "text-anchor": "middle"}); axisTitle.textContent = "Count"; svg.append(axisTitle);
+      const axisTitle = svgEl("text", {x: labelWidth + plotWidth / 2, y: height - 5, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 11, "text-anchor": "middle"}); axisTitle.textContent = plotType === "dot" ? "Fold enrichment" : "Count"; svg.append(axisTitle);
       const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
-      triggerDownload(new Blob([markup], {type: "image/svg+xml;charset=utf-8"}), enrichmentFilename(branchId, eventKind, enrichment.source, "svg"));
+      triggerDownload(new Blob([markup], {type: "image/svg+xml;charset=utf-8"}), enrichmentFilename(branchId, eventKind, `${enrichment.source}-${plotType}`, "svg"));
     }
     function enrichmentTermLabel(row) {
       const name = row.term_name || row.term_id;

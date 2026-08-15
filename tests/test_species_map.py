@@ -144,6 +144,11 @@ class ProjectTests(unittest.TestCase):
                     all(row["source"] == source for row in source_enrichment["results"])
                 )
                 self.assertIn(source, [item["source"] for item in annotation_sources(connection)])
+                all_enrichment = branch_enrichment(
+                    connection, branch, "gain", limit=100, min_overlap=1, source="All"
+                )
+                self.assertEqual(all_enrichment["source"], "All")
+                self.assertGreater(len({row["source"] for row in all_enrichment["results"]}), 1)
                 ko_enrichment = branch_enrichment(
                     connection, branch, "gain", min_overlap=1, source="KEGG KO"
                 )
@@ -179,6 +184,11 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("red = lower", html)
             self.assertIn("width: min(var(--detail-panel-width, 760px)", html)
             self.assertIn("bar.style.backgroundColor = fdrColor", html)
+            self.assertIn('allOption.value = "All"', html)
+            self.assertIn('["dot", "Dot plot"]', html)
+            self.assertIn('dot.className = "chart-dot"', html)
+            self.assertIn('x = fold enrichment · dot size = hits', html)
+            self.assertIn('state.enrichmentPlotType', html)
             self.assertIn("detailResizeHandle", html)
             self.assertIn("enableDetailResize", html)
             self.assertIn("background: var(--detail-panel)", html)
@@ -273,7 +283,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('function downloadEnrichmentPlot(', html)
             self.assertIn('legendDirection.textContent = "red = lower"', html)
             self.assertIn('legendTitle.textContent = "FDR"', html)
-            self.assertIn('axisTitle.textContent = "Count"', html)
+            self.assertIn('axisTitle.textContent = plotType === "dot" ? "Fold enrichment" : "Count"', html)
             self.assertIn('function downloadEnrichmentTable(', html)
             self.assertIn('text/tab-separated-values;charset=utf-8', html)
             self.assertIn('state.treeLayout !== "rectangular"', html)

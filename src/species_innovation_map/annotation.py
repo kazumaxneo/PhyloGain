@@ -372,16 +372,17 @@ def branch_enrichment(
         "SELECT COUNT(DISTINCT family_id) FROM events WHERE branch_id=? AND event=?",
         (branch_id, event),
     ).fetchone()[0]
-    if source is not None:
+    all_sources = source == "All"
+    if source is not None and not all_sources:
         available = {
             row[0]
             for row in connection.execute("SELECT DISTINCT source FROM annotation_terms")
         }
         if source not in available:
             raise ValueError(f"Unknown annotation database: {source}")
-    source_filter = " AND ft.source=?" if source is not None else ""
+    source_filter = " AND ft.source=?" if source is not None and not all_sources else ""
     parameters: list[object] = [branch_id, event]
-    if source is not None:
+    if source is not None and not all_sources:
         parameters.append(source)
     rows = connection.execute(
         f"""
@@ -412,7 +413,12 @@ def branch_enrichment(
                 "p_value": p_value,
             }
         )
-    _benjamini_hochberg(tested)
+    if all_sources:
+        sources = {row["source"] for row in tested}
+        for row_source in sources:
+            _benjamini_hochberg([row for row in tested if row["source"] == row_source])
+    else:
+        _benjamini_hochberg(tested)
     results = [row for row in tested if row["overlap"] >= min_overlap]
     results.sort(key=lambda row: (row["q_value"], row["p_value"], -row["overlap"]))
     return {

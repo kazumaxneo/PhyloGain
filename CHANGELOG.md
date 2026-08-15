@@ -52,6 +52,7 @@
 - Match downloaded enrichment SVGs to the web view with a vertical FDR legend on the plot's right side.
 - Shorten the spacing-control labels to Horizontal and Vertical.
 - Add optional GTDB family and genus labels at their inferred crown nodes within the tree.
+- Add Bar plot and Dot plot enrichment views, plus an All-databases view with FDR correction retained within each database.
 - Export the complete current tree view as a self-contained SVG from the upper-right control row.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
