@@ -113,6 +113,7 @@
     .tree-scale-control label { grid-column: 1; grid-row: 1; overflow: hidden; font-size: 11px; line-height: 1; text-overflow: ellipsis; }
     .tree-scale-control input { grid-column: 1 / 3; grid-row: 2; width: 134px; margin: 0; accent-color: var(--accent); cursor: pointer; touch-action: none; }
     .tree-scale-control output { grid-column: 2; grid-row: 1; width: 32px; color: var(--ink); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .taxonomy-color-shuffle { align-self: center; margin: 15px 2px 0 3px; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
     .filter-actions { grid-column: 4; grid-row: 1; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
@@ -121,7 +122,7 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(max-content, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
     .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; min-width: 235px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
@@ -413,6 +414,7 @@
             <input id="taxonomyLabelFontSize" type="range" min="6" max="24" step="1" value="9" aria-label="GTDB clade label font size">
             <output id="taxonomyLabelFontSizeValue" for="taxonomyLabelFontSize">9px</output>
           </div>
+          <button class="filter-reset taxonomy-color-shuffle" id="shuffleTaxonomyColors" type="button" title="Assign another balanced GTDB color set" hidden>Shuffle colors</button>
         </div>
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Filter (gain)</span>
@@ -445,7 +447,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -513,6 +515,9 @@
           $("cladeLabelSelect").value = storedCladeLabels;
         }
         $("cladeLabelControl").hidden = cladeRanks.length === 0;
+        $("shuffleTaxonomyColors").hidden = cladeRanks.length === 0;
+        const storedTaxonomyColorSeed = Number(localStorage.getItem("species-map-taxonomy-color-seed"));
+        if (Number.isInteger(storedTaxonomyColorSeed) && storedTaxonomyColorSeed >= 0) state.taxonomyColorSeed = storedTaxonomyColorSeed >>> 0;
         try {
           const storedOffsets = JSON.parse(localStorage.getItem("species-map-taxonomy-label-offsets") || "{}");
           state.taxonomyLabelOffsets = new Map(Object.entries(storedOffsets));
@@ -755,9 +760,13 @@
         const index = taxonomyColorIndex(taxonomyRank, value, occurrenceKey);
         const goldenAngle = 137.507764;
         const rankOffset = {family: 7, genus: 53, species: 101}[taxonomyRank] || 0;
-        const hue = Math.round((index * goldenAngle + rankOffset) % 360);
-        const saturation = dark ? 72 + index % 4 * 5 : 68 + index % 5 * 6;
-        const lightness = dark ? 18 + index % 4 * 3 : 39 + index % 5 * 5;
+        const seed = state.taxonomyColorSeed >>> 0;
+        const direction = seed === 0 || seed % 2 ? 1 : -1;
+        const phase = seed === 0 ? 0 : (seed % 3600) / 10;
+        const hue = Math.round(((direction * index * goldenAngle + rankOffset + phase) % 360 + 360) % 360);
+        const variation = seed === 0 ? index : index + seed % 29;
+        const saturation = dark ? 72 + variation % 4 * 5 : 68 + variation % 5 * 6;
+        const lightness = dark ? 18 + variation % 4 * 3 : 39 + variation % 5 * 5;
         return `hsl(${hue} ${Math.min(94, saturation)}% ${lightness}%)`;
       }
       const taxonomyColor = (rankName, value, key = "") => taxonomyHsl(rankName, value, key, false);
@@ -1575,6 +1584,15 @@
     $("cladeLabelSelect").addEventListener("change", event => {
       state.cladeLabelMode = event.target.value;
       localStorage.setItem("species-map-clade-labels", state.cladeLabelMode);
+      renderTree();
+    });
+    $("shuffleTaxonomyColors").addEventListener("click", () => {
+      const randomValue = new Uint32Array(1);
+      crypto.getRandomValues(randomValue);
+      let nextSeed = randomValue[0] >>> 0;
+      if (nextSeed === state.taxonomyColorSeed) nextSeed = (nextSeed + 1) >>> 0;
+      state.taxonomyColorSeed = nextSeed;
+      localStorage.setItem("species-map-taxonomy-color-seed", String(nextSeed));
       renderTree();
     });
     $("treeOrderSelect").addEventListener("change", event => {
