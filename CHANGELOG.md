@@ -47,6 +47,7 @@
 - Increase all tree-adjustment labels and values to 11 px and rebalance gauge widths and spacing for compact screens.
 - Keep Gain/Loss gauges at fixed widths on wide displays and leave surplus space on the right.
 - Download each enrichment bar plot as SVG and its complete significant-term table as UTF-8 TSV.
+- Include a labelled FDR color legend and Count axis title in downloaded enrichment SVGs.
 - Export the complete current tree view as a self-contained SVG from the upper-right control row.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 

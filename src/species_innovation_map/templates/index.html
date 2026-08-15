@@ -1033,7 +1033,7 @@
       const title = svgEl("text", {x: 24, y: 30, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 18, "font-weight": 600}); title.textContent = heading; svg.append(title);
       const subtitle = svgEl("text", {x: 24, y: 52, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 12}); subtitle.textContent = `${branchId} · ${enrichment.source} · bar length = hits · color = FDR`; svg.append(subtitle);
       const legendX = width - 330;
-      const legendTitle = svgEl("text", {x: legendX - 42, y: 38, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); legendTitle.textContent = "FDR"; svg.append(legendTitle);
+      const legendTitle = svgEl("text", {x: legendX - 105, y: 38, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); legendTitle.textContent = "FDR (red = lower)"; svg.append(legendTitle);
       for (let index = 0; index < 4; index += 1) {
         const position = index / 3;
         const value = 10 ** (Math.log10(fdrMinimum) + (Math.log10(fdrMaximum) - Math.log10(fdrMinimum)) * position);
@@ -1052,6 +1052,7 @@
         svg.append(svgEl("rect", {x: labelWidth, y: y + 4, width: Math.max(2, counts[index] / axis.maximum * plotWidth), height: 20, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum)}));
         const count = svgEl("text", {x: labelWidth + counts[index] / axis.maximum * plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = number(counts[index]); svg.append(count);
       });
+      const axisTitle = svgEl("text", {x: labelWidth + plotWidth / 2, y: height - 5, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 11, "text-anchor": "middle"}); axisTitle.textContent = "Count"; svg.append(axisTitle);
       const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
       triggerDownload(new Blob([markup], {type: "image/svg+xml;charset=utf-8"}), enrichmentFilename(branchId, eventKind, enrichment.source, "svg"));
     }

@@ -271,6 +271,8 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('Download plot', html)
             self.assertIn('Download table', html)
             self.assertIn('function downloadEnrichmentPlot(', html)
+            self.assertIn('FDR (red = lower)', html)
+            self.assertIn('axisTitle.textContent = "Count"', html)
             self.assertIn('function downloadEnrichmentTable(', html)
             self.assertIn('text/tab-separated-values;charset=utf-8', html)
             self.assertIn('state.treeLayout !== "rectangular"', html)
