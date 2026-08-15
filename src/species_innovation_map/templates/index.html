@@ -619,8 +619,9 @@
       return link;
     }
     function appendChartTerm(container, row) {
-      const link = createOfficialTermLink(row);
       const name = row.term_name || row.term_id;
+      if (row.source === "COG category") { container.textContent = name; return; }
+      const link = createOfficialTermLink(row);
       if (!link) { container.textContent = enrichmentTermLabel(row); return; }
       container.append(link);
       if (name !== row.term_id) container.append(document.createTextNode(` — ${name}`));

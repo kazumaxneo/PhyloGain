@@ -190,6 +190,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('id="lossMin"', html)
             self.assertIn('id="lossMax"', html)
             self.assertIn("function branchMatchesFilter(branch)", html)
+            self.assertIn('row.source === "COG category"', html)
             self.assertNotIn('id="hideUnmatched"', html)
             self.assertIn("filtered-branch-label", html)
             self.assertIn('id="filterReset"', html)
