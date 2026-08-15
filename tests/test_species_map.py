@@ -156,7 +156,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("background: var(--detail-panel)", html)
             self.assertIn('--detail-panel: #202428', html)
             self.assertIn('id="detailBack"', html)
-            self.assertIn("Back to ${returnContext.branchId}", html)
+            self.assertIn('configureDetailBack("Back"', html)
             self.assertIn("font-size: 9px", html)
             self.assertNotIn('textContent = "Inferred events"', html)
             self.assertNotIn('textContent = "Genes by species"', html)
@@ -167,6 +167,8 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('annotation.className = "function-annotation"', html)
             self.assertIn('functionTitle.className = "section-title functional-title"', html)
             self.assertIn("font-weight: 400", html)
+            self.assertIn('classList.add("family-title")', html)
+            self.assertIn('detailSubtitle").hidden = true', html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

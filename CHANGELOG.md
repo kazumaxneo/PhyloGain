@@ -14,6 +14,7 @@
 - Separate assembly members from annotations with compact, underlined, theme-neutral assembly labels.
 - Prefix each functional annotation item with a middle dot and increase spacing before assembly members.
 - Use colon-separated, regular-weight assembly labels and emphasize functional annotation headings and items.
+- Unify functional-annotation typography, simplify orthogroup headers, and emphasize the Back button.
 
 ## 0.3.1 — 2026-08-15
 
