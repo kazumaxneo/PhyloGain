@@ -170,21 +170,25 @@
     .enrichment-toolbar select { min-width: 210px; }
     .enrichment-method { margin-left: auto; color: var(--muted); font-size: 10px; }
     .enrichment-section { margin-bottom: 26px; }
+    .chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 74px; gap: 14px; align-items: start; }
     .enrichment-chart { display: grid; gap: 7px; margin: 8px 0 14px; }
     .chart-caption { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
-    .chart-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 48px; align-items: center; gap: 9px; min-height: 22px; }
-    .chart-term { overflow: hidden; color: var(--ink); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
-    .chart-track { position: relative; height: 14px; background: var(--control); border-left: 1px solid var(--muted); }
+    .chart-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 42px; align-items: center; gap: 9px; min-height: 25px; }
+    .chart-term { color: var(--ink); font-size: 11px; line-height: 1.15; white-space: normal; }
+    .chart-track { position: relative; height: 16px; background: transparent; border-left: 1px solid var(--muted); }
     .chart-grid-line { position: absolute; z-index: 0; top: 0; bottom: 0; width: 1px; background: var(--line); }
     .chart-bar { position: relative; z-index: 1; height: 100%; min-width: 2px; }
-    .chart-bar.gain { background: var(--gain); }
-    .chart-bar.loss { background: var(--loss); }
     .chart-score { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
-    .chart-axis-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 48px; align-items: start; gap: 9px; min-height: 25px; }
+    .chart-axis-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 42px; align-items: start; gap: 9px; min-height: 25px; }
     .chart-axis { position: relative; height: 24px; border-top: 1px solid var(--muted); }
     .chart-tick { position: absolute; top: -4px; height: 5px; border-left: 1px solid var(--muted); }
     .chart-tick span { position: absolute; top: 7px; transform: translateX(-50%); color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
     .chart-axis-label { color: var(--muted); font-size: 9px; line-height: 1.2; text-align: right; white-space: pre-line; }
+    .fdr-legend { margin-top: 37px; color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .fdr-legend-title { margin-bottom: 5px; color: var(--ink); font: 10px sans-serif; }
+    .fdr-step { display: grid; grid-template-columns: 14px 1fr; align-items: center; gap: 5px; height: 25px; }
+    .fdr-swatch { width: 14px; height: 25px; }
+    .fdr-direction { margin-top: 5px; font: 9px sans-serif; line-height: 1.2; }
     .enrichment-table { table-layout: fixed; }
     .enrichment-table th:nth-child(1) { width: 42%; }
     .enrichment-table th:nth-child(2), .enrichment-table th:nth-child(3) { width: 17%; }
@@ -217,6 +221,7 @@
       .workspace { height: calc(100vh - 145px); }
       .detail-panel { left: 20px; width: auto; }
       .detail-resize-handle { display: none; }
+      .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
       .summary { grid-template-columns: 130px max-content; }
     }
   </style>
@@ -444,20 +449,24 @@
       ]);
       if (state.selectedBranch !== branchId || state.enrichmentSource !== source) return;
       container.replaceChildren();
-      appendEnrichment(container, gain, "Gained-family enrichment", "gain");
-      appendEnrichment(container, loss, "Lost-family enrichment", "loss");
+      appendEnrichment(container, gain, "Gained-family enrichment");
+      appendEnrichment(container, loss, "Lost-family enrichment");
     }
-    function appendEnrichment(body, enrichment, heading, eventType) {
+    function appendEnrichment(body, enrichment, heading) {
       const section = document.createElement("section"); section.className = "enrichment-section";
       const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; section.append(title);
       if (!enrichment.foreground) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No gene-family events on this branch."; section.append(empty); body.append(section); return; }
       const significant = enrichment.results.filter(row => row.q_value <= 0.05);
       if (!significant.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No enriched terms at FDR ≤ 0.05."; section.append(empty); body.append(section); return; }
-      const plotted = significant.slice(0, 10);
-      const scores = plotted.map(row => -Math.log10(Math.max(Number(row.q_value), 1e-300)));
-      const axis = niceAxis(Math.max(...scores, 1));
-      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}, ranked by negative log10 FDR`);
-      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = `Top significant ${enrichment.source} terms`; chart.append(caption);
+      const plotted = significant.slice(0, 15);
+      const counts = plotted.map(row => Number(row.overlap));
+      const fdrValues = plotted.map(row => Math.max(Number(row.q_value), 1e-300));
+      const axis = niceCountAxis(Math.max(...counts, 1));
+      const fdrMinimum = Math.min(...fdrValues);
+      const fdrMaximum = 0.05;
+      const layout = document.createElement("div"); layout.className = "chart-layout";
+      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}; bar length is gene-family count and color is FDR`);
+      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
       plotted.forEach((row, index) => {
         const chartRow = document.createElement("div"); chartRow.className = "chart-row";
         const term = document.createElement("div"); term.className = "chart-term"; term.textContent = row.term_name || row.term_id; term.title = `${row.source}: ${row.term_id}`;
@@ -465,8 +474,8 @@
         for (let tick = axis.step; tick <= axis.maximum; tick += axis.step) {
           const gridLine = document.createElement("span"); gridLine.className = "chart-grid-line"; gridLine.style.left = `${tick / axis.maximum * 100}%`; track.append(gridLine);
         }
-        const bar = document.createElement("div"); bar.className = `chart-bar ${eventType}`; bar.style.width = `${Math.max(2, scores[index] / axis.maximum * 100)}%`; track.append(bar);
-        const score = document.createElement("div"); score.className = "chart-score"; score.textContent = scores[index].toFixed(1);
+        const bar = document.createElement("div"); bar.className = "chart-bar"; bar.style.width = `${Math.max(2, counts[index] / axis.maximum * 100)}%`; bar.style.backgroundColor = fdrColor(fdrValues[index], fdrMinimum, fdrMaximum); track.append(bar);
+        const score = document.createElement("div"); score.className = "chart-score"; score.textContent = number(counts[index]);
         chartRow.append(term, track, score); chart.append(chartRow);
       });
       const axisRow = document.createElement("div"); axisRow.className = "chart-axis-row";
@@ -476,9 +485,9 @@
         const tickNode = document.createElement("span"); tickNode.className = "chart-tick"; tickNode.style.left = `${tick / axis.maximum * 100}%`;
         const tickLabel = document.createElement("span"); tickLabel.textContent = formatAxisTick(tick, axis.step); tickNode.append(tickLabel); axisNode.append(tickNode);
       }
-      const axisLabel = document.createElement("span"); axisLabel.className = "chart-axis-label"; axisLabel.textContent = "−log10\n(FDR)";
+      const axisLabel = document.createElement("span"); axisLabel.className = "chart-axis-label"; axisLabel.textContent = "Count";
       axisRow.append(spacer, axisNode, axisLabel); chart.append(axisRow);
-      section.append(chart);
+      layout.append(chart, createFdrLegend(fdrMinimum, fdrMaximum)); section.append(layout);
       const table = document.createElement("table"); table.className = "enrichment-table";
       table.innerHTML = "<thead><tr><th>Term</th><th>Hits</th><th>Background</th><th>Fold</th><th>FDR</th></tr></thead>";
       const tbody = document.createElement("tbody");
@@ -494,14 +503,37 @@
       }
       table.append(tbody); section.append(table); body.append(section);
     }
-    function niceAxis(value) {
+    function niceCountAxis(value) {
       const rawStep = value / 5;
       const magnitude = 10 ** Math.floor(Math.log10(rawStep));
       const fraction = rawStep / magnitude;
-      const step = (fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10) * magnitude;
+      const step = Math.max(1, (fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10) * magnitude);
       return { step, maximum: Math.ceil(value / step) * step };
     }
-    function formatAxisTick(value, step) { return step < 1 ? value.toFixed(1) : number(value); }
+    function formatAxisTick(value) { return number(value); }
+    function fdrColor(value, minimum, maximum) {
+      const denominator = Math.log10(maximum) - Math.log10(minimum);
+      const position = denominator > 0 ? Math.min(1, Math.max(0, (Math.log10(value) - Math.log10(minimum)) / denominator)) : 0;
+      const stops = position <= 0.5
+        ? [[245, 28, 52], [201, 0, 170], position * 2]
+        : [[201, 0, 170], [35, 52, 235], (position - 0.5) * 2];
+      const rgb = stops[0].map((channel, index) => Math.round(channel + (stops[1][index] - channel) * stops[2]));
+      return `rgb(${rgb.join(",")})`;
+    }
+    function createFdrLegend(minimum, maximum) {
+      const legend = document.createElement("div"); legend.className = "fdr-legend"; legend.setAttribute("aria-label", "FDR color scale; lower values are red");
+      const title = document.createElement("div"); title.className = "fdr-legend-title"; title.textContent = "FDR"; legend.append(title);
+      for (let index = 0; index < 4; index += 1) {
+        const position = index / 3;
+        const value = 10 ** (Math.log10(minimum) + (Math.log10(maximum) - Math.log10(minimum)) * position);
+        const step = document.createElement("div"); step.className = "fdr-step";
+        const swatch = document.createElement("span"); swatch.className = "fdr-swatch"; swatch.style.backgroundColor = fdrColor(value, minimum, maximum);
+        const label = document.createElement("span"); label.textContent = formatProbability(value);
+        step.append(swatch, label); legend.append(step);
+      }
+      const direction = document.createElement("div"); direction.className = "fdr-direction"; direction.textContent = "red = lower"; legend.append(direction);
+      return legend;
+    }
     function formatProbability(value) { return value < 0.001 ? Number(value).toExponential(1) : Number(value).toFixed(3); }
     function formatFold(value) { return value >= 10 ? Number(value).toFixed(0) : Number(value).toFixed(1); }
     async function showFamily(familyId) {

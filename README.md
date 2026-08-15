@@ -104,7 +104,7 @@ species-map build \
   --output annotated_map
 ```
 
-Clicking a branch calculates gained- and lost-family enrichment on demand. The database selector separates KEGG pathway, KEGG module, KEGG KO, GO, Pfam, COG category, and KEGG reaction results. The test uses all orthogroups in the map as the background, a one-sided Fisher exact test, and Benjamini-Hochberg correction within the selected database. Results with FDR <= 0.05 appear as an axis-labelled chart and exact table above the gene-family list. The table reports foreground hits, background frequency, fold enrichment, and FDR. The output also includes `functional_annotations.tsv` and the original eggNOG-mapper file under `annotations/`.
+Clicking a branch calculates gained- and lost-family enrichment on demand. The database selector separates KEGG pathway, KEGG module, KEGG KO, GO, Pfam, COG category, and KEGG reaction results. The test uses all orthogroups in the map as the background, a one-sided Fisher exact test, and Benjamini-Hochberg correction within the selected database. Results with FDR <= 0.05 appear as a horizontal bar chart and exact table above the gene-family list. Bar length is the number of foreground gene families and bar color encodes FDR on a logarithmic red-to-blue scale, with lower FDR shown in red. The table reports foreground hits, background frequency, fold enrichment, and FDR. The output also includes `functional_annotations.tsv` and the original eggNOG-mapper file under `annotations/`.
 
 ## Collapse the tree by GTDB rank
 

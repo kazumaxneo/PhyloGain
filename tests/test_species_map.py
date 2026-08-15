@@ -146,8 +146,11 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("/api/annotation-sources", html)
             self.assertIn("chart-axis", html)
             self.assertIn("Background", html)
+            self.assertIn("bar length = hits", html)
+            self.assertIn("createFdrLegend", html)
+            self.assertIn("red = lower", html)
             self.assertIn("width: min(var(--detail-panel-width, 760px)", html)
-            self.assertIn('className = `chart-bar ${eventType}`', html)
+            self.assertIn("bar.style.backgroundColor = fdrColor", html)
             self.assertIn("detailResizeHandle", html)
             self.assertIn("enableDetailResize", html)
 
