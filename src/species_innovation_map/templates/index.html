@@ -109,30 +109,30 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-control-window { position: absolute; z-index: 6; top: 12px; left: 12px; width: min(430px, calc(100% - 24px)); overflow: hidden; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--panel) 90%, transparent); box-shadow: 0 8px 24px rgba(15, 23, 30, .14); backdrop-filter: blur(6px); }
+    .tree-control-window { position: absolute; z-index: 6; top: 12px; left: 12px; width: min(460px, calc(100% - 24px)); overflow: hidden; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--panel) 90%, transparent); box-shadow: 0 8px 24px rgba(15, 23, 30, .14); backdrop-filter: blur(6px); }
     .tree-control-window.minimized { width: 160px; }
     .tree-control-window-head { display: flex; align-items: center; justify-content: space-between; min-height: 30px; padding: 5px 10px; color: var(--ink); cursor: move; touch-action: none; user-select: none; }
     .tree-control-window-title { font-size: 12px; font-weight: 650; }
     .tree-control-window-toggle { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
     .tree-control-window-body { max-height: min(78vh, 760px); overflow: auto; border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
     .tree-control-window.minimized .tree-control-window-body { display: none; }
-    .control-section-title { padding: 7px 12px 4px; color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .control-section-title { padding: 7px 15px 4px; color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
     .tree-control-window .header-controls { display: grid; gap: 0; padding: 0; border-bottom: 0; }
-    .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 9px; min-height: 37px; padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 124px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 37px; padding: 5px 15px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
     .tree-control-window .control-row > label, .tree-control-window .header-field > label, .control-row-label { display: block; color: var(--ink); font-size: 11px; opacity: .76; }
     .tree-control-window .header-controls select, .tree-control-window .header-controls button, .tree-control-window .control-row select, .tree-control-window .control-row button { width: 100%; min-width: 0; border-color: color-mix(in srgb, var(--ink) 22%, transparent); background: color-mix(in srgb, var(--control) 82%, transparent); color: var(--ink); }
     .tree-control-window .branch-filters { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 0; min-height: 0; padding: 0; overflow: visible; border-bottom: 0; background: transparent; }
     .tree-control-window .tree-tools { display: grid; grid-column: 1; grid-row: auto; gap: 0; width: 100%; }
-    .tree-control-window .tree-scale-control { display: grid; grid-template-columns: 120px minmax(0, 1fr) 45px; grid-template-rows: auto; align-items: center; gap: 9px; width: 100%; min-height: 37px; padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .tree-scale-control { display: grid; grid-template-columns: 124px minmax(0, 1fr) 45px; grid-template-rows: auto; align-items: center; gap: 10px; width: 100%; min-height: 37px; padding: 5px 15px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
     .tree-control-window .tree-scale-control label { grid-column: 1; grid-row: 1; display: block; color: var(--ink); font-size: 11px; opacity: .76; }
     .tree-control-window .tree-scale-control input { grid-column: 2; grid-row: 1; width: 100%; }
     .tree-control-window .tree-scale-control output { grid-column: 3; grid-row: 1; width: 45px; }
-    .tree-control-window .range-filter { display: grid; grid-template-columns: 120px minmax(0, 1fr) 66px; grid-template-rows: auto; grid-column: 1; grid-row: auto; gap: 9px; width: 100%; min-width: 0; min-height: 40px; padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .range-filter { display: grid; grid-template-columns: 124px minmax(0, 1fr) 66px; grid-template-rows: auto; grid-column: 1; grid-row: auto; gap: 10px; width: 100%; min-width: 0; min-height: 40px; padding: 5px 15px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
     .tree-control-window .range-filter-name { grid-column: 1; grid-row: 1; color: var(--ink); font-size: 11px; opacity: .76; }
     .tree-control-window .range-filter .dual-range { grid-column: 2; grid-row: 1; }
     .tree-control-window .range-filter output { grid-column: 3; grid-row: 1; }
     .tree-control-window .filter-actions { display: grid; grid-column: 1; grid-row: auto; gap: 0; }
-    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: space-between; justify-self: stretch; padding: 7px 12px; }
+    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: space-between; justify-self: stretch; padding: 7px 15px; }
     .tree-control-window .taxonomy-color-shuffle { margin: 0; }
     .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 7px; }
     .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; width: 134px; color: var(--muted); white-space: nowrap; }
@@ -189,7 +189,8 @@
     .clade-taxonomy-label-accent { pointer-events: none; }
     .clade-taxonomy-label { fill: #fff; font: 600 var(--taxonomy-label-font-size, 9px)/1 var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
     .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
-    .taxonomy-legend-label { fill: var(--muted); font: 9px var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
+    .taxonomy-legend-label { fill: var(--ink); font: 10px var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
+    .taxonomy-legend-title { font-weight: 650; }
     .collapsed-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
@@ -753,6 +754,7 @@
       const taxonomy = state.project.taxonomy?.species || {};
       const rank = state.collapseRank;
       const taxonomyDisplayColorIndex = new Map();
+      const taxonomyDisplayLegend = new Map();
       const cladeSizes = new Map();
       function cladeSize(node) {
         if (cladeSizes.has(node.id)) return cladeSizes.get(node.id);
@@ -839,7 +841,10 @@
       }
       function taxonomyColorIndex(taxonomyRank, value, occurrenceKey = "") {
         const key = occurrenceKey || `${taxonomyRank}:${value}`;
-        if (!taxonomyDisplayColorIndex.has(key)) taxonomyDisplayColorIndex.set(key, taxonomyDisplayColorIndex.size);
+        if (!taxonomyDisplayColorIndex.has(key)) {
+          taxonomyDisplayColorIndex.set(key, taxonomyDisplayColorIndex.size);
+          taxonomyDisplayLegend.set(key, {rank: taxonomyRank, value});
+        }
         return taxonomyDisplayColorIndex.get(key);
       }
       function taxonomyHsl(taxonomyRank, value, occurrenceKey = "", dark = false) {
@@ -872,19 +877,33 @@
         labelNode.textContent = text;
         rotated.append(labelNode); group.append(rotated); canvas.append(group);
       }
-      function appendTaxonomyLegend(x, y) {
-        if (!state.cladeLabelMode) return;
+      function appendTaxonomyLegend(x, y, maxWidth) {
+        if (!state.cladeLabelMode || !taxonomyDisplayLegend.size) return 0;
         const group = svgEl("g", {"aria-label": "GTDB clade background legend"});
-        const title = svgEl("text", {x, y, class: "taxonomy-legend-label"});
+        const title = svgEl("text", {x, y, class: "taxonomy-legend-label taxonomy-legend-title"});
         title.textContent = "GTDB clades"; group.append(title);
-        const sampleEntries = [...taxonomyDisplayColorIndex.entries()].slice(0, 6);
-        sampleEntries.forEach(([key], index) => {
-          const taxonomyRank = key.split(":", 1)[0];
-          group.append(svgEl("rect", {x: x + 66 + index * 17, y: y - 9, width: 13, height: 10, rx: 1, style: `fill:${taxonomyColor(taxonomyRank, "", key)}`}));
-        });
-        const explanation = svgEl("text", {x: x + 66 + sampleEntries.length * 17 + 8, y, class: "taxonomy-legend-label"});
-        explanation.textContent = "one color per clade · label = darker shade";
-        group.append(explanation); canvas.append(group);
+        const startX = x + 72;
+        const rightEdge = x + Math.max(240, maxWidth);
+        const rowHeight = 17;
+        let cursorX = startX;
+        let row = 0;
+        for (const [key, item] of taxonomyDisplayLegend) {
+          const defaultText = `${taxonomyRankTitle(item.rank)}: ${item.value}`;
+          const text = state.taxonomyLabelOverrides.get(key) || defaultText;
+          const itemWidth = Math.max(74, 22 + text.length * 5.6);
+          if (cursorX > startX && cursorX + itemWidth > rightEdge) {
+            row += 1;
+            cursorX = startX;
+          }
+          const itemY = y + row * rowHeight;
+          group.append(svgEl("rect", {x: cursorX, y: itemY - 10, width: 12, height: 12, rx: 1, style: `fill:${taxonomyColor(item.rank, item.value, key)}`}));
+          const label = svgEl("text", {x: cursorX + 17, y: itemY, class: "taxonomy-legend-label"});
+          label.textContent = text;
+          group.append(label);
+          cursorX += itemWidth;
+        }
+        canvas.append(group);
+        return (row + 1) * rowHeight;
       }
       const visibleNodes = [];
       function collect(node) {
@@ -1035,7 +1054,8 @@
           }
         }
         visibleNodes.forEach(node => appendCladeTaxonomyLabel(node, true));
-        appendTaxonomyLegend(18, baseSize - 18);
+        const taxonomyLegendHeight = appendTaxonomyLegend(18, baseSize - 18, baseSize - 36);
+        if (taxonomyLegendHeight > 17) svg.setAttribute("height", (baseSize + taxonomyLegendHeight - 17 + 12) * zoom);
         return;
       }
       svg.style.backgroundImage = useBranchLengths ? "none" : "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
@@ -1123,7 +1143,8 @@
         }
       }
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
-      appendTaxonomyLegend(18, baseHeight - 18);
+      const taxonomyLegendHeight = appendTaxonomyLegend(18, baseHeight - 18, baseWidth - 36);
+      if (taxonomyLegendHeight > 17) svg.setAttribute("height", (baseHeight + taxonomyLegendHeight - 17 + 12) * zoom);
     }
     function enableTreeZoom() {
       const input = $("treeZoom");
@@ -1279,7 +1300,8 @@
         .clade-taxonomy-label-bg { fill-opacity: .82; }
         .clade-taxonomy-label { fill: #fff; font: 600 ${state.taxonomyLabelFontSize}px ${treeLabelFont}; }
         .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
-        .taxonomy-legend-label { fill: ${color("--muted")}; font: 9px ${treeLabelFont}; }
+        .taxonomy-legend-label { fill: ${color("--ink")}; font: 10px ${treeLabelFont}; }
+        .taxonomy-legend-title { font-weight: 650; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
         .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
         .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
