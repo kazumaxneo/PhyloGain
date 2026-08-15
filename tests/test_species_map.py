@@ -130,6 +130,13 @@ class ProjectTests(unittest.TestCase):
                     all(row["source"] == source for row in source_enrichment["results"])
                 )
                 self.assertIn(source, [item["source"] for item in annotation_sources(connection)])
+                ko_enrichment = branch_enrichment(
+                    connection, branch, "gain", min_overlap=1, source="KEGG KO"
+                )
+                self.assertEqual(ko_enrichment["results"][0]["term_id"], "K02588")
+                self.assertEqual(
+                    ko_enrichment["results"][0]["term_name"], "nitrogenase iron protein"
+                )
                 with self.assertRaisesRegex(ValueError, "Unknown annotation database"):
                     branch_enrichment(
                         connection, branch, "gain", min_overlap=1, source="Not a database"
@@ -172,6 +179,36 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('eventKind.className = "event-kind"', html)
             self.assertIn("grid-template-columns: 34px 92px minmax(0, 1fr)", html)
             self.assertIn("text-overflow: ellipsis", html)
+            self.assertIn("enrichmentTermLabel(row)", html)
+
+    def test_import_official_go_names(self):
+        with tempfile.TemporaryDirectory() as directory:
+            obo = Path(directory) / "go-basic.obo"
+            obo.write_text(
+                "format-version: 1.2\n\n"
+                "[Term]\n"
+                "id: GO:0009399\n"
+                "name: nitrogen fixation\n\n"
+                "[Term]\n"
+                "id: GO:0003677\n"
+                "name: DNA binding\n",
+                encoding="utf-8",
+            )
+            output = Path(directory) / "map"
+            build_project(
+                FIXTURE,
+                output,
+                annotation_path=EGGNOG_ANNOTATIONS,
+                go_obo_path=obo,
+            )
+            with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
+                name = connection.execute(
+                    "SELECT term_name FROM annotation_terms WHERE source='GO' AND term_id='GO:0009399'"
+                ).fetchone()[0]
+                self.assertEqual(name, "nitrogen fixation")
+            self.assertTrue((output / "annotations" / "go-basic.obo").is_file())
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project["settings"]["named_go_terms"], 2)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

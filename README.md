@@ -87,13 +87,14 @@ species-map build \
   --annotate eggnog \
   --proteomes proteomes \
   --eggnog-data-dir /path/to/eggnog_data \
+  --go-obo /path/to/go-basic.obo \
   --annotation-cpu 16 \
   --output annotated_map
 
 species-map serve annotated_map
 ```
 
-The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Species Innovation Map selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments.
+The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Species Innovation Map selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. KEGG KO identifiers are labeled with the representative eggNOG functional description.
 
 If eggNOG-mapper was run separately, import its standard output without repeating the search:
 
@@ -171,6 +172,7 @@ species-map validate \
 --proteomes DIR            Protein FASTA directory used by OrthoFinder
 --eggnog-emapper FILE      eggNOG-mapper executable (default: emapper.py)
 --eggnog-data-dir DIR      Existing eggNOG database directory
+--go-obo FILE              Official go-basic.obo file for readable GO term names
 --annotation-cpu INT       CPUs used by eggNOG-mapper (default: 1)
 ```
 

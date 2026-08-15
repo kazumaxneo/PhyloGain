@@ -491,7 +491,7 @@
       const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
       plotted.forEach((row, index) => {
         const chartRow = document.createElement("div"); chartRow.className = "chart-row";
-        const term = document.createElement("div"); term.className = "chart-term"; term.textContent = row.term_name || row.term_id; term.title = `${row.source}: ${row.term_id}`;
+        const term = document.createElement("div"); term.className = "chart-term"; term.textContent = enrichmentTermLabel(row); term.title = `${row.source}: ${row.term_id}`;
         const track = document.createElement("div"); track.className = "chart-track";
         for (let tick = axis.step; tick <= axis.maximum; tick += axis.step) {
           const gridLine = document.createElement("span"); gridLine.className = "chart-grid-line"; gridLine.style.left = `${tick / axis.maximum * 100}%`; track.append(gridLine);
@@ -524,6 +524,10 @@
         tr.append(term, hits, background, fold, fdr); tbody.append(tr);
       }
       table.append(tbody); section.append(table); body.append(section);
+    }
+    function enrichmentTermLabel(row) {
+      const name = row.term_name || row.term_id;
+      return name !== row.term_id ? `${row.term_id} — ${name}` : row.term_id;
     }
     function niceCountAxis(value) {
       const rawStep = value / 5;

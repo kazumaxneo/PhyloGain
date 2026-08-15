@@ -48,6 +48,10 @@ def parser() -> argparse.ArgumentParser:
     )
     build.add_argument("--eggnog-emapper", default="emapper.py")
     build.add_argument("--eggnog-data-dir")
+    build.add_argument(
+        "--go-obo",
+        help="Official go-basic.obo file used to add readable names to GO identifiers",
+    )
     build.add_argument("--annotation-cpu", type=int, default=1)
 
     serve = commands.add_parser("serve", help="Open a generated map in a local web server")
@@ -108,6 +112,7 @@ def main(argv: list[str] | None = None) -> None:
                 gtdb_taxonomy_path=args.gtdb_taxonomy,
                 annotate=args.annotate,
                 annotation_path=args.annotations,
+                go_obo_path=args.go_obo,
                 proteomes=args.proteomes,
                 eggnog_emapper=args.eggnog_emapper,
                 eggnog_data_dir=args.eggnog_data_dir,

@@ -21,6 +21,7 @@ from .analysis import (
     read_phenotypes,
 )
 from .annotation import (
+    import_go_term_names,
     import_eggnog_annotations,
     run_eggnog_mapper,
     write_representative_fasta,
@@ -139,6 +140,7 @@ def build_project(
     gtdb_taxonomy_path: str | Path | None = None,
     annotate: str | None = None,
     annotation_path: str | Path | None = None,
+    go_obo_path: str | Path | None = None,
     proteomes: str | Path | None = None,
     eggnog_emapper: str = "emapper.py",
     eggnog_data_dir: str | Path | None = None,
@@ -164,6 +166,10 @@ def build_project(
         raise InputError("Orthogroups.tsv is required for functional annotation")
     if annotation_path and not Path(annotation_path).is_file():
         raise InputError(f"Annotation file was not found: {annotation_path}")
+    if go_obo_path and not Path(go_obo_path).is_file():
+        raise InputError(f"GO ontology file was not found: {go_obo_path}")
+    if go_obo_path and not (annotate or annotation_path):
+        raise InputError("--go-obo requires --annotate or --annotations")
     output_path = Path(output).resolve()
     if output_path.exists() and any(output_path.iterdir()):
         raise InputError(f"Output directory is not empty: {output_path}")
@@ -324,6 +330,13 @@ def build_project(
     if imported_annotation:
         progress("Importing functional annotations")
         annotation_report = import_eggnog_annotations(connection, imported_annotation)
+        if go_obo_path:
+            progress("Importing official Gene Ontology term names")
+            go_names = import_go_term_names(connection, go_obo_path)
+            annotation_report["named_go_terms"] = go_names
+            go_copy = output_path / "annotations" / "go-basic.obo"
+            if Path(go_obo_path).resolve() != go_copy.resolve():
+                shutil.copyfile(go_obo_path, go_copy)
         _write_functional_annotations(connection, output_path / "functional_annotations.tsv")
 
     connection.executescript(
@@ -371,6 +384,7 @@ def build_project(
             "gene_members_indexed": bool(include_members and found["members"]),
             "annotation_engine": "eggnog" if imported_annotation else None,
             "annotated_families": annotation_report["annotated_families"] if annotation_report else 0,
+            "named_go_terms": annotation_report.get("named_go_terms", 0) if annotation_report else 0,
         },
     }
     (output_path / "project.json").write_text(
@@ -387,6 +401,7 @@ def build_project(
         "phenotype_file": str(Path(phenotype_path).resolve()) if phenotype_path else None,
         "gtdb_taxonomy_file": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
         "annotation_file": str(imported_annotation) if imported_annotation else None,
+        "go_ontology_file": str(Path(go_obo_path).resolve()) if go_obo_path else None,
         "proteomes_directory": str(Path(proteomes).resolve()) if proteomes else None,
         "warnings": report["warnings"],
     }

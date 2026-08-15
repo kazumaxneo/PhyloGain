@@ -187,6 +187,7 @@ def import_eggnog_annotations(
         "INSERT OR IGNORE INTO family_terms(family_id,source,term_id) VALUES(?,?,?)",
         sorted(link_rows),
     )
+    _update_kegg_ko_names(connection)
     connection.execute(
         """
         UPDATE annotation_terms
@@ -197,6 +198,79 @@ def import_eggnog_annotations(
         """
     )
     return {"annotated_families": len(family_rows), "family_term_links": len(link_rows)}
+
+
+def import_go_term_names(
+    connection: sqlite3.Connection,
+    obo_path: str | Path,
+) -> int:
+    """Replace GO identifiers with official term names from a GO OBO file."""
+    names: dict[str, str] = {}
+    term_id = ""
+    term_name = ""
+    alternate_ids: list[str] = []
+
+    def store_term() -> None:
+        if term_id and term_name:
+            names[term_id] = term_name
+            for alternate_id in alternate_ids:
+                names[alternate_id] = term_name
+
+    with Path(obo_path).open("r", encoding="utf-8-sig") as handle:
+        for raw_line in handle:
+            line = raw_line.rstrip("\r\n")
+            if line == "[Term]":
+                store_term()
+                term_id = ""
+                term_name = ""
+                alternate_ids = []
+            elif line.startswith("id: GO:"):
+                term_id = line[4:].strip()
+            elif line.startswith("name: "):
+                term_name = line[6:].strip()
+            elif line.startswith("alt_id: GO:"):
+                alternate_ids.append(line[8:].strip())
+            elif line.startswith("[") and line != "[Term]":
+                store_term()
+                term_id = ""
+                term_name = ""
+                alternate_ids = []
+        store_term()
+
+    existing = {
+        row[0]
+        for row in connection.execute(
+            "SELECT term_id FROM annotation_terms WHERE source='GO'"
+        )
+    }
+    updates = [(names[term_id], term_id) for term_id in existing if term_id in names]
+    connection.executemany(
+        "UPDATE annotation_terms SET term_name=? WHERE source='GO' AND term_id=?",
+        updates,
+    )
+    return len(updates)
+
+
+def _update_kegg_ko_names(connection: sqlite3.Connection) -> int:
+    """Use the most common eggNOG family description as a readable KO label."""
+    rows = connection.execute(
+        """
+        SELECT ft.term_id,f.description,COUNT(*) AS frequency
+        FROM family_terms ft
+        JOIN families f ON f.family_id=ft.family_id
+        WHERE ft.source='KEGG KO' AND TRIM(COALESCE(f.description,'')) NOT IN ('','-')
+        GROUP BY ft.term_id,f.description
+        ORDER BY ft.term_id,frequency DESC,LENGTH(f.description),f.description
+        """
+    ).fetchall()
+    selected: dict[str, str] = {}
+    for term_id, description, _frequency in rows:
+        selected.setdefault(term_id, description)
+    connection.executemany(
+        "UPDATE annotation_terms SET term_name=? WHERE source='KEGG KO' AND term_id=?",
+        [(description, term_id) for term_id, description in selected.items()],
+    )
+    return len(selected)
 
 
 def branch_enrichment(
