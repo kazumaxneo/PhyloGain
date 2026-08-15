@@ -108,13 +108,11 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 10px; }
-    .tree-zoom { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
-    .tree-zoom input { width: 75px; accent-color: var(--accent); }
-    .tree-zoom output { width: 34px; color: var(--ink); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
-    .spacing-controls { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10px; white-space: nowrap; }
-    .spacing-controls button { border: 0; border-radius: 0; padding: 1px 2px; background: transparent; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
-    .spacing-controls output { width: 31px; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: center; }
+    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 9px; }
+    .tree-scale-control { display: grid; grid-template-columns: 66px 30px; grid-template-rows: 13px 16px; align-items: center; column-gap: 3px; width: 99px; color: var(--muted); white-space: nowrap; }
+    .tree-scale-control label { grid-column: 1 / 3; font-size: 9px; line-height: 1; }
+    .tree-scale-control input { grid-column: 1; width: 66px; margin: 0; accent-color: var(--accent); }
+    .tree-scale-control output { grid-column: 2; width: 30px; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
     .svg-download { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; white-space: nowrap; text-decoration: underline; text-underline-offset: 2px; }
@@ -282,6 +280,7 @@
     @media (max-width: 1400px) {
       .summary .card:nth-child(3), .summary .card:last-child { display: none; }
       .filter-status .legend { display: none; }
+      .filter-match-count { display: none; }
     }
     @media (max-width: 1180px) {
       .header-controls > label, .header-controls .header-field > label { display: none; }
@@ -339,7 +338,6 @@
         <select id="treeLayoutSelect" title="Tree layout" aria-label="Tree layout">
           <option value="rectangular">Rectangular</option>
           <option value="circular">Circular</option>
-          <option value="unrooted">Unrooted</option>
         </select>
       </span>
     </div>
@@ -354,18 +352,25 @@
     <section class="map-panel">
       <div class="branch-filters" aria-label="Branch event filters">
         <div class="tree-tools">
-          <div class="tree-zoom">
-          <label for="treeZoom">Zoom</label>
-          <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
-          <output id="treeZoomValue" for="treeZoom">100%</output>
+          <div class="tree-scale-control">
+            <label for="treeZoom">Zoom</label>
+            <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
+            <output id="treeZoomValue" for="treeZoom">100%</output>
           </div>
-          <div class="spacing-controls" aria-label="Tree spacing controls">
-            <button id="horizontalSpacingDown" type="button" title="Decrease horizontal spacing">H−</button>
-            <output id="horizontalSpacingValue">100%</output>
-            <button id="horizontalSpacingUp" type="button" title="Increase horizontal spacing">H+</button>
-            <button id="verticalSpacingDown" type="button" title="Decrease vertical spacing">V−</button>
-            <output id="verticalSpacingValue">100%</output>
-            <button id="verticalSpacingUp" type="button" title="Increase vertical spacing">V+</button>
+          <div class="tree-scale-control">
+            <label for="horizontalSpacing">Horizontal spacing</label>
+            <input id="horizontalSpacing" type="range" min="50" max="300" step="10" value="100" aria-label="Horizontal tree spacing">
+            <output id="horizontalSpacingValue" for="horizontalSpacing">100%</output>
+          </div>
+          <div class="tree-scale-control">
+            <label for="verticalSpacing">Vertical spacing</label>
+            <input id="verticalSpacing" type="range" min="50" max="300" step="10" value="100" aria-label="Vertical tree spacing">
+            <output id="verticalSpacingValue" for="verticalSpacing">100%</output>
+          </div>
+          <div class="tree-scale-control">
+            <label for="tipFontSize">Tip labels</label>
+            <input id="tipFontSize" type="range" min="6" max="16" step="1" value="9" aria-label="Tip label font size">
+            <output id="tipFontSizeValue" for="tipFontSize">9px</output>
           </div>
         </div>
         <div class="range-filter gain-filter">
@@ -397,7 +402,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -583,7 +588,6 @@
         svg.setAttribute("height", baseSize * zoom);
         svg.style.backgroundImage = "none";
         function radialPath(parent, node) {
-          if (state.treeLayout === "unrooted") return `M ${parent.x} ${parent.y} L ${node.x} ${node.y}`;
           const turnX = center + parent.radius * Math.cos(node.angle);
           const turnY = center + parent.radius * Math.sin(node.angle);
           const delta = node.angle - parent.angle;
@@ -604,7 +608,7 @@
           canvas.append(svgEl("path", {d: pathData, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id, fill: "none"}));
           const middleX = (parent.x + node.x) / 2;
           const middleY = (parent.y + node.y) / 2;
-          const label = svgEl("text", {x: middleX, y: middleY - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
+          const label = svgEl("text", {x: middleX, y: middleY - 5, "text-anchor": "middle", class: "branch-label", style: "font-size: 9px", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
           const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
           const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
           const gain = svgEl("tspan", {class: gainClass, "data-branch": node.branch_id, "data-event": "gain", role: "button", tabindex: "0", "aria-label": `Gained gene families on branch ${node.branch_id}`}); gain.textContent = `+${branch.gain_count}`;
@@ -622,6 +626,7 @@
           const ux = Math.cos(node.angle);
           const uy = Math.sin(node.angle);
           const anchor = ux >= 0 ? "start" : "end";
+          const labelAngle = node.angle * 180 / Math.PI + (ux < 0 ? 180 : 0);
           if (node.collapsed) {
             const px = -uy;
             const py = ux;
@@ -630,7 +635,9 @@
             const tipX = node.x + ux * 16;
             const tipY = node.y + uy * 16;
             const marker = svgEl("polygon", {points: `${baseX + px * 6},${baseY + py * 6} ${tipX},${tipY} ${baseX - px * 6},${baseY - py * 6}`, class: "collapsed-marker", "data-expand-node": node.id});
-            const tip = svgEl("text", {x: node.x + ux * 23, y: node.y + uy * 23 + 4, "text-anchor": anchor, class: "collapsed-label", "data-expand-node": node.id});
+            const labelX = node.x + ux * 23;
+            const labelY = node.y + uy * 23;
+            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: "collapsed-label", "data-expand-node": node.id});
             tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
             addSvgTooltip(marker, "Expand clade");
             addSvgTooltip(tip, "Expand clade");
@@ -638,7 +645,9 @@
           } else if (node.is_leaf) {
             const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
             const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-            const tip = svgEl("text", {x: node.x + ux * 10, y: node.y + uy * 10 + 4, "text-anchor": anchor, class: tipClass});
+            const labelX = node.x + ux * 10;
+            const labelY = node.y + uy * 10;
+            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass});
             tip.textContent = taxonomyLabel;
             canvas.append(tip);
           }
@@ -701,7 +710,7 @@
         else canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
         if (node.collapsed) {
           const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
-          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
+          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: "collapsed-label", "data-expand-node": node.id});
           tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
           addSvgTooltip(marker, "Expand clade");
           addSvgTooltip(tip, "Expand clade");
@@ -709,7 +718,7 @@
         } else if (node.is_leaf) {
           const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: tipClass}); tip.textContent = taxonomyLabel; canvas.append(tip);
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass}); tip.textContent = taxonomyLabel; canvas.append(tip);
         }
       }
     }
@@ -756,10 +765,21 @@
       for (const axis of ["horizontal", "vertical"]) {
         const stored = Number(localStorage.getItem(`species-map-${axis}-spacing`));
         if (Number.isFinite(stored) && stored >= .5 && stored <= 3) state[`${axis}Spacing`] = stored;
+        const input = $(`${axis}Spacing`);
+        input.value = String(Math.round(state[`${axis}Spacing`] * 100));
         $(`${axis}SpacingValue`).textContent = `${Math.round(state[`${axis}Spacing`] * 100)}%`;
-        $(`${axis}SpacingDown`).addEventListener("click", () => setSpacing(axis, state[`${axis}Spacing`] - .1));
-        $(`${axis}SpacingUp`).addEventListener("click", () => setSpacing(axis, state[`${axis}Spacing`] + .1));
+        input.addEventListener("input", () => setSpacing(axis, Number(input.value) / 100));
       }
+      const storedTipFontSize = Number(localStorage.getItem("species-map-tip-font-size"));
+      if (Number.isFinite(storedTipFontSize) && storedTipFontSize >= 6 && storedTipFontSize <= 16) state.tipFontSize = storedTipFontSize;
+      $("tipFontSize").value = String(state.tipFontSize);
+      $("tipFontSizeValue").textContent = `${state.tipFontSize}px`;
+      $("tipFontSize").addEventListener("input", event => {
+        state.tipFontSize = Number(event.target.value);
+        $("tipFontSizeValue").textContent = `${state.tipFontSize}px`;
+        localStorage.setItem("species-map-tip-font-size", String(state.tipFontSize));
+        rerenderKeepingCenter();
+      });
       $("treeLayoutSelect").addEventListener("change", event => {
         state.treeLayout = event.target.value;
         renderTree();

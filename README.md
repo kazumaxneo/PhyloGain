@@ -184,8 +184,10 @@ are normalized to `0.950`; branches without support labels remain unlabelled.
 The Zoom slider scales the complete tree while preserving the current viewport center.
 Use H−/H+ to change the distance between successive tree depths and V−/V+ to
 change the spacing between displayed tips. These controls are especially useful
-after collapsing a large clade. Layout switches among Rectangular, Circular, and
-Unrooted views without changing the topology, branch events, or collapsed-node state.
+after collapsing a large clade. Tip labels adjusts label text from 6 to 16 px.
+Layout switches between Rectangular and Circular views without changing the
+topology, branch events, or collapsed-node state. Circular tip names follow their
+terminal-branch angles and reverse orientation on the left side for readability.
 Download SVG saves the complete currently rendered tree, including its layout,
 collapsed clades, Gain/Loss labels, support values, filters, and active color theme.
 Click a horizontal internal branch to collapse its descendant clade, and click the
