@@ -26,6 +26,7 @@
 - Stack Gain and Loss filter bars vertically, enlarge their labels and values, and simplify Reset to an unboxed text control.
 - Rename the public interface from Species Innovation Map to Gene Gain/Loss Viewer.
 - Move the four dataset statistics into the title bar to preserve vertical space on laptop screens.
+- Clarify the gained- and lost-family functional-enrichment headings in the branch detail panel.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

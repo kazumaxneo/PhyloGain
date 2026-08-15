@@ -562,8 +562,8 @@
       ]);
       if (state.selectedBranch !== branchId || state.enrichmentSource !== source) return;
       container.replaceChildren();
-      appendEnrichment(container, gain, "Gained-family enrichment");
-      appendEnrichment(container, loss, "Lost-family enrichment");
+      appendEnrichment(container, gain, "Functional enrichment of gained gene families");
+      appendEnrichment(container, loss, "Functional enrichment of lost gene families");
     }
     function appendEnrichment(body, enrichment, heading) {
       const section = document.createElement("section"); section.className = "enrichment-section";
