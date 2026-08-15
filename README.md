@@ -77,6 +77,35 @@ This additionally creates:
 
 Repeat `--phenotype` to select several columns. Omit it to analyze all phenotype columns.
 
+## Add functional enrichment with eggNOG-mapper
+
+Functional annotation is optional. Supply the protein FASTA directory used by OrthoFinder and request eggNOG-mapper during the build:
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --annotate eggnog \
+  --proteomes proteomes \
+  --eggnog-data-dir /path/to/eggnog_data \
+  --annotation-cpu 16 \
+  --output annotated_map
+
+species-map serve annotated_map
+```
+
+The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Species Innovation Map selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments.
+
+If eggNOG-mapper was run separately, import its standard output without repeating the search:
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --annotations eggnog.emapper.annotations \
+  --output annotated_map
+```
+
+Clicking a branch calculates gained- and lost-family enrichment on demand. The test uses all orthogroups in the map as the background, a one-sided Fisher exact test, and Benjamini-Hochberg correction across tested terms. Results with FDR <= 0.05 appear above the gene-family list. The output also includes `functional_annotations.tsv` and the original eggNOG-mapper file under `annotations/`.
+
 ## Collapse the tree by GTDB rank
 
 Add a GTDB taxonomy TSV to enable interactive collapse controls for phylum, class, order, family, and genus. Standard GTDB-Tk summary files are accepted directly (`user_genome` plus `classification`). A generic TSV may instead use `species_id` or `genome_id` plus `gtdb_taxonomy`.
@@ -137,6 +166,12 @@ species-map validate \
 --no-members               Skip Orthogroups.tsv to make a smaller output
 --species-tree FILE        Rooted Newick tree replacing the OrthoFinder tree
 --gtdb-taxonomy FILE       GTDB/GTDB-Tk taxonomy TSV for rank collapsing
+--annotate eggnog          Run eggNOG-mapper for orthogroup representatives
+--annotations FILE         Import an existing .emapper.annotations file
+--proteomes DIR            Protein FASTA directory used by OrthoFinder
+--eggnog-emapper FILE      eggNOG-mapper executable (default: emapper.py)
+--eggnog-data-dir DIR      Existing eggNOG database directory
+--annotation-cpu INT       CPUs used by eggNOG-mapper (default: 1)
 ```
 
 Example with gains penalized relative to losses:

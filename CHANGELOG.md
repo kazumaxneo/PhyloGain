@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.3.0 — 2026-08-15
+
+- Add optional eggNOG-mapper annotation with `--annotate eggnog`.
+- Import precomputed eggNOG results with `--annotations`.
+- Calculate branch-specific Gain/Loss enrichment with Fisher's exact test and BH FDR.
+- Show enriched terms, preferred gene names, and functional descriptions in the branch panel.
+- Export `functional_annotations.tsv` for reuse outside the viewer.
+
 ## 0.2.1 — 2026-08-15
 
 - Show taxonomy-assigned singleton tips as `Taxon (1)` in collapsed rank views.
