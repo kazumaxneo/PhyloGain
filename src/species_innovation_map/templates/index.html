@@ -115,6 +115,7 @@
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
+    .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
     .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
@@ -311,7 +312,9 @@
           tip.textContent = `${node.rankValue} (${number(node.leafCount)})`;
           svg.append(marker, tip);
         } else if (node.is_leaf) {
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: "tip-label"}); tip.textContent = node.label; svg.append(tip);
+          const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+          const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: tipClass}); tip.textContent = taxonomyLabel; svg.append(tip);
         }
       }
     }
