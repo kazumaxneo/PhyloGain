@@ -190,6 +190,8 @@ topology, branch events, or collapsed-node state. Circular tip names follow thei
 terminal-branch angles and reverse orientation on the left side for readability.
 Download SVG saves the complete currently rendered tree, including its layout,
 collapsed clades, Gain/Loss labels, support values, filters, and active color theme.
+Each significant enrichment section also provides Download plot (SVG) and
+Download table (UTF-8 TSV) for the selected branch, event type, and database.
 Click a horizontal internal branch to collapse its descendant clade, and click the
 collapsed marker to expand it again. Clicking a vertical connector flips the display
 order of its child clades without changing the topology or inferred events.

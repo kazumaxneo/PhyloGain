@@ -121,7 +121,7 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: minmax(235px, 1fr) minmax(235px, 1fr) max-content max-content minmax(0, auto); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
     .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; min-width: 235px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
@@ -212,6 +212,11 @@
     .enrichment-toolbar select { min-width: 210px; }
     .enrichment-method { margin-left: auto; color: var(--muted); font-size: 10px; }
     .enrichment-section { margin-bottom: 26px; }
+    .enrichment-section-head { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 8px; }
+    .enrichment-section-head .section-title { margin: 0; }
+    .enrichment-downloads { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .enrichment-download { border: 0; border-radius: 0; padding: 1px 0; background: transparent; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+    .enrichment-download:focus-visible { outline: none; color: var(--accent); text-decoration-thickness: 2px; }
     .chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 74px; gap: 14px; align-items: start; }
     .enrichment-chart { --term-column: minmax(280px, 38%); display: grid; gap: 7px; margin: 8px 0 14px; }
     .enrichment-chart.long-term-labels { --term-column: minmax(340px, 48%); }
@@ -927,16 +932,23 @@
       container.replaceChildren();
       enrichments.forEach((enrichment, index) => {
         const kind = eventKinds[index];
-        appendEnrichment(container, enrichment, kind === "gain" ? "Functional enrichment of gained gene families" : "Functional enrichment of lost gene families");
+        appendEnrichment(container, enrichment, kind === "gain" ? "Functional enrichment of gained gene families" : "Functional enrichment of lost gene families", branchId, kind);
       });
     }
-    function appendEnrichment(body, enrichment, heading) {
+    function appendEnrichment(body, enrichment, heading, branchId, eventKind) {
       const section = document.createElement("section"); section.className = "enrichment-section";
-      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; section.append(title);
+      const sectionHead = document.createElement("div"); sectionHead.className = "enrichment-section-head";
+      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; sectionHead.append(title); section.append(sectionHead);
       if (!enrichment.foreground) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No gene-family events on this branch."; section.append(empty); body.append(section); return; }
       const significant = enrichment.results.filter(row => row.q_value <= 0.05);
       if (!significant.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No enriched terms at FDR ≤ 0.05."; section.append(empty); body.append(section); return; }
       const plotted = significant.slice(0, 15);
+      const downloads = document.createElement("div"); downloads.className = "enrichment-downloads";
+      const plotDownload = document.createElement("button"); plotDownload.type = "button"; plotDownload.className = "enrichment-download"; plotDownload.textContent = "Download plot";
+      plotDownload.addEventListener("click", () => downloadEnrichmentPlot(plotted, enrichment, heading, branchId, eventKind));
+      const tableDownload = document.createElement("button"); tableDownload.type = "button"; tableDownload.className = "enrichment-download"; tableDownload.textContent = "Download table";
+      tableDownload.addEventListener("click", () => downloadEnrichmentTable(significant, enrichment, branchId, eventKind));
+      downloads.append(plotDownload, tableDownload); sectionHead.append(downloads);
       const counts = plotted.map(row => Number(row.overlap));
       const fdrValues = plotted.map(row => Math.max(Number(row.q_value), 1e-300));
       const axis = niceCountAxis(Math.max(...counts, 1));
@@ -979,6 +991,69 @@
         tr.append(term, hits, background, fold, fdr); tbody.append(tr);
       }
       table.append(tbody); section.append(table); body.append(section);
+    }
+    function safeFilename(value) { return String(value).replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, ""); }
+    function triggerDownload(blob, filename) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob); link.download = filename; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+    function enrichmentFilename(branchId, eventKind, source, extension) {
+      return `${safeFilename(branchId)}-${safeFilename(eventKind)}-${safeFilename(source)}-enrichment.${extension}`;
+    }
+    function downloadEnrichmentTable(rows, enrichment, branchId, eventKind) {
+      const columns = ["Source", "Term ID", "Term name", "Hits", "Foreground", "Term total", "Universe", "Fold enrichment", "P value", "FDR"];
+      const clean = value => String(value ?? "").replace(/[\t\r\n]+/g, " ");
+      const lines = [columns.join("\t")];
+      for (const row of rows) lines.push([
+        row.source, row.term_id, row.term_name || row.term_id, row.overlap, row.foreground,
+        row.term_total, row.universe, row.fold_enrichment, row.p_value, row.q_value
+      ].map(clean).join("\t"));
+      const blob = new Blob(["\ufeff", lines.join("\n") + "\n"], {type: "text/tab-separated-values;charset=utf-8"});
+      triggerDownload(blob, enrichmentFilename(branchId, eventKind, enrichment.source, "tsv"));
+    }
+    function downloadEnrichmentPlot(rows, enrichment, heading, branchId, eventKind) {
+      const width = 1200;
+      const labelWidth = enrichment.source === "KEGG reaction" ? 610 : 470;
+      const plotWidth = width - labelWidth - 120;
+      const rowHeight = 34;
+      const top = 76;
+      const bottom = 58;
+      const height = top + rows.length * rowHeight + bottom;
+      const counts = rows.map(row => Number(row.overlap));
+      const fdrValues = rows.map(row => Math.max(Number(row.q_value), 1e-300));
+      const axis = niceCountAxis(Math.max(...counts, 1));
+      const fdrMinimum = Math.min(...fdrValues);
+      const fdrMaximum = 0.05;
+      const rootStyle = getComputedStyle(document.documentElement);
+      const color = name => rootStyle.getPropertyValue(name).trim();
+      const svg = document.createElementNS(SVG, "svg");
+      svg.setAttribute("xmlns", SVG); svg.setAttribute("width", width); svg.setAttribute("height", height); svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.append(svgEl("rect", {width, height, fill: color("--panel")}));
+      const title = svgEl("text", {x: 24, y: 30, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 18, "font-weight": 600}); title.textContent = heading; svg.append(title);
+      const subtitle = svgEl("text", {x: 24, y: 52, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 12}); subtitle.textContent = `${branchId} · ${enrichment.source} · bar length = hits · color = FDR`; svg.append(subtitle);
+      const legendX = width - 330;
+      const legendTitle = svgEl("text", {x: legendX - 42, y: 38, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); legendTitle.textContent = "FDR"; svg.append(legendTitle);
+      for (let index = 0; index < 4; index += 1) {
+        const position = index / 3;
+        const value = 10 ** (Math.log10(fdrMinimum) + (Math.log10(fdrMaximum) - Math.log10(fdrMinimum)) * position);
+        const x = legendX + index * 74;
+        svg.append(svgEl("rect", {x, y: 27, width: 64, height: 11, fill: fdrColor(value, fdrMinimum, fdrMaximum)}));
+        const legendLabel = svgEl("text", {x: x + 32, y: 52, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 9, "text-anchor": "middle"}); legendLabel.textContent = formatProbability(value); svg.append(legendLabel);
+      }
+      for (let tick = 0; tick <= axis.maximum + axis.step / 2; tick += axis.step) {
+        const x = labelWidth + tick / axis.maximum * plotWidth;
+        svg.append(svgEl("line", {x1: x, y1: top - 10, x2: x, y2: height - bottom + 4, stroke: color("--line"), "stroke-width": 1}));
+        const tickText = svgEl("text", {x, y: height - 24, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 11, "text-anchor": "middle"}); tickText.textContent = formatAxisTick(tick); svg.append(tickText);
+      }
+      rows.forEach((row, index) => {
+        const y = top + index * rowHeight;
+        const label = svgEl("text", {x: labelWidth - 14, y: y + 17, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 12, "text-anchor": "end"}); label.textContent = enrichmentTermLabel(row); svg.append(label);
+        svg.append(svgEl("rect", {x: labelWidth, y: y + 4, width: Math.max(2, counts[index] / axis.maximum * plotWidth), height: 20, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum)}));
+        const count = svgEl("text", {x: labelWidth + counts[index] / axis.maximum * plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = number(counts[index]); svg.append(count);
+      });
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+      triggerDownload(new Blob([markup], {type: "image/svg+xml;charset=utf-8"}), enrichmentFilename(branchId, eventKind, enrichment.source, "svg"));
     }
     function enrichmentTermLabel(row) {
       const name = row.term_name || row.term_id;
