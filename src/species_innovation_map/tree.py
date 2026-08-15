@@ -8,6 +8,7 @@ from pathlib import Path
 class Node:
     label: str = ""
     length: float | None = None
+    support: float | None = None
     children: list["Node"] = field(default_factory=list)
     parent: "Node | None" = None
     node_id: str = ""
@@ -65,6 +66,8 @@ class _Parser:
                     break
                 raise NewickError(f"Expected ',' or ')' at character {self.pos + 1}")
         node.label = self._label()
+        if node.children:
+            node.support = normalize_support(node.label)
         self._space()
         if self.pos < len(self.text) and self.text[self.pos] == ":":
             self.pos += 1
@@ -107,6 +110,17 @@ def parse_newick(path: str | Path) -> Node:
     root = _Parser(Path(path).read_text(encoding="utf-8")).parse()
     assign_ids(root)
     return root
+
+
+def normalize_support(label: str) -> float | None:
+    """Return an internal-node support value on a 0–1 scale when present."""
+    try:
+        value = float(label)
+    except (TypeError, ValueError):
+        return None
+    if not 0 <= value <= 100:
+        return None
+    return value / 100 if value > 1 else value
 
 
 def preorder(root: Node) -> list[Node]:
@@ -167,6 +181,7 @@ def as_project_nodes(root: Node) -> list[dict[str, object]]:
             "parent_id": node.parent.node_id if node.parent else None,
             "branch_id": node.branch_id,
             "length": node.length,
+            "support": node.support,
             "is_leaf": node.is_leaf,
             "depth": node.depth,
             "children": [child.node_id for child in node.children],

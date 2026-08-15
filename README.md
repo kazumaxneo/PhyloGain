@@ -1,6 +1,6 @@
-# Species Innovation Map
+# Gene Gain/Loss Viewer
 
-**Species Innovation Map** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) result directory into an interactive species tree annotated with gene-family gains and losses.
+**Gene Gain/Loss Viewer** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) result directory into an interactive species tree annotated with gene-family gains and losses.
 
 Each branch shows `+gains / −losses`. Click a branch to inspect its orthogroups, then click an orthogroup to see member gene IDs. An optional phenotype table marks inferred phenotype transitions and ranks gene families gained on the same branches.
 
@@ -87,13 +87,15 @@ species-map build \
   --annotate eggnog \
   --proteomes proteomes \
   --eggnog-data-dir /path/to/eggnog_data \
+  --go-obo /path/to/go-basic.obo \
+  --fetch-kegg-names \
   --annotation-cpu 16 \
   --output annotated_map
 
 species-map serve annotated_map
 ```
 
-The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Species Innovation Map selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments.
+The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Gene Gain/Loss Viewer selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. `--fetch-kegg-names` retrieves official KO, pathway, module, and reaction names from the KEGG REST API once during the build and stores them in SQLite and `annotations/kegg_term_names.tsv`; viewing the map then requires no KEGG API calls. The KEGG REST API is limited to academic use by academic users.
 
 If eggNOG-mapper was run separately, import its standard output without repeating the search:
 
@@ -104,7 +106,9 @@ species-map build \
   --output annotated_map
 ```
 
-Clicking a branch calculates gained- and lost-family enrichment on demand. The test uses all orthogroups in the map as the background, a one-sided Fisher exact test, and Benjamini-Hochberg correction across tested terms. Results with FDR <= 0.05 appear above the gene-family list. The output also includes `functional_annotations.tsv` and the original eggNOG-mapper file under `annotations/`.
+Clicking a branch calculates gained- and lost-family enrichment on demand. The database selector separates KEGG pathway, KEGG module, KEGG KO, GO, Pfam, COG category, and KEGG reaction results. The test uses all orthogroups in the map as the background, a one-sided Fisher exact test, and Benjamini-Hochberg correction within the selected database. Results with FDR <= 0.05 appear as a horizontal bar chart and exact table above the gene-family list. Bar length is the number of foreground gene families and bar color encodes FDR on a logarithmic red-to-blue scale, with lower FDR shown in red. The table reports foreground hits, background frequency, fold enrichment, and FDR. The output also includes `functional_annotations.tsv` and the original eggNOG-mapper file under `annotations/`.
+
+Select `All` to rank significant terms from every available annotation database together while retaining separate Benjamini-Hochberg correction within each database. The plot selector switches between a bar plot (bar length = hits) and a dot plot (x = fold enrichment, dot size = hits); color represents FDR in both views.
 
 ## Collapse the tree by GTDB rank
 
@@ -123,6 +127,8 @@ species-map build \
 ```
 
 The viewer collapses each maximal monophyletic clade sharing the selected rank. A repeated taxon label means that taxon is non-monophyletic in the supplied species tree. Click a collapsed label to expand only that group. Gain/Loss values remain the events on the branch entering the collapsed clade; hidden descendant events are not added to that number.
+
+The `GTDB labels` control can independently show family labels, genus labels, or both inside the uncollapsed tree. A label is placed only at the crown node of a monophyletic group with at least two sampled genomes; single-genome taxa remain represented only by their normal tip names. Select `Off` to hide all internal GTDB labels.
 
 To use a different rooted topology, including a pruned and relabeled GTDB tree whose tips exactly match the OrthoFinder species IDs:
 
@@ -171,8 +177,33 @@ species-map validate \
 --proteomes DIR            Protein FASTA directory used by OrthoFinder
 --eggnog-emapper FILE      eggNOG-mapper executable (default: emapper.py)
 --eggnog-data-dir DIR      Existing eggNOG database directory
+--go-obo FILE              Official go-basic.obo file for readable GO term names
+--fetch-kegg-names         Fetch and cache official KEGG names during the build
 --annotation-cpu INT       CPUs used by eggNOG-mapper (default: 1)
 ```
+
+Numeric internal-node support labels in the selected Newick tree are shown below
+their branches on a 0–1 scale. Values supplied as percentages (for example, `95`)
+are normalized to `0.950`; branches without support labels remain unlabelled.
+The Zoom slider scales the complete tree while preserving the current viewport center.
+Use H−/H+ to change the distance between successive tree depths and V−/V+ to
+change the spacing between displayed tips. These controls are especially useful
+after collapsing a large clade. Tip labels adjusts label text from 6 to 16 px.
+Layout switches between Rectangular and Circular views without changing the
+topology, branch events, or collapsed-node state. Circular tip names follow their
+terminal-branch angles and reverse orientation on the left side for readability.
+Download SVG saves the complete currently rendered tree, including its layout,
+collapsed clades, Gain/Loss labels, support values, filters, and active color theme.
+Each significant enrichment section also provides Download plot (SVG) and
+Download table (UTF-8 TSV) for the selected branch, event type, and database.
+Click a horizontal internal branch to collapse its descendant clade, and click the
+collapsed marker to expand it again. Clicking a vertical connector flips the display
+order of its child clades without changing the topology or inferred events.
+Subtle hover tooltips identify these actions as Collapse clade, Expand clade, or Flip clades.
+The Order control ladderizes every node by descendant-tip count in ascending or
+descending order. The Support control can collapse branches below a selected
+0–1 bootstrap threshold in 0.10 increments; its default All setting leaves the
+complete tree visible.
 
 Example with gains penalized relative to losses:
 

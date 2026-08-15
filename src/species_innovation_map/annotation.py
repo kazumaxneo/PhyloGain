@@ -5,7 +5,9 @@ import math
 import shutil
 import sqlite3
 import subprocess
+import time
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 
 COG_CATEGORIES = {
@@ -45,6 +47,14 @@ TERM_COLUMNS = {
     "KEGG_Reaction": "KEGG reaction",
     "PFAMs": "Pfam",
 }
+
+KEGG_LIST_DATABASES = {
+    "KEGG KO": "ko",
+    "KEGG pathway": "pathway",
+    "KEGG module": "module",
+    "KEGG reaction": "reaction",
+}
+KEGG_REST_URL = "https://rest.kegg.jp"
 
 
 def write_representative_fasta(
@@ -187,6 +197,7 @@ def import_eggnog_annotations(
         "INSERT OR IGNORE INTO family_terms(family_id,source,term_id) VALUES(?,?,?)",
         sorted(link_rows),
     )
+    _update_kegg_ko_names(connection)
     connection.execute(
         """
         UPDATE annotation_terms
@@ -199,12 +210,160 @@ def import_eggnog_annotations(
     return {"annotated_families": len(family_rows), "family_term_links": len(link_rows)}
 
 
+def import_go_term_names(
+    connection: sqlite3.Connection,
+    obo_path: str | Path,
+) -> int:
+    """Replace GO identifiers with official term names from a GO OBO file."""
+    names: dict[str, str] = {}
+    term_id = ""
+    term_name = ""
+    alternate_ids: list[str] = []
+
+    def store_term() -> None:
+        if term_id and term_name:
+            names[term_id] = term_name
+            for alternate_id in alternate_ids:
+                names[alternate_id] = term_name
+
+    with Path(obo_path).open("r", encoding="utf-8-sig") as handle:
+        for raw_line in handle:
+            line = raw_line.rstrip("\r\n")
+            if line == "[Term]":
+                store_term()
+                term_id = ""
+                term_name = ""
+                alternate_ids = []
+            elif line.startswith("id: GO:"):
+                term_id = line[4:].strip()
+            elif line.startswith("name: "):
+                term_name = line[6:].strip()
+            elif line.startswith("alt_id: GO:"):
+                alternate_ids.append(line[8:].strip())
+            elif line.startswith("[") and line != "[Term]":
+                store_term()
+                term_id = ""
+                term_name = ""
+                alternate_ids = []
+        store_term()
+
+    existing = {
+        row[0]
+        for row in connection.execute(
+            "SELECT term_id FROM annotation_terms WHERE source='GO'"
+        )
+    }
+    updates = [(names[term_id], term_id) for term_id in existing if term_id in names]
+    connection.executemany(
+        "UPDATE annotation_terms SET term_name=? WHERE source='GO' AND term_id=?",
+        updates,
+    )
+    return len(updates)
+
+
+def fetch_official_kegg_names(
+    connection: sqlite3.Connection,
+    cache_path: str | Path | None = None,
+    base_url: str = KEGG_REST_URL,
+) -> dict[str, int]:
+    """Fetch official KEGG labels once, cache them, and update stored term names."""
+    fetched: dict[str, dict[str, str]] = {}
+    for index, (source, database) in enumerate(KEGG_LIST_DATABASES.items()):
+        request = Request(
+            f"{base_url.rstrip('/')}/list/{database}",
+            headers={"User-Agent": "species-innovation-map"},
+        )
+        with urlopen(request, timeout=120) as response:
+            text = response.read().decode("utf-8")
+        fetched[source] = _parse_kegg_list(text)
+        if index + 1 < len(KEGG_LIST_DATABASES):
+            time.sleep(0.4)
+
+    existing = connection.execute(
+        "SELECT source,term_id FROM annotation_terms WHERE source LIKE 'KEGG %'"
+    ).fetchall()
+    updates: list[tuple[str, str, str]] = []
+    cached_rows: list[tuple[str, str, str]] = []
+    counts = {source: 0 for source in KEGG_LIST_DATABASES}
+    for source, term_id in existing:
+        lookup_id = term_id
+        if source == "KEGG pathway" and term_id.startswith("ko"):
+            lookup_id = "map" + term_id[2:]
+        term_name = fetched.get(source, {}).get(lookup_id)
+        if not term_name:
+            continue
+        updates.append((term_name, source, term_id))
+        cached_rows.append((source, term_id, term_name))
+        counts[source] += 1
+    unavailable_modules = [
+        term_id
+        for source, term_id in existing
+        if source == "KEGG module" and term_id not in fetched["KEGG module"]
+    ]
+    retired_label = "Retired KEGG module (not present in the current KEGG release)"
+    updates.extend(
+        (retired_label, "KEGG module", term_id) for term_id in unavailable_modules
+    )
+    cached_rows.extend(
+        ("KEGG module", term_id, retired_label) for term_id in unavailable_modules
+    )
+    connection.executemany(
+        "UPDATE annotation_terms SET term_name=? WHERE source=? AND term_id=?",
+        updates,
+    )
+    if cache_path:
+        destination = Path(cache_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        with destination.open("w", encoding="utf-8", newline="") as handle:
+            writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+            writer.writerow(["source", "term_id", "term_name"])
+            writer.writerows(sorted(cached_rows))
+    counts["total"] = len(updates)
+    counts["retired_modules"] = len(unavailable_modules)
+    return counts
+
+
+def _parse_kegg_list(text: str) -> dict[str, str]:
+    names: dict[str, str] = {}
+    for line in text.splitlines():
+        if "\t" not in line:
+            continue
+        term_id, term_name = line.split("\t", 1)
+        term_id = term_id.removeprefix("ko:")
+        if term_id and term_name:
+            names[term_id] = term_name
+    return names
+
+
+def _update_kegg_ko_names(connection: sqlite3.Connection) -> int:
+    """Use the most common eggNOG family description as a readable KO label."""
+    rows = connection.execute(
+        """
+        SELECT ft.term_id,f.description,COUNT(*) AS frequency
+        FROM family_terms ft
+        JOIN families f ON f.family_id=ft.family_id
+        WHERE ft.source='KEGG KO' AND TRIM(COALESCE(f.description,'')) NOT IN ('','-')
+        GROUP BY ft.term_id,f.description
+        ORDER BY ft.term_id,frequency DESC,LENGTH(f.description),f.description
+        """
+    ).fetchall()
+    selected: dict[str, str] = {}
+    for term_id, description, _frequency in rows:
+        selected.setdefault(term_id, description)
+    connection.executemany(
+        "UPDATE annotation_terms SET term_name=? WHERE source='KEGG KO' AND term_id=?",
+        [(description, term_id) for term_id, description in selected.items()],
+    )
+    return len(selected)
+
+
 def branch_enrichment(
     connection: sqlite3.Connection,
     branch_id: str,
     event: str,
     limit: int = 20,
     min_overlap: int = 2,
+    source: str | None = None,
 ) -> dict[str, object]:
     if event not in {"gain", "loss"}:
         raise ValueError("event must be gain or loss")
@@ -213,25 +372,37 @@ def branch_enrichment(
         "SELECT COUNT(DISTINCT family_id) FROM events WHERE branch_id=? AND event=?",
         (branch_id, event),
     ).fetchone()[0]
+    all_sources = source == "All"
+    if source is not None and not all_sources:
+        available = {
+            row[0]
+            for row in connection.execute("SELECT DISTINCT source FROM annotation_terms")
+        }
+        if source not in available:
+            raise ValueError(f"Unknown annotation database: {source}")
+    source_filter = " AND ft.source=?" if source is not None and not all_sources else ""
+    parameters: list[object] = [branch_id, event]
+    if source is not None and not all_sources:
+        parameters.append(source)
     rows = connection.execute(
-        """
+        f"""
         SELECT ft.source,ft.term_id,at.term_name,
                COUNT(DISTINCT ft.family_id) AS overlap,at.family_count
         FROM events e
         JOIN family_terms ft ON ft.family_id=e.family_id
         JOIN annotation_terms at ON at.source=ft.source AND at.term_id=ft.term_id
-        WHERE e.branch_id=? AND e.event=?
+        WHERE e.branch_id=? AND e.event=?{source_filter}
         GROUP BY ft.source,ft.term_id,at.term_name,at.family_count
         """,
-        (branch_id, event),
+        parameters,
     ).fetchall()
     tested = []
-    for source, term_id, term_name, overlap, term_total in rows:
+    for row_source, term_id, term_name, overlap, term_total in rows:
         p_value = _hypergeom_sf(overlap, universe, term_total, foreground)
         fold = (overlap / foreground) / (term_total / universe) if foreground else 0.0
         tested.append(
             {
-                "source": source,
+                "source": row_source,
                 "term_id": term_id,
                 "term_name": term_name,
                 "overlap": overlap,
@@ -242,17 +413,55 @@ def branch_enrichment(
                 "p_value": p_value,
             }
         )
-    _benjamini_hochberg(tested)
+    if all_sources:
+        sources = {row["source"] for row in tested}
+        for row_source in sources:
+            _benjamini_hochberg([row for row in tested if row["source"] == row_source])
+    else:
+        _benjamini_hochberg(tested)
     results = [row for row in tested if row["overlap"] >= min_overlap]
     results.sort(key=lambda row: (row["q_value"], row["p_value"], -row["overlap"]))
     return {
         "branch_id": branch_id,
         "event": event,
+        "source": source,
         "foreground": foreground,
         "universe": universe,
         "tested_terms": len(tested),
         "results": results[:limit],
     }
+
+
+def annotation_sources(connection: sqlite3.Connection) -> list[dict[str, object]]:
+    preferred_order = {
+        name: index
+        for index, name in enumerate(
+            [
+                "KEGG pathway",
+                "KEGG module",
+                "KEGG KO",
+                "GO",
+                "Pfam",
+                "COG category",
+                "KEGG reaction",
+            ]
+        )
+    }
+    rows = connection.execute(
+        """
+        SELECT at.source,COUNT(DISTINCT at.term_id) AS term_count,
+               COUNT(DISTINCT ft.family_id) AS family_count
+        FROM annotation_terms at
+        LEFT JOIN family_terms ft ON ft.source=at.source AND ft.term_id=at.term_id
+        GROUP BY at.source
+        """
+    ).fetchall()
+    results = [
+        {"source": row[0], "term_count": row[1], "family_count": row[2]}
+        for row in rows
+    ]
+    results.sort(key=lambda row: (preferred_order.get(row["source"], 999), row["source"]))
+    return results
 
 
 def _read_wanted_fasta(path: Path, wanted: dict[str, str]):

@@ -4,13 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="icon" href="data:,">
-  <title>Species Innovation Map</title>
+  <title>Gene Gain/Loss Viewer</title>
   <style>
     :root {
       --ink: #17212b;
       --muted: #66727f;
       --paper: #f4f6f8;
       --panel: #ffffff;
+      --detail-panel: #fbfcfd;
       --line: #d9dee3;
       --gain: #087f5b;
       --gain-text: #16a36a;
@@ -25,13 +26,17 @@
       --tree-grid: rgba(33,79,114,.025);
       --shadow: 0 8px 24px rgba(32, 45, 54, .07);
     }
-    html[data-theme="black"] { --ink: #f1f3f5; --muted: #aeb6bf; --paper: #111315; --panel: #1b1e21; --line: #353b40; --gain-soft: #123c30; --loss-soft: #47202b; --accent: #8bb8d5; --header: #0c0d0e; --header-ink: #ffffff; --control: #24282c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
-    html[data-theme="brown"] { --ink: #2d2824; --muted: #756a61; --paper: #eee8df; --panel: #faf7f2; --line: #d7cdc0; --accent: #76553b; --header: #4b392c; --header-ink: #ffffff; --control: #fffdf9; --tree-grid: rgba(91,65,45,.04); }
-    html[data-theme="green"] { --ink: #edf4f0; --muted: #a9bbb1; --paper: #102019; --panel: #182b22; --line: #355044; --gain-soft: #214c3b; --loss-soft: #4b2730; --accent: #93c9ae; --header: #0a1912; --header-ink: #ffffff; --control: #21372c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
-    html[data-theme="blue"] { --ink: #edf3f8; --muted: #aab8c5; --paper: #101c26; --panel: #192a38; --line: #354c5f; --gain-soft: #174638; --loss-soft: #4a2632; --accent: #91c1df; --header: #0a1721; --header-ink: #ffffff; --control: #213746; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="black"] { --ink: #f1f3f5; --muted: #aeb6bf; --paper: #111315; --panel: #1b1e21; --detail-panel: #202428; --line: #353b40; --gain-soft: #123c30; --loss-soft: #47202b; --accent: #8bb8d5; --header: #0c0d0e; --header-ink: #ffffff; --control: #24282c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="brown"] { --ink: #2d2824; --muted: #756a61; --paper: #eee8df; --panel: #faf7f2; --detail-panel: #f6f1ea; --line: #d7cdc0; --accent: #76553b; --header: #4b392c; --header-ink: #ffffff; --control: #fffdf9; --tree-grid: rgba(91,65,45,.04); }
+    html[data-theme="green"] { --ink: #edf4f0; --muted: #a9bbb1; --paper: #102019; --panel: #182b22; --detail-panel: #1d3228; --line: #355044; --gain-soft: #214c3b; --loss-soft: #4b2730; --accent: #93c9ae; --header: #0a1912; --header-ink: #ffffff; --control: #21372c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="blue"] { --ink: #edf3f8; --muted: #aab8c5; --paper: #101c26; --panel: #192a38; --detail-panel: #1e3040; --line: #354c5f; --gain-soft: #174638; --loss-soft: #4a2632; --accent: #91c1df; --header: #0a1721; --header-ink: #ffffff; --control: #213746; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
       color: var(--ink);
       background: var(--paper);
       font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -40,15 +45,20 @@
       display: flex;
       justify-content: flex-start;
       align-items: center;
-      gap: 14px;
-      padding: 18px 24px;
+      flex: 0 0 auto;
+      gap: 9px;
+      padding: 12px 18px;
       color: var(--header-ink);
       background: var(--header);
       border-bottom: 1px solid var(--line);
     }
-    h1 { margin: 0; font: 650 21px/1.1 Georgia, serif; letter-spacing: .01em; }
-    .theme-picker { display: flex; align-items: center; gap: 5px; }
-    .theme-picker button { width: 18px; height: 18px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
+    h1 { margin: 0; font: 650 19px/1.1 Georgia, serif; letter-spacing: .01em; white-space: nowrap; }
+    .header-controls { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+    .header-controls label { color: var(--header-ink); font-size: 10px; opacity: .72; }
+    .header-controls select, .header-controls button { min-width: 0; border-color: color-mix(in srgb, var(--header-ink) 25%, transparent); padding: 4px 7px; background: color-mix(in srgb, var(--header) 88%, var(--control)); color: var(--header-ink); font-size: 11px; }
+    .header-field { display: inline-flex; align-items: center; gap: 4px; }
+    .theme-picker { display: flex; align-items: center; gap: 4px; }
+    .theme-picker button { width: 16px; height: 16px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
     .theme-picker button.active { border-color: var(--swatch); background: var(--swatch); box-shadow: 0 0 0 2px var(--header), 0 0 0 4px var(--accent); }
     .theme-picker button[data-theme-value="white"] { --swatch: #ffffff; }
     .theme-picker button[data-theme-value="black"] { --swatch: #17191b; }
@@ -56,20 +66,26 @@
     .theme-picker button[data-theme-value="green"] { --swatch: #173c2b; }
     .theme-picker button[data-theme-value="blue"] { --swatch: #173c57; }
     .summary {
-      display: grid;
-      grid-template-columns: 130px max-content;
-      column-gap: 18px;
-      row-gap: 1px;
-      padding: 10px 24px 0;
+      display: flex;
+      align-items: baseline;
+      flex-wrap: nowrap;
+      gap: 4px 10px;
+      min-width: 0;
+      margin-left: auto;
     }
     .card {
-      display: contents;
+      display: inline-flex;
+      align-items: baseline;
+      gap: 4px;
+      white-space: nowrap;
     }
-    .card span { color: var(--muted); font-size: 12px; }
-    .card strong { color: var(--ink); font-size: 12px; font-weight: 600; text-align: right; }
+    .card span { color: var(--header-ink); font-size: 11px; opacity: .72; }
+    .card span::after { content: ":"; }
+    .card strong { color: var(--header-ink); font-size: 11px; font-weight: 600; }
     .workspace {
       position: relative;
-      height: calc(100vh - 145px);
+      flex: 1 1 auto;
+      min-height: 0;
       padding: 14px 20px 20px;
       overflow: hidden;
     }
@@ -80,15 +96,7 @@
       border-radius: 9px;
       box-shadow: var(--shadow);
     }
-    .map-panel { width: 100%; height: 100%; }
-    .toolbar {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      min-height: 55px;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--line);
-    }
+    .map-panel { display: flex; flex-direction: column; width: 100%; height: 100%; }
     label { color: var(--muted); font-size: 12px; }
     select, button {
       border: 1px solid var(--line);
@@ -100,22 +108,55 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .legend { margin-left: auto; display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
+    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 7px; }
+    .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; width: 134px; color: var(--muted); white-space: nowrap; }
+    .tree-scale-control label { grid-column: 1; grid-row: 1; overflow: hidden; font-size: 11px; line-height: 1; text-overflow: ellipsis; }
+    .tree-scale-control input { grid-column: 1 / 3; grid-row: 2; width: 134px; margin: 0; accent-color: var(--accent); }
+    .tree-scale-control output { grid-column: 2; grid-row: 1; width: 32px; color: var(--ink); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
+    .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
+    .filter-actions { grid-column: 4; grid-row: 1; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+    .svg-download { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 11px; white-space: nowrap; text-decoration: underline; text-underline-offset: 2px; }
+    .svg-download:focus-visible { outline: none; color: var(--accent); text-decoration-thickness: 2px; }
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
+    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; min-width: 235px; }
+    .gain-filter { grid-column: 1; grid-row: 1; }
+    .loss-filter { grid-column: 2; grid-row: 1; }
+    .range-filter-name { grid-column: 1; grid-row: 1; color: var(--ink); font-size: 12px; font-weight: 500; line-height: 1; }
+    .range-filter output { grid-column: 2; grid-row: 1; color: var(--ink); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    html[data-theme="black"] .range-filter-name, html[data-theme="black"] .range-filter output { color: #ffffff; }
+    .dual-range { --low: 0%; --high: 100%; position: relative; grid-column: 1 / 3; grid-row: 2; width: 100%; height: 18px; background: linear-gradient(to right, var(--line) 0 var(--low), var(--accent) var(--low) var(--high), var(--line) var(--high) 100%); background-size: 100% 3px; background-position: center; background-repeat: no-repeat; }
+    .dual-range input { position: absolute; inset: 0; width: 100%; height: 18px; margin: 0; padding: 0; appearance: none; background: transparent; pointer-events: none; }
+    .dual-range input::-webkit-slider-runnable-track { height: 3px; background: transparent; }
+    .dual-range input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; appearance: none; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
+    .dual-range input::-moz-range-track { height: 3px; background: transparent; }
+    .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
+    .filter-reset { border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
+    .filter-match-count { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .filtered-branch-label { opacity: .1; }
+    #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
+    .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
-    .branch-hit { stroke: transparent; stroke-width: 14; cursor: pointer; }
+    .branch-hit { fill: transparent; cursor: pointer; }
+    .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
-    .branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
-    .connector { stroke: #a6afb5; stroke-width: 1.2; }
+    .branch-hit:hover + .branch, .radial-branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
+    .connector-hit { fill: transparent; cursor: ns-resize; }
+    .connector { stroke: #a6afb5; stroke-width: 1.2; pointer-events: none; }
+    .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: 3; }
     .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
+    .support-label { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
     .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
+    .clade-taxonomy-label { font: 600 9px/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+    .clade-taxonomy-label.family { fill: #4f8fc9; }
+    .clade-taxonomy-label.genus { fill: #a477c7; font-style: italic; }
     .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
@@ -127,8 +168,9 @@
       top: 14px;
       right: 20px;
       bottom: 20px;
-      width: min(760px, calc(100% - 40px));
-      overflow: auto;
+      width: min(var(--detail-panel-width, 760px), calc(100% - 40px));
+      background: var(--detail-panel);
+      overflow: hidden;
       opacity: 0;
       pointer-events: none;
       transform: translateX(calc(100% + 24px)) scale(.97);
@@ -137,9 +179,31 @@
       box-shadow: 0 16px 44px rgba(20, 30, 38, .22);
     }
     .workspace.detail-open .detail-panel { opacity: 1; pointer-events: auto; transform: translateX(0) scale(1); }
+    .detail-scroll { height: 100%; overflow: auto; }
+    .detail-resize-handle {
+      position: absolute;
+      z-index: 3;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 12px;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+      cursor: col-resize;
+      touch-action: none;
+    }
+    .detail-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 1px; background: transparent; }
+    .detail-resize-handle:hover::after, .detail-resize-handle:focus-visible::after, body.detail-resizing .detail-resize-handle::after { background: var(--accent); }
+    body.detail-resizing { cursor: col-resize; user-select: none; }
     .detail-head { position: relative; padding: 17px 52px 13px 18px; border-bottom: 1px solid var(--line); }
+    .detail-back { display: block; margin: 0 0 10px; border: 1px solid var(--accent); border-radius: 5px; padding: 5px 10px; background: var(--accent); color: var(--panel); font-size: 11px; font-weight: 700; line-height: 1.2; }
+    .detail-back:hover { border-color: var(--accent); color: var(--panel); }
+    .detail-back[hidden] { display: none; }
     .detail-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; font-size: 22px; line-height: 1; }
     .detail-head h2 { margin: 0; font: 650 18px/1.2 Georgia, serif; }
+    .detail-head h2.family-title { color: var(--ink); font: 500 13px/1.3 Inter, ui-sans-serif, system-ui, sans-serif; }
     .detail-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
     .detail-body { padding: 18px 22px 28px; }
     .empty { color: var(--muted); padding: 24px 4px; }
@@ -147,31 +211,63 @@
     .count { padding: 0; }
     .count strong { margin-left: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
     .section-title { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+    .enrichment-toolbar { display: flex; align-items: center; gap: 10px; margin: 8px 0 18px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .enrichment-toolbar label { color: var(--muted); font-size: 11px; }
+    .enrichment-toolbar select { min-width: 0; }
+    .enrichment-source-select { width: 210px; }
+    .enrichment-plot-select { width: 110px; }
+    .enrichment-method { margin-left: auto; color: var(--muted); font-size: 10px; }
     .enrichment-section { margin-bottom: 26px; }
-    .enrichment-chart { display: grid; gap: 7px; margin: 8px 0 14px; }
+    .enrichment-section-head { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 8px; }
+    .enrichment-section-head .section-title { margin: 0; }
+    .enrichment-downloads { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+    .enrichment-download { border: 0; border-radius: 0; padding: 1px 0; background: transparent; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+    .enrichment-download:focus-visible { outline: none; color: var(--accent); text-decoration-thickness: 2px; }
+    .chart-layout { display: grid; grid-template-columns: minmax(0, 1fr) 74px; gap: 14px; align-items: start; }
+    .enrichment-chart { --term-column: minmax(280px, 38%); display: grid; gap: 7px; margin: 8px 0 14px; }
+    .enrichment-chart.long-term-labels { --term-column: minmax(340px, 48%); }
     .chart-caption { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
-    .chart-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 48px; align-items: center; gap: 9px; min-height: 22px; }
-    .chart-term { overflow: hidden; color: var(--ink); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
-    .chart-track { height: 12px; background: var(--control); border-left: 1px solid var(--muted); }
-    .chart-bar { height: 100%; min-width: 2px; }
-    .chart-bar.gain { background: var(--gain); }
-    .chart-bar.loss { background: var(--loss); }
+    .chart-row { display: grid; grid-template-columns: var(--term-column) minmax(180px, 1fr) 42px; align-items: center; gap: 9px; min-height: 25px; }
+    .chart-term { color: var(--ink); font-size: 11px; line-height: 1.15; white-space: normal; }
+    .chart-track { position: relative; height: 16px; background: transparent; border-left: 1px solid var(--muted); }
+    .chart-grid-line { position: absolute; z-index: 0; top: 0; bottom: 0; width: 1px; background: var(--line); }
+    .chart-bar { position: relative; z-index: 1; height: 100%; min-width: 2px; }
+    .chart-dot { position: absolute; z-index: 1; top: 50%; border: 1px solid color-mix(in srgb, var(--ink) 28%, transparent); border-radius: 50%; transform: translate(-50%, -50%); }
     .chart-score { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .chart-axis-row { display: grid; grid-template-columns: var(--term-column) minmax(180px, 1fr) 42px; align-items: start; gap: 9px; min-height: 25px; }
+    .chart-axis { position: relative; height: 24px; border-top: 1px solid var(--muted); }
+    .chart-tick { position: absolute; top: -4px; height: 5px; border-left: 1px solid var(--muted); }
+    .chart-tick span { position: absolute; top: 7px; transform: translateX(-50%); color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .chart-axis-label { color: var(--muted); font-size: 9px; line-height: 1.2; text-align: right; white-space: pre-line; }
+    .fdr-legend { margin-top: 37px; color: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .fdr-legend-title { margin-bottom: 5px; color: var(--ink); font: 10px sans-serif; }
+    .fdr-step { display: grid; grid-template-columns: 14px 1fr; align-items: center; gap: 5px; height: 25px; }
+    .fdr-swatch { width: 14px; height: 25px; }
+    .fdr-direction { margin-top: 5px; font: 9px sans-serif; line-height: 1.2; }
     .enrichment-table { table-layout: fixed; }
-    .enrichment-table th:nth-child(1) { width: 40%; }
-    .enrichment-table th:nth-child(2) { width: 19%; }
-    .enrichment-table th:nth-child(3), .enrichment-table th:nth-child(4), .enrichment-table th:nth-child(5) { width: 13.6%; text-align: right; }
+    .enrichment-table th:nth-child(1) { width: 42%; }
+    .enrichment-table th:nth-child(2), .enrichment-table th:nth-child(3) { width: 17%; }
+    .enrichment-table th:nth-child(4), .enrichment-table th:nth-child(5) { width: 12%; }
+    .enrichment-table th:not(:first-child) { text-align: right; }
     .enrichment-table td { vertical-align: top; overflow-wrap: anywhere; }
     .enrichment-table td:first-child { font-weight: 550; }
     .term-id { display: block; margin-top: 2px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .term-source { display: block; margin-bottom: 2px; color: var(--muted); font-size: 9px; font-weight: 400; }
+    .term-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+    .term-link:hover { color: var(--accent); }
+    .inline-term-id { margin-left: 6px; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
     .number-cell { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
-    .event-list { display: grid; gap: 5px; }
-    .family-button { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; text-align: left; }
-    .family-id { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .family-description { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; line-height: 1.3; }
-    .function-name { margin-bottom: 5px; font-weight: 650; }
-    .function-description { color: var(--muted); font-size: 12px; line-height: 1.45; }
-    .annotation-list { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .event-list { display: grid; gap: 0; border-top: 1px solid var(--line); }
+    .family-button { display: grid; grid-template-columns: 34px 92px minmax(0, 1fr); align-items: baseline; gap: 6px; width: 100%; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 4px 2px; background: transparent; color: var(--ink); text-align: left; }
+    .family-button:hover { border-color: var(--line); background: var(--control); color: var(--ink); }
+    .event-kind { color: var(--ink); font-size: 9px; font-weight: 400; text-transform: lowercase; }
+    .family-id { color: var(--ink); font: 500 10px/1.25 ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .family-description { overflow: hidden; color: var(--muted); font-size: 9px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+    .functional-title { color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
+    .function-name, .function-description, .annotation-list { color: var(--ink); font: 650 12px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; }
+    .function-name { margin-bottom: 5px; }
+    .annotation-list { margin-top: 8px; }
+    .function-name::before, .function-description::before, .function-annotation::before { content: "・"; margin-right: 3px; }
     .tag { padding: 1px 6px; border-radius: 10px; font: 700 10px/1.5 sans-serif; text-transform: uppercase; }
     .tag.gain { color: var(--gain); background: var(--gain-soft); }
     .tag.loss { color: var(--loss); background: var(--loss-soft); }
@@ -181,13 +277,32 @@
     th { color: var(--muted); text-align: left; font-weight: 600; border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .member-species { margin: 10px 0 4px; color: var(--accent); font-weight: 650; word-break: break-all; }
-    .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
+    .member-list { display: grid; gap: 0; margin-top: 32px; }
+    .member-row { padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .member-assembly { margin: 0 0 1px; color: var(--ink); font-size: 9px; font-weight: 400; line-height: 1.2; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
+    .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; line-height: 1.25; word-break: break-all; }
     #status { padding: 40px; color: var(--muted); }
     @media (max-width: 950px) {
-      .workspace { height: calc(100vh - 145px); }
       .detail-panel { left: 20px; width: auto; }
-      .summary { grid-template-columns: 130px max-content; }
+      .detail-resize-handle { display: none; }
+      .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
+      .branch-filters { grid-template-columns: 315px 315px minmax(100px, 1fr); grid-template-rows: auto auto; }
+      .tree-tools { grid-column: 1; grid-row: 2; justify-self: start; }
+      .filter-actions { grid-column: 2; grid-row: 2; justify-self: start; }
+      .filter-status { grid-column: 3; grid-row: 1 / 3; }
+    }
+    @media (max-width: 1400px) {
+      .summary .card:nth-child(3), .summary .card:last-child { display: none; }
+      .branch-filters { grid-template-columns: 235px 235px max-content max-content 0; column-gap: 10px; }
+      .filter-status .legend { display: none; }
+      .filter-match-count { display: none; }
+    }
+    @media (max-width: 1180px) {
+      .header-controls > label, .header-controls .header-field > label { display: none; }
+    }
+    @media (max-width: 760px) {
+      header { flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; }
+      .summary { width: 100%; margin-left: 0; gap: 4px 14px; }
     }
   </style>
 </head>
@@ -200,36 +315,115 @@
       <button type="button" data-theme-value="green" aria-label="Green theme" title="Green"></button>
       <button type="button" data-theme-value="blue" aria-label="Blue theme" title="Blue"></button>
     </div>
-    <h1>Species Innovation Map</h1>
+    <h1>Gene Gain/Loss Viewer</h1>
+    <div class="header-controls" aria-label="Tree controls">
+      <label for="phenotypeSelect">Phenotype</label>
+      <select id="phenotypeSelect" title="Phenotype"><option value="">None</option></select>
+      <button id="candidateButton" type="button">Candidate genes</button>
+      <span class="header-field" id="taxonomyControl" hidden>
+        <label for="collapseSelect">Collapse</label>
+        <select id="collapseSelect" title="Collapse taxonomic rank"><option value="">None</option></select>
+      </span>
+      <span class="header-field" id="cladeLabelControl" hidden>
+        <label for="cladeLabelSelect">GTDB labels</label>
+        <select id="cladeLabelSelect" title="Show GTDB clade labels" aria-label="Show GTDB clade labels"><option value="">Off</option></select>
+      </span>
+      <span class="header-field">
+        <label for="treeOrderSelect">Order</label>
+        <select id="treeOrderSelect" title="Order child clades" aria-label="Order child clades">
+          <option value="original">Original</option>
+          <option value="ascending">Ascending</option>
+          <option value="descending">Descending</option>
+        </select>
+      </span>
+      <span class="header-field">
+        <label for="supportCollapseSelect">Support</label>
+        <select id="supportCollapseSelect" title="Collapse branches below bootstrap support" aria-label="Collapse branches below bootstrap support">
+          <option value="0">All</option>
+          <option value="0.1">&lt;0.10</option>
+          <option value="0.2">&lt;0.20</option>
+          <option value="0.3">&lt;0.30</option>
+          <option value="0.4">&lt;0.40</option>
+          <option value="0.5">&lt;0.50</option>
+          <option value="0.6">&lt;0.60</option>
+          <option value="0.7">&lt;0.70</option>
+          <option value="0.8">&lt;0.80</option>
+          <option value="0.9">&lt;0.90</option>
+          <option value="1">&lt;1.00</option>
+        </select>
+      </span>
+      <span class="header-field">
+        <label for="treeLayoutSelect">Layout</label>
+        <select id="treeLayoutSelect" title="Tree layout" aria-label="Tree layout">
+          <option value="rectangular">Rectangular</option>
+          <option value="circular">Circular</option>
+        </select>
+      </span>
+    </div>
+    <div class="summary" aria-label="Dataset summary">
+      <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
+      <div class="card"><span>Gene families</span><strong id="familyCount">—</strong></div>
+      <div class="card"><span>Branches</span><strong id="branchCount">—</strong></div>
+      <div class="card"><span>Selected phenotype</span><strong id="phenotypeCount">None</strong></div>
+    </div>
   </header>
-  <section class="summary">
-    <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
-    <div class="card"><span>Gene families</span><strong id="familyCount">—</strong></div>
-    <div class="card"><span>Branches</span><strong id="branchCount">—</strong></div>
-    <div class="card"><span>Selected phenotype</span><strong id="phenotypeCount">None</strong></div>
-  </section>
   <main class="workspace">
     <section class="map-panel">
-      <div class="toolbar">
-        <label for="phenotypeSelect">Phenotype</label>
-        <select id="phenotypeSelect"><option value="">None</option></select>
-        <button id="candidateButton" type="button">Candidate genes</button>
-        <span id="taxonomyControl" hidden>
-          <label for="collapseSelect">Collapse</label>
-          <select id="collapseSelect"><option value="">None</option></select>
-        </span>
-        <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
+      <div class="branch-filters" aria-label="Branch event filters">
+        <div class="tree-tools">
+          <div class="tree-scale-control">
+            <label for="treeZoom">Zoom</label>
+            <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
+            <output id="treeZoomValue" for="treeZoom">100%</output>
+          </div>
+          <div class="tree-scale-control">
+            <label for="horizontalSpacing">Horizontal</label>
+            <input id="horizontalSpacing" type="range" min="50" max="300" step="10" value="100" aria-label="Horizontal tree spacing">
+            <output id="horizontalSpacingValue" for="horizontalSpacing">100%</output>
+          </div>
+          <div class="tree-scale-control">
+            <label for="verticalSpacing">Vertical</label>
+            <input id="verticalSpacing" type="range" min="50" max="300" step="10" value="100" aria-label="Vertical tree spacing">
+            <output id="verticalSpacingValue" for="verticalSpacing">100%</output>
+          </div>
+          <div class="tree-scale-control">
+            <label for="tipFontSize">Tip labels</label>
+            <input id="tipFontSize" type="range" min="6" max="16" step="1" value="9" aria-label="Tip label font size">
+            <output id="tipFontSizeValue" for="tipFontSize">9px</output>
+          </div>
+        </div>
+        <div class="range-filter gain-filter">
+          <span class="range-filter-name">Filter (gain)</span>
+          <div class="dual-range" id="gainRange"><input id="gainMin" type="range" aria-label="Minimum gain count"><input id="gainMax" type="range" aria-label="Maximum gain count"></div>
+          <output id="gainRangeValue"></output>
+        </div>
+        <div class="range-filter loss-filter">
+          <span class="range-filter-name">Filter (loss)</span>
+          <div class="dual-range" id="lossRange"><input id="lossMin" type="range" aria-label="Minimum loss count"><input id="lossMax" type="range" aria-label="Maximum loss count"></div>
+          <output id="lossRangeValue"></output>
+        </div>
+        <div class="filter-actions">
+          <button class="filter-reset" id="filterReset" type="button">Reset</button>
+          <button class="svg-download" id="downloadSvg" type="button">Download SVG</button>
+        </div>
+        <div class="filter-status">
+          <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
+          <span class="filter-match-count" id="filterMatchCount"></span>
+        </div>
       </div>
-      <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
+      <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
-      <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
-      <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
+      <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
+      <div class="detail-scroll">
+        <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><button class="detail-back" id="detailBack" type="button" hidden>← Back</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
+        <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
+      </div>
     </aside>
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, collapseRank: "", expandedGroups: new Set() };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -237,6 +431,10 @@
       for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
       return node;
     };
+    function addSvgTooltip(node, text) {
+      node.dataset.actionHint = text;
+      return node;
+    }
     async function api(path) {
       const response = await fetch(path);
       if (!response.ok) throw new Error((await response.json()).error || response.statusText);
@@ -244,9 +442,14 @@
     }
     async function start() {
       try {
-        const [project, branches] = await Promise.all([api("/api/project"), api("/api/branches")]);
+        const [project, branches, annotationSources] = await Promise.all([api("/api/project"), api("/api/branches"), api("/api/annotation-sources")]);
         state.project = project;
         state.branches = new Map(branches.map(branch => [branch.branch_id, branch]));
+        initializeBranchFilters(branches);
+        state.annotationSources = annotationSources;
+        state.enrichmentSource = annotationSources.some(item => item.source === "KEGG pathway") ? "KEGG pathway" : (annotationSources[0]?.source || "");
+        const storedPlotType = localStorage.getItem("species-map-enrichment-plot");
+        if (storedPlotType === "bar" || storedPlotType === "dot") state.enrichmentPlotType = storedPlotType;
         $("speciesCount").textContent = number(project.species_count);
         $("familyCount").textContent = number(project.family_count);
         $("branchCount").textContent = number(branches.length);
@@ -261,6 +464,21 @@
           $("collapseSelect").append(option);
         }
         $("taxonomyControl").hidden = ranks.length === 0;
+        const cladeRanks = ["family", "genus"].filter(rank => ranks.includes(rank));
+        for (const rank of cladeRanks) {
+          const option = document.createElement("option"); option.value = rank; option.textContent = rankLabels[rank];
+          $("cladeLabelSelect").append(option);
+        }
+        if (cladeRanks.length === 2) {
+          const option = document.createElement("option"); option.value = "family,genus"; option.textContent = "Family + Genus";
+          $("cladeLabelSelect").append(option);
+        }
+        const storedCladeLabels = localStorage.getItem("species-map-clade-labels") || "";
+        if ([...$("cladeLabelSelect").options].some(option => option.value === storedCladeLabels)) {
+          state.cladeLabelMode = storedCladeLabels;
+          $("cladeLabelSelect").value = storedCladeLabels;
+        }
+        $("cladeLabelControl").hidden = cladeRanks.length === 0;
         $("status").remove();
         renderTree();
       } catch (error) {
@@ -268,78 +486,438 @@
         console.error(error);
       }
     }
+    function initializeBranchFilters(branches) {
+      const maxima = {
+        gain: Math.max(0, ...branches.map(branch => Number(branch.gain_count || 0))),
+        loss: Math.max(0, ...branches.map(branch => Number(branch.loss_count || 0)))
+      };
+      for (const kind of ["gain", "loss"]) {
+        const minimum = $(`${kind}Min`); const maximum = $(`${kind}Max`);
+        minimum.min = 0; minimum.max = maxima[kind]; minimum.step = 1; minimum.value = 0;
+        maximum.min = 0; maximum.max = maxima[kind]; maximum.step = 1; maximum.value = maxima[kind];
+        minimum.addEventListener("input", () => syncBranchFilters(kind, "minimum"));
+        maximum.addEventListener("input", () => syncBranchFilters(kind, "maximum"));
+      }
+      $("filterReset").addEventListener("click", () => {
+        $("gainMin").value = 0; $("gainMax").value = maxima.gain;
+        $("lossMin").value = 0; $("lossMax").value = maxima.loss;
+        syncBranchFilters();
+      });
+      syncBranchFilters(null, null, false);
+    }
+    function syncBranchFilters(changedKind = null, changedHandle = null, rerender = true) {
+      for (const kind of ["gain", "loss"]) {
+        const minimum = $(`${kind}Min`); const maximum = $(`${kind}Max`);
+        if (Number(minimum.value) > Number(maximum.value)) {
+          if (kind === changedKind && changedHandle === "minimum") maximum.value = minimum.value;
+          else minimum.value = maximum.value;
+        }
+        const low = Number(minimum.value); const high = Number(maximum.value); const upper = Math.max(Number(maximum.max), 1);
+        state.branchFilter[`${kind}Min`] = low; state.branchFilter[`${kind}Max`] = high;
+        $(`${kind}Range`).style.setProperty("--low", `${low / upper * 100}%`);
+        $(`${kind}Range`).style.setProperty("--high", `${high / upper * 100}%`);
+        $(`${kind}RangeValue`).textContent = `${number(low)}–${number(high)}`;
+      }
+      const matched = [...state.branches.values()].filter(branchMatchesFilter).length;
+      $("filterMatchCount").textContent = `${number(matched)} / ${number(state.branches.size)} branches`;
+      if (rerender && state.project) renderTree();
+    }
+    function branchMatchesFilter(branch) {
+      return branchValueMatchesFilter(branch, "gain") && branchValueMatchesFilter(branch, "loss");
+    }
+    function branchValueMatchesFilter(branch, kind) {
+      const value = Number(branch[`${kind}_count`] || 0);
+      return value >= state.branchFilter[`${kind}Min`] && value <= state.branchFilter[`${kind}Max`];
+    }
+    function normalizedBranchSupport(node) {
+      let value = node.support;
+      if (value == null && !node.is_leaf && /^\s*\d+(?:\.\d+)?\s*$/.test(node.label || "")) value = Number(node.label);
+      value = Number(value);
+      if (!Number.isFinite(value) || value < 0 || value > 100) return null;
+      return value > 1 ? value / 100 : value;
+    }
     function renderTree() {
       const svg = $("treeSvg"); svg.replaceChildren();
+      const zoom = state.treeZoom;
+      const canvas = svgEl("g", {transform: `scale(${zoom})`});
+      svg.append(canvas);
       const nodes = new Map(state.project.nodes.map(node => [node.id, {...node}]));
       const root = [...nodes.values()].find(node => !node.parent_id);
       const taxonomy = state.project.taxonomy?.species || {};
       const rank = state.collapseRank;
+      const cladeSizes = new Map();
+      function cladeSize(node) {
+        if (cladeSizes.has(node.id)) return cladeSizes.get(node.id);
+        const size = node.children.length ? node.children.reduce((sum, id) => sum + cladeSize(nodes.get(id)), 0) : 1;
+        cladeSizes.set(node.id, size);
+        return size;
+      }
+      cladeSize(root);
+      function childNodes(node) {
+        let ids = [...node.children];
+        if (state.treeOrder !== "original") {
+          const direction = state.treeOrder === "ascending" ? 1 : -1;
+          ids.sort((left, right) => direction * (cladeSizes.get(left) - cladeSizes.get(right)) || left.localeCompare(right));
+        }
+        if (state.flippedNodes.has(node.id)) ids.reverse();
+        return ids.map(id => nodes.get(id));
+      }
       function summarize(node) {
-        const children = node.children.map(id => nodes.get(id));
+        const children = childNodes(node);
         if (!children.length) {
           node.leafCount = 1;
           node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
+          node.taxonomyConsensus = Object.fromEntries(["family", "genus"].map(taxonomyRank => [taxonomyRank, taxonomy[node.label]?.[taxonomyRank] || ""]));
           return;
         }
         children.forEach(summarize);
         node.leafCount = children.reduce((sum, child) => sum + child.leafCount, 0);
+        node.taxonomyConsensus = {};
+        for (const taxonomyRank of ["family", "genus"]) {
+          const values = new Set(children.map(child => child.taxonomyConsensus[taxonomyRank]));
+          node.taxonomyConsensus[taxonomyRank] = values.size === 1 && !values.has("") ? [...values][0] : "";
+        }
         const values = new Set(children.map(child => child.rankValue));
         node.rankValue = values.size === 1 && !values.has("") ? [...values][0] : "";
-        node.collapsed = Boolean(
+        node.taxonomyCollapsed = Boolean(
           rank && node.parent_id && node.rankValue && node.leafCount > 1 &&
           !state.expandedGroups.has(`${rank}:${node.id}`)
         );
+        const support = normalizedBranchSupport(node);
+        node.supportCollapsed = Boolean(
+          state.supportThreshold > 0 && node.parent_id && support != null && support < state.supportThreshold &&
+          !state.expandedGroups.has(`support:${state.supportThreshold}:${node.id}`)
+        );
+        node.collapsed = state.manuallyCollapsed.has(node.id) || node.taxonomyCollapsed || node.supportCollapsed;
       }
       summarize(root);
+      function cladeTaxonomyLabels(node) {
+        if (node.is_leaf || node.collapsed || node.leafCount < 2 || !state.cladeLabelMode) return [];
+        const parent = node.parent_id ? nodes.get(node.parent_id) : null;
+        return state.cladeLabelMode.split(",").flatMap(taxonomyRank => {
+          const value = node.taxonomyConsensus[taxonomyRank];
+          if (!value || parent?.taxonomyConsensus?.[taxonomyRank] === value) return [];
+          return [{rank: taxonomyRank, value}];
+        });
+      }
+      function appendCladeTaxonomyLabel(node, circular = false) {
+        const labels = cladeTaxonomyLabels(node);
+        if (!labels.length) return;
+        if (circular) {
+          const ux = Math.cos(node.angle); const uy = Math.sin(node.angle);
+          const px = -uy; const py = ux;
+          const anchor = ux >= 0 ? "start" : "end";
+          const angle = node.angle * 180 / Math.PI + (ux < 0 ? 180 : 0);
+          labels.forEach((item, index) => {
+            const offset = (index - (labels.length - 1) / 2) * 12;
+            const x = node.x + ux * 9 + px * offset;
+            const y = node.y + uy * 9 + py * offset;
+            const labelNode = svgEl("text", {x, y, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${angle} ${x} ${y})`, class: `clade-taxonomy-label ${item.rank}`});
+            labelNode.textContent = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+            canvas.append(labelNode);
+          });
+          return;
+        }
+        labels.forEach((item, index) => {
+          const labelNode = svgEl("text", {x: node.x + 7, y: node.y + 15 + index * 11, class: `clade-taxonomy-label ${item.rank}`});
+          labelNode.textContent = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+          canvas.append(labelNode);
+        });
+      }
       const visibleNodes = [];
       function collect(node) {
         visibleNodes.push(node);
-        if (!node.collapsed) node.children.map(id => nodes.get(id)).forEach(collect);
+        if (!node.collapsed) childNodes(node).forEach(collect);
       }
       collect(root);
       const visibleIds = new Set(visibleNodes.map(node => node.id));
+      if (state.treeLayout !== "rectangular") {
+        const terminals = [];
+        function assignAngles(node) {
+          const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+          if (!children.length) {
+            terminals.push(node);
+            return;
+          }
+          children.forEach(assignAngles);
+        }
+        assignAngles(root);
+        terminals.forEach((node, index) => { node.angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(1, terminals.length); });
+        function averageAngles(node) {
+          const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+          children.forEach(averageAngles);
+          if (children.length) node.angle = children.reduce((sum, child) => sum + child.angle, 0) / children.length;
+        }
+        averageAngles(root);
+        const maxDepth = Math.max(1, ...visibleNodes.map(node => node.depth));
+        const circumferenceRadius = terminals.length * 18 * state.verticalSpacing / (Math.PI * 2);
+        const radialStep = Math.max(55 * state.horizontalSpacing, circumferenceRadius / maxDepth);
+        const outerRadius = 28 + maxDepth * radialStep;
+        const margin = 230;
+        const baseSize = Math.max(760, (outerRadius + margin) * 2);
+        const center = baseSize / 2;
+        visibleNodes.forEach(node => {
+          node.radius = 28 + node.depth * radialStep;
+          node.x = center + node.radius * Math.cos(node.angle);
+          node.y = center + node.radius * Math.sin(node.angle);
+        });
+        svg.setAttribute("width", baseSize * zoom);
+        svg.setAttribute("height", baseSize * zoom);
+        svg.style.backgroundImage = "none";
+        function radialPath(parent, node) {
+          const turnX = center + parent.radius * Math.cos(node.angle);
+          const turnY = center + parent.radius * Math.sin(node.angle);
+          const delta = node.angle - parent.angle;
+          const largeArc = Math.abs(delta) > Math.PI ? 1 : 0;
+          const sweep = delta >= 0 ? 1 : 0;
+          return `M ${parent.x} ${parent.y} A ${parent.radius} ${parent.radius} 0 ${largeArc} ${sweep} ${turnX} ${turnY} L ${node.x} ${node.y}`;
+        }
+        for (const node of visibleNodes) {
+          if (!node.parent_id) continue;
+          const parent = nodes.get(node.parent_id);
+          const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
+          const pathData = radialPath(parent, node);
+          const hitAttributes = {d: pathData, class: "radial-branch-hit"};
+          if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
+          const hitPath = svgEl("path", hitAttributes);
+          if (!node.is_leaf) addSvgTooltip(hitPath, node.collapsed ? "Expand clade" : "Collapse clade");
+          canvas.append(hitPath);
+          canvas.append(svgEl("path", {d: pathData, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id, fill: "none"}));
+          const middleX = (parent.x + node.x) / 2;
+          const middleY = (parent.y + node.y) / 2;
+          const label = svgEl("text", {x: middleX, y: middleY - 5, "text-anchor": "middle", class: "branch-label", style: "font-size: 9px", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
+          const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
+          const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
+          const gain = svgEl("tspan", {class: gainClass, "data-branch": node.branch_id, "data-event": "gain", role: "button", tabindex: "0", "aria-label": `Gained gene families on branch ${node.branch_id}`}); gain.textContent = `+${branch.gain_count}`;
+          const loss = svgEl("tspan", {class: lossClass, "data-branch": node.branch_id, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${node.branch_id}`, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
+          label.append(gain, loss); canvas.append(label);
+          const support = normalizedBranchSupport(node);
+          if (support != null) {
+            const supportLabel = svgEl("text", {x: middleX, y: middleY + 11, "text-anchor": "middle", class: "support-label"});
+            supportLabel.textContent = support.toFixed(3);
+            canvas.append(supportLabel);
+          }
+          const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
+          if (phenotypeEvent) canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
+          else canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
+          const ux = Math.cos(node.angle);
+          const uy = Math.sin(node.angle);
+          const anchor = ux >= 0 ? "start" : "end";
+          const labelAngle = node.angle * 180 / Math.PI + (ux < 0 ? 180 : 0);
+          if (node.collapsed) {
+            const px = -uy;
+            const py = ux;
+            const baseX = node.x + ux * 3;
+            const baseY = node.y + uy * 3;
+            const tipX = node.x + ux * 16;
+            const tipY = node.y + uy * 16;
+            const marker = svgEl("polygon", {points: `${baseX + px * 6},${baseY + py * 6} ${tipX},${tipY} ${baseX - px * 6},${baseY - py * 6}`, class: "collapsed-marker", "data-expand-node": node.id});
+            const labelX = node.x + ux * 23;
+            const labelY = node.y + uy * 23;
+            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: "collapsed-label", "data-expand-node": node.id});
+            tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+            addSvgTooltip(marker, "Expand clade");
+            addSvgTooltip(tip, "Expand clade");
+            canvas.append(marker, tip);
+          } else if (node.is_leaf) {
+            const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+            const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
+            const labelX = node.x + ux * 10;
+            const labelY = node.y + uy * 10;
+            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass});
+            tip.textContent = taxonomyLabel;
+            canvas.append(tip);
+          }
+        }
+        visibleNodes.forEach(node => appendCladeTaxonomyLabel(node, true));
+        return;
+      }
+      svg.style.backgroundImage = "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
       let leafIndex = 0;
-      const spacing = 25;
+      const spacing = 25 * state.verticalSpacing;
+      const depthSpacing = 110 * state.horizontalSpacing;
       function position(node) {
-        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id));
+        const children = node.collapsed ? [] : childNodes(node);
         children.forEach(position);
-        node.x = 35 + node.depth * 110;
+        node.x = 35 + node.depth * depthSpacing;
         node.y = children.length ? children.reduce((sum, child) => sum + child.y, 0) / children.length : 24 + leafIndex++ * spacing;
       }
       position(root);
       const maxDepth = Math.max(...visibleNodes.map(node => node.depth));
-      svg.setAttribute("width", Math.max(900, 110 * maxDepth + 440));
-      svg.setAttribute("height", Math.max(500, leafIndex * spacing + 40));
+      const baseWidth = Math.max(900, depthSpacing * maxDepth + 440);
+      const baseHeight = Math.max(500, leafIndex * spacing + 40);
+      svg.setAttribute("width", baseWidth * zoom);
+      svg.setAttribute("height", baseHeight * zoom);
+      svg.style.backgroundSize = `${depthSpacing * zoom}px 100%`;
       for (const node of visibleNodes) {
-        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id)).filter(child => visibleIds.has(child.id));
-        if (children.length > 1) svg.append(svgEl("line", {x1: node.x, y1: Math.min(...children.map(c => c.y)), x2: node.x, y2: Math.max(...children.map(c => c.y)), class: "connector"}));
+        const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+        if (children.length > 1) {
+          const minimumY = Math.min(...children.map(c => c.y));
+          const maximumY = Math.max(...children.map(c => c.y));
+          const connectorAttributes = {x1: node.x, y1: minimumY, x2: node.x, y2: maximumY};
+          const connectorHit = svgEl("rect", {x: node.x - 7, y: minimumY, width: 14, height: Math.max(14, maximumY - minimumY), class: "connector-hit", "data-flip-node": node.id, role: "button", tabindex: "0", "aria-label": `Flip child clades at node ${node.id}`});
+          canvas.append(addSvgTooltip(connectorHit, "Flip clades"));
+          canvas.append(svgEl("line", {...connectorAttributes, class: "connector"}));
+        }
       }
       for (const node of visibleNodes) {
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
-        const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: "branch-hit", "data-branch": node.branch_id});
-        svg.append(hitLine);
+        const hitAttributes = {x: parent.x, y: node.y - 7, width: Math.max(14, node.x - parent.x), height: 14, class: "branch-hit"};
+        if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
+        const hitLine = svgEl("rect", hitAttributes);
+        if (!node.is_leaf) addSvgTooltip(hitLine, node.collapsed ? "Expand clade" : "Collapse clade");
+        canvas.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
-        svg.append(line);
+        canvas.append(line);
         const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
-        const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
-        const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
-        label.append(gain, loss); svg.append(label);
+        const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
+        const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
+        const gain = svgEl("tspan", {class: gainClass, "data-branch": node.branch_id, "data-event": "gain", role: "button", tabindex: "0", "aria-label": `Gained gene families on branch ${node.branch_id}`}); gain.textContent = `+${branch.gain_count}`;
+        const loss = svgEl("tspan", {class: lossClass, "data-branch": node.branch_id, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${node.branch_id}`, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
+        label.append(gain, loss); canvas.append(label);
+        const support = normalizedBranchSupport(node);
+        if (support != null) {
+          const supportLabel = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y + 11, "text-anchor": "middle", class: "support-label"});
+          supportLabel.textContent = support.toFixed(3);
+          canvas.append(supportLabel);
+        }
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
-        if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
-        else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
+        if (phenotypeEvent) canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
+        else canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
         if (node.collapsed) {
           const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
-          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
-          tip.textContent = `${node.rankValue} (${number(node.leafCount)})`;
-          svg.append(marker, tip);
+          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: "collapsed-label", "data-expand-node": node.id});
+          tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+          addSvgTooltip(marker, "Expand clade");
+          addSvgTooltip(tip, "Expand clade");
+          canvas.append(marker, tip);
         } else if (node.is_leaf) {
           const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: tipClass}); tip.textContent = taxonomyLabel; svg.append(tip);
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass}); tip.textContent = taxonomyLabel; canvas.append(tip);
         }
       }
+      visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
+    }
+    function enableTreeZoom() {
+      const input = $("treeZoom");
+      const output = $("treeZoomValue");
+      const stored = Number(localStorage.getItem("species-map-tree-zoom"));
+      if (Number.isFinite(stored) && stored >= 60 && stored <= 200) input.value = stored;
+      state.treeZoom = Number(input.value) / 100;
+      output.textContent = `${input.value}%`;
+      input.addEventListener("input", () => {
+        const viewport = $("treeViewport");
+        const oldZoom = state.treeZoom;
+        const centerX = (viewport.scrollLeft + viewport.clientWidth / 2) / oldZoom;
+        const centerY = (viewport.scrollTop + viewport.clientHeight / 2) / oldZoom;
+        state.treeZoom = Number(input.value) / 100;
+        output.textContent = `${input.value}%`;
+        localStorage.setItem("species-map-tree-zoom", input.value);
+        if (!state.project) return;
+        renderTree();
+        viewport.scrollLeft = centerX * state.treeZoom - viewport.clientWidth / 2;
+        viewport.scrollTop = centerY * state.treeZoom - viewport.clientHeight / 2;
+      });
+    }
+    function enableTreeLayoutControls() {
+      const viewport = $("treeViewport");
+      function rerenderKeepingCenter() {
+        if (!state.project) return;
+        const oldWidth = Math.max(1, viewport.scrollWidth);
+        const oldHeight = Math.max(1, viewport.scrollHeight);
+        const centerX = (viewport.scrollLeft + viewport.clientWidth / 2) / oldWidth;
+        const centerY = (viewport.scrollTop + viewport.clientHeight / 2) / oldHeight;
+        renderTree();
+        viewport.scrollLeft = centerX * viewport.scrollWidth - viewport.clientWidth / 2;
+        viewport.scrollTop = centerY * viewport.scrollHeight - viewport.clientHeight / 2;
+      }
+      function setSpacing(axis, value) {
+        const next = Math.round(Math.min(3, Math.max(.5, value)) * 10) / 10;
+        state[`${axis}Spacing`] = next;
+        $(`${axis}SpacingValue`).textContent = `${Math.round(next * 100)}%`;
+        localStorage.setItem(`species-map-${axis}-spacing`, String(next));
+        rerenderKeepingCenter();
+      }
+      for (const axis of ["horizontal", "vertical"]) {
+        const stored = Number(localStorage.getItem(`species-map-${axis}-spacing`));
+        if (Number.isFinite(stored) && stored >= .5 && stored <= 3) state[`${axis}Spacing`] = stored;
+        const input = $(`${axis}Spacing`);
+        input.value = String(Math.round(state[`${axis}Spacing`] * 100));
+        $(`${axis}SpacingValue`).textContent = `${Math.round(state[`${axis}Spacing`] * 100)}%`;
+        input.addEventListener("input", () => setSpacing(axis, Number(input.value) / 100));
+      }
+      const storedTipFontSize = Number(localStorage.getItem("species-map-tip-font-size"));
+      if (Number.isFinite(storedTipFontSize) && storedTipFontSize >= 6 && storedTipFontSize <= 16) state.tipFontSize = storedTipFontSize;
+      $("tipFontSize").value = String(state.tipFontSize);
+      $("tipFontSizeValue").textContent = `${state.tipFontSize}px`;
+      $("tipFontSize").addEventListener("input", event => {
+        state.tipFontSize = Number(event.target.value);
+        $("tipFontSizeValue").textContent = `${state.tipFontSize}px`;
+        localStorage.setItem("species-map-tip-font-size", String(state.tipFontSize));
+        rerenderKeepingCenter();
+      });
+      $("treeLayoutSelect").addEventListener("change", event => {
+        state.treeLayout = event.target.value;
+        renderTree();
+        if (state.treeLayout === "rectangular") viewport.scrollTo({top: 0, left: 0});
+        else viewport.scrollTo({
+          left: Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2),
+          top: Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2)
+        });
+      });
+    }
+    function downloadCurrentTreeSvg() {
+      if (!state.project) return;
+      const source = $("treeSvg");
+      const clone = source.cloneNode(true);
+      clone.setAttribute("xmlns", SVG);
+      clone.removeAttribute("style");
+      clone.querySelectorAll(".branch-hit, .radial-branch-hit, .connector-hit").forEach(node => node.remove());
+      clone.querySelectorAll("*").forEach(node => {
+        for (const attribute of [...node.attributes]) {
+          if (attribute.name === "role" || attribute.name === "tabindex" || attribute.name.startsWith("aria-") || attribute.name.startsWith("data-")) node.removeAttribute(attribute.name);
+        }
+      });
+      const theme = getComputedStyle(document.documentElement);
+      const color = name => theme.getPropertyValue(name).trim();
+      const style = document.createElementNS(SVG, "style");
+      style.textContent = `
+        .branch { stroke: #83909a; stroke-width: 1.5; fill: none; }
+        .branch.selected { stroke: ${color("--accent")}; stroke-width: 4; }
+        .connector { stroke: #a6afb5; stroke-width: 1.2; }
+        .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .support-label { fill: ${color("--muted")}; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .gain-value { fill: ${color("--gain-text")}; }
+        .loss-value { fill: ${color("--loss-text")}; }
+        .filtered-branch-label { opacity: .1; }
+        .tip-label { font: 11px sans-serif; fill: ${color("--ink")}; }
+        .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
+        .clade-taxonomy-label { font: 600 9px sans-serif; paint-order: stroke; stroke: ${color("--panel")}; stroke-width: 3px; stroke-linejoin: round; }
+        .clade-taxonomy-label.family { fill: #4f8fc9; }
+        .clade-taxonomy-label.genus { fill: #a477c7; font-style: italic; }
+        .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
+        .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
+        .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
+        .phenotype-loss { fill: ${color("--loss")}; stroke: white; stroke-width: 2; }
+      `;
+      const background = document.createElementNS(SVG, "rect");
+      background.setAttribute("width", "100%");
+      background.setAttribute("height", "100%");
+      background.setAttribute("fill", color("--panel"));
+      clone.prepend(background);
+      clone.prepend(style);
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
+      const blob = new Blob([markup], {type: "image/svg+xml;charset=utf-8"});
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = `gene-gain-loss-tree-${state.treeLayout}.svg`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
     }
     function openDetailPanel() {
       document.querySelector(".workspace").classList.add("detail-open");
@@ -349,106 +927,346 @@
       document.querySelector(".workspace").classList.remove("detail-open");
       document.querySelector(".detail-panel").setAttribute("aria-hidden", "true");
       state.selectedBranch = null;
+      state.selectedEvent = null;
       if (state.project) renderTree();
     }
-    async function selectBranch(branchId) {
+    function resetDetailScroll() { document.querySelector(".detail-scroll").scrollTop = 0; }
+    function configureDetailBack(label, action) {
+      const button = $("detailBack");
+      button.hidden = !action;
+      button.textContent = label || "← Back";
+      button.onclick = action || null;
+    }
+    async function selectBranch(branchId, eventKind = null) {
       openDetailPanel();
-      state.selectedBranch = branchId; renderTree();
+      configureDetailBack("", null);
+      resetDetailScroll();
+      state.selectedBranch = branchId;
+      state.selectedEvent = eventKind;
+      renderTree();
       const branch = state.branches.get(branchId);
+      $("detailTitle").classList.remove("family-title");
       $("detailTitle").textContent = branchId;
-      $("detailSubtitle").textContent = branch.tip_label || `${branch.parent_node} → ${branch.child_node}`;
+      $("detailSubtitle").hidden = false;
+      const branchDescription = branch.tip_label || `${branch.parent_node} → ${branch.child_node}`;
+      const eventDescription = eventKind === "gain" ? "Gained gene families" : eventKind === "loss" ? "Lost gene families" : "";
+      $("detailSubtitle").textContent = [branchDescription, eventDescription].filter(Boolean).join(" · ");
       const body = $("detailBody"); body.replaceChildren();
       const counts = document.createElement("div"); counts.className = "counts";
-      counts.innerHTML = `<div class="count">Gain <strong>+${number(branch.gain_count)}</strong></div><div class="count">Loss <strong>−${number(branch.loss_count)}</strong></div>`;
+      const countItems = eventKind ? [eventKind] : ["gain", "loss"];
+      counts.innerHTML = countItems.map(kind => `<div class="count">${kind === "gain" ? "Gain" : "Loss"} <strong>${kind === "gain" ? "+" : "−"}${number(branch[`${kind}_count`])}</strong></div>`).join("");
       body.append(counts);
       const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading branch analysis…"; body.append(loading);
       const annotated = state.project.settings?.annotation_engine;
-      const requests = [api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500`)];
-      if (annotated) {
-        requests.push(api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=gain&limit=20`));
-        requests.push(api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=loss&limit=20`));
-      }
-      const responses = await Promise.all(requests);
-      const result = responses[0];
+      const eventQuery = eventKind ? `&event=${eventKind}` : "";
+      const result = await api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500${eventQuery}`);
+      if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind) return;
       loading.remove();
-      if (annotated) {
-        appendEnrichment(body, responses[1], "Gained-family enrichment", "gain");
-        appendEnrichment(body, responses[2], "Lost-family enrichment", "loss");
+      if (annotated && state.annotationSources.length) {
+        const toolbar = document.createElement("div"); toolbar.className = "enrichment-toolbar";
+        const label = document.createElement("label"); label.htmlFor = "enrichmentSource"; label.textContent = "Database";
+        const select = document.createElement("select"); select.id = "enrichmentSource"; select.className = "enrichment-source-select";
+        const allOption = document.createElement("option"); allOption.value = "All"; allOption.textContent = "All"; allOption.selected = state.enrichmentSource === "All"; select.append(allOption);
+        for (const item of state.annotationSources) {
+          const option = document.createElement("option"); option.value = item.source; option.textContent = item.source; option.selected = item.source === state.enrichmentSource; select.append(option);
+        }
+        const plotLabel = document.createElement("label"); plotLabel.htmlFor = "enrichmentPlotType"; plotLabel.textContent = "Plot";
+        const plotSelect = document.createElement("select"); plotSelect.id = "enrichmentPlotType"; plotSelect.className = "enrichment-plot-select";
+        for (const [value, text] of [["bar", "Bar plot"], ["dot", "Dot plot"]]) {
+          const option = document.createElement("option"); option.value = value; option.textContent = text; option.selected = value === state.enrichmentPlotType; plotSelect.append(option);
+        }
+        const method = document.createElement("span"); method.className = "enrichment-method"; method.textContent = "FDR corrected within database";
+        toolbar.append(label, select, plotLabel, plotSelect, method); body.append(toolbar);
+        const enrichmentBody = document.createElement("div"); body.append(enrichmentBody);
+        select.addEventListener("change", () => {
+          state.enrichmentSource = select.value;
+          renderBranchEnrichment(enrichmentBody, branchId, select.value, eventKind);
+        });
+        plotSelect.addEventListener("change", () => {
+          state.enrichmentPlotType = plotSelect.value;
+          localStorage.setItem("species-map-enrichment-plot", state.enrichmentPlotType);
+          renderBranchEnrichment(enrichmentBody, branchId, select.value, eventKind);
+        });
+        await renderBranchEnrichment(enrichmentBody, branchId, state.enrichmentSource, eventKind);
       }
-      const title = document.createElement("div"); title.className = "section-title"; title.textContent = `Gene-family events (${number(result.total)})`; body.append(title);
+      if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind) return;
+      const listHeading = eventKind === "gain" ? "Gained gene families" : eventKind === "loss" ? "Lost gene families" : "Gene-family events";
+      const title = document.createElement("div"); title.className = "section-title"; title.textContent = `${listHeading} (${number(result.total)})`; body.append(title);
       const list = document.createElement("div"); list.className = "event-list";
       for (const event of result.events) {
         const button = document.createElement("button"); button.className = "family-button";
-        const family = document.createElement("span");
-        const familyId = document.createElement("span"); familyId.className = "family-id"; familyId.textContent = event.family_id; family.append(familyId);
+        const eventLabel = document.createElement("span"); eventLabel.className = "event-kind"; eventLabel.textContent = event.event;
+        const familyId = document.createElement("span"); familyId.className = "family-id"; familyId.textContent = event.family_id;
         const annotation = event.preferred_name || event.description;
-        if (annotation) { const description = document.createElement("span"); description.className = "family-description"; description.textContent = [event.preferred_name, event.description].filter(Boolean).join(" — "); family.append(description); }
-        const tag = document.createElement("span"); tag.className = `tag ${event.event}`; tag.textContent = event.event;
-        button.append(family, tag); button.addEventListener("click", () => showFamily(event.family_id)); list.append(button);
+        const description = document.createElement("span"); description.className = "family-description"; description.textContent = annotation ? [event.preferred_name, event.description].filter(Boolean).join(" — ") : ""; description.title = description.textContent;
+        button.append(eventLabel, familyId, description); button.addEventListener("click", () => showFamily(event.family_id, {type: "branch", branchId, eventKind})); list.append(button);
       }
       body.append(list);
       if (result.total > result.events.length) {
         const note = document.createElement("div"); note.className = "empty"; note.textContent = `Showing the first ${number(result.events.length)} events. Complete results are in gene_gain_loss.tsv.`; body.append(note);
       }
     }
-    function appendEnrichment(body, enrichment, heading, eventType) {
+    async function renderBranchEnrichment(container, branchId, source, eventKind = null) {
+      container.replaceChildren();
+      const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = `Calculating ${source} enrichment…`; container.append(loading);
+      const sourceQuery = encodeURIComponent(source);
+      const eventKinds = eventKind ? [eventKind] : ["gain", "loss"];
+      const enrichments = await Promise.all(eventKinds.map(kind => api(`/api/enrichment?branch=${encodeURIComponent(branchId)}&event=${kind}&limit=100&source=${sourceQuery}`)));
+      if (state.selectedBranch !== branchId || state.selectedEvent !== eventKind || state.enrichmentSource !== source) return;
+      container.replaceChildren();
+      enrichments.forEach((enrichment, index) => {
+        const kind = eventKinds[index];
+        appendEnrichment(container, enrichment, kind === "gain" ? "Functional enrichment of gained gene families" : "Functional enrichment of lost gene families", branchId, kind);
+      });
+    }
+    function appendEnrichment(body, enrichment, heading, branchId, eventKind) {
       const section = document.createElement("section"); section.className = "enrichment-section";
-      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; section.append(title);
+      const sectionHead = document.createElement("div"); sectionHead.className = "enrichment-section-head";
+      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; sectionHead.append(title); section.append(sectionHead);
       if (!enrichment.foreground) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No gene-family events on this branch."; section.append(empty); body.append(section); return; }
       const significant = enrichment.results.filter(row => row.q_value <= 0.05);
       if (!significant.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No enriched terms at FDR ≤ 0.05."; section.append(empty); body.append(section); return; }
-      const plotted = significant.slice(0, 10);
-      const scores = plotted.map(row => -Math.log10(Math.max(Number(row.q_value), 1e-300)));
-      const maximumScore = Math.max(...scores, 1);
-      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}, ranked by negative log10 FDR`);
-      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = "Top significant terms · bar length = −log10(FDR)"; chart.append(caption);
+      const plotted = significant.slice(0, 15);
+      const downloads = document.createElement("div"); downloads.className = "enrichment-downloads";
+      const plotDownload = document.createElement("button"); plotDownload.type = "button"; plotDownload.className = "enrichment-download"; plotDownload.textContent = "Download plot";
+      plotDownload.addEventListener("click", () => downloadEnrichmentPlot(plotted, enrichment, heading, branchId, eventKind, state.enrichmentPlotType));
+      const tableDownload = document.createElement("button"); tableDownload.type = "button"; tableDownload.className = "enrichment-download"; tableDownload.textContent = "Download table";
+      tableDownload.addEventListener("click", () => downloadEnrichmentTable(significant, enrichment, branchId, eventKind));
+      downloads.append(plotDownload, tableDownload); sectionHead.append(downloads);
+      const counts = plotted.map(row => Number(row.overlap));
+      const folds = plotted.map(row => Number(row.fold_enrichment));
+      const fdrValues = plotted.map(row => Math.max(Number(row.q_value), 1e-300));
+      const plotType = state.enrichmentPlotType;
+      const plotValues = plotType === "dot" ? folds : counts;
+      const axis = niceCountAxis(Math.max(...plotValues, 1));
+      const fdrMinimum = Math.min(...fdrValues);
+      const fdrMaximum = 0.05;
+      const layout = document.createElement("div"); layout.className = "chart-layout";
+      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.classList.toggle("long-term-labels", enrichment.source === "KEGG reaction" || plotted.some(row => row.source === "KEGG reaction")); chart.setAttribute("role", "img"); chart.setAttribute("aria-label", plotType === "dot" ? `${heading}; x axis is fold enrichment, dot size is gene-family count, and color is FDR` : `${heading}; bar length is gene-family count and color is FDR`);
+      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = plotType === "dot" ? `Top significant ${enrichment.source} terms · x = fold enrichment · dot size = hits` : `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
+      const maximumCount = Math.max(...counts, 1);
       plotted.forEach((row, index) => {
         const chartRow = document.createElement("div"); chartRow.className = "chart-row";
-        const term = document.createElement("div"); term.className = "chart-term"; term.textContent = row.term_name || row.term_id; term.title = `${row.source}: ${row.term_id}`;
+        const term = document.createElement("div"); term.className = "chart-term";
+        if (enrichment.source === "All") { const sourceName = document.createElement("span"); sourceName.className = "term-source"; sourceName.textContent = row.source; term.append(sourceName); }
+        appendChartTerm(term, row); term.title = `${row.source}: ${row.term_id}`;
         const track = document.createElement("div"); track.className = "chart-track";
-        const bar = document.createElement("div"); bar.className = `chart-bar ${eventType}`; bar.style.width = `${Math.max(2, scores[index] / maximumScore * 100)}%`; track.append(bar);
-        const score = document.createElement("div"); score.className = "chart-score"; score.textContent = scores[index].toFixed(1);
+        for (let tick = axis.step; tick <= axis.maximum; tick += axis.step) {
+          const gridLine = document.createElement("span"); gridLine.className = "chart-grid-line"; gridLine.style.left = `${tick / axis.maximum * 100}%`; track.append(gridLine);
+        }
+        if (plotType === "dot") {
+          const dot = document.createElement("div"); dot.className = "chart-dot";
+          const diameter = 6 + Math.sqrt(counts[index] / maximumCount) * 13;
+          dot.style.left = `${folds[index] / axis.maximum * 100}%`; dot.style.width = `${diameter}px`; dot.style.height = `${diameter}px`; dot.style.backgroundColor = fdrColor(fdrValues[index], fdrMinimum, fdrMaximum); track.append(dot);
+        } else {
+          const bar = document.createElement("div"); bar.className = "chart-bar"; bar.style.width = `${Math.max(2, counts[index] / axis.maximum * 100)}%`; bar.style.backgroundColor = fdrColor(fdrValues[index], fdrMinimum, fdrMaximum); track.append(bar);
+        }
+        const score = document.createElement("div"); score.className = "chart-score"; score.textContent = number(counts[index]);
         chartRow.append(term, track, score); chart.append(chartRow);
       });
-      section.append(chart);
+      const axisRow = document.createElement("div"); axisRow.className = "chart-axis-row";
+      const spacer = document.createElement("span");
+      const axisNode = document.createElement("div"); axisNode.className = "chart-axis";
+      for (let tick = 0; tick <= axis.maximum + axis.step / 2; tick += axis.step) {
+        const tickNode = document.createElement("span"); tickNode.className = "chart-tick"; tickNode.style.left = `${tick / axis.maximum * 100}%`;
+        const tickLabel = document.createElement("span"); tickLabel.textContent = formatAxisTick(tick, axis.step); tickNode.append(tickLabel); axisNode.append(tickNode);
+      }
+      const axisLabel = document.createElement("span"); axisLabel.className = "chart-axis-label"; axisLabel.textContent = plotType === "dot" ? "Fold\nenrichment" : "Count";
+      axisRow.append(spacer, axisNode, axisLabel); chart.append(axisRow);
+      layout.append(chart, createFdrLegend(fdrMinimum, fdrMaximum)); section.append(layout);
       const table = document.createElement("table"); table.className = "enrichment-table";
-      table.innerHTML = "<thead><tr><th>Term</th><th>Source</th><th>Hits</th><th>Fold</th><th>FDR</th></tr></thead>";
+      table.innerHTML = "<thead><tr><th>Term</th><th>Hits</th><th>Background</th><th>Fold</th><th>FDR</th></tr></thead>";
       const tbody = document.createElement("tbody");
       for (const row of significant) {
         const tr = document.createElement("tr");
-        const term = document.createElement("td"); term.textContent = row.term_name || row.term_id;
-        if ((row.term_name || row.term_id) !== row.term_id) { const id = document.createElement("span"); id.className = "term-id"; id.textContent = row.term_id; term.append(id); }
-        const source = document.createElement("td"); source.textContent = row.source;
+        const term = document.createElement("td");
+        if (enrichment.source === "All") { const sourceName = document.createElement("span"); sourceName.className = "term-source"; sourceName.textContent = row.source; term.append(sourceName); }
+        appendTableTerm(term, row);
         const hits = document.createElement("td"); hits.className = "number-cell"; hits.textContent = `${row.overlap}/${row.foreground}`;
+        const background = document.createElement("td"); background.className = "number-cell"; background.textContent = `${row.term_total}/${row.universe}`;
         const fold = document.createElement("td"); fold.className = "number-cell"; fold.textContent = `${formatFold(row.fold_enrichment)}×`;
         const fdr = document.createElement("td"); fdr.className = "number-cell"; fdr.textContent = formatProbability(row.q_value);
-        tr.append(term, source, hits, fold, fdr); tbody.append(tr);
+        tr.append(term, hits, background, fold, fdr); tbody.append(tr);
       }
       table.append(tbody); section.append(table); body.append(section);
     }
+    function safeFilename(value) { return String(value).replace(/[^A-Za-z0-9._-]+/g, "-").replace(/^-+|-+$/g, ""); }
+    function triggerDownload(blob, filename) {
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob); link.download = filename; document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+    function enrichmentFilename(branchId, eventKind, source, extension) {
+      return `${safeFilename(branchId)}-${safeFilename(eventKind)}-${safeFilename(source)}-enrichment.${extension}`;
+    }
+    function downloadEnrichmentTable(rows, enrichment, branchId, eventKind) {
+      const columns = ["Source", "Term ID", "Term name", "Hits", "Foreground", "Term total", "Universe", "Fold enrichment", "P value", "FDR"];
+      const clean = value => String(value ?? "").replace(/[\t\r\n]+/g, " ");
+      const lines = [columns.join("\t")];
+      for (const row of rows) lines.push([
+        row.source, row.term_id, row.term_name || row.term_id, row.overlap, row.foreground,
+        row.term_total, row.universe, row.fold_enrichment, row.p_value, row.q_value
+      ].map(clean).join("\t"));
+      const blob = new Blob(["\ufeff", lines.join("\n") + "\n"], {type: "text/tab-separated-values;charset=utf-8"});
+      triggerDownload(blob, enrichmentFilename(branchId, eventKind, enrichment.source, "tsv"));
+    }
+    function downloadEnrichmentPlot(rows, enrichment, heading, branchId, eventKind, plotType = "bar") {
+      const width = 1200;
+      const labelWidth = enrichment.source === "KEGG reaction" || rows.some(row => row.source === "KEGG reaction") ? 610 : 470;
+      const plotWidth = width - labelWidth - 120;
+      const rowHeight = 34;
+      const top = 76;
+      const bottom = 58;
+      const height = top + rows.length * rowHeight + bottom;
+      const counts = rows.map(row => Number(row.overlap));
+      const folds = rows.map(row => Number(row.fold_enrichment));
+      const plotValues = plotType === "dot" ? folds : counts;
+      const fdrValues = rows.map(row => Math.max(Number(row.q_value), 1e-300));
+      const axis = niceCountAxis(Math.max(...plotValues, 1));
+      const maximumCount = Math.max(...counts, 1);
+      const fdrMinimum = Math.min(...fdrValues);
+      const fdrMaximum = 0.05;
+      const rootStyle = getComputedStyle(document.documentElement);
+      const color = name => rootStyle.getPropertyValue(name).trim();
+      const svg = document.createElementNS(SVG, "svg");
+      svg.setAttribute("xmlns", SVG); svg.setAttribute("width", width); svg.setAttribute("height", height); svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.append(svgEl("rect", {width, height, fill: color("--panel")}));
+      const title = svgEl("text", {x: 24, y: 30, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 18, "font-weight": 600}); title.textContent = heading; svg.append(title);
+      const subtitle = svgEl("text", {x: 24, y: 52, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 12}); subtitle.textContent = plotType === "dot" ? `${branchId} · ${enrichment.source} · x = fold enrichment · dot size = hits · color = FDR` : `${branchId} · ${enrichment.source} · bar length = hits · color = FDR`; svg.append(subtitle);
+      const legendX = labelWidth + plotWidth + 38;
+      const legendY = top + 8;
+      const legendTitle = svgEl("text", {x: legendX, y: top - 3, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); legendTitle.textContent = "FDR"; svg.append(legendTitle);
+      for (let index = 0; index < 4; index += 1) {
+        const position = index / 3;
+        const value = 10 ** (Math.log10(fdrMinimum) + (Math.log10(fdrMaximum) - Math.log10(fdrMinimum)) * position);
+        const y = legendY + index * 26;
+        svg.append(svgEl("rect", {x: legendX, y, width: 16, height: 26, fill: fdrColor(value, fdrMinimum, fdrMaximum)}));
+        const legendLabel = svgEl("text", {x: legendX + 23, y: y + 17, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 9}); legendLabel.textContent = formatProbability(value); svg.append(legendLabel);
+      }
+      const legendDirection = svgEl("text", {x: legendX, y: legendY + 4 * 26 + 18, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 9}); legendDirection.textContent = "red = lower"; svg.append(legendDirection);
+      for (let tick = 0; tick <= axis.maximum + axis.step / 2; tick += axis.step) {
+        const x = labelWidth + tick / axis.maximum * plotWidth;
+        svg.append(svgEl("line", {x1: x, y1: top - 10, x2: x, y2: height - bottom + 4, stroke: color("--line"), "stroke-width": 1}));
+        const tickText = svgEl("text", {x, y: height - 24, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 11, "text-anchor": "middle"}); tickText.textContent = formatAxisTick(tick); svg.append(tickText);
+      }
+      rows.forEach((row, index) => {
+        const y = top + index * rowHeight;
+        const label = svgEl("text", {x: labelWidth - 14, y: y + 17, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 12, "text-anchor": "end"}); label.textContent = `${enrichment.source === "All" ? `[${row.source}] ` : ""}${enrichmentTermLabel(row)}`; svg.append(label);
+        if (plotType === "dot") {
+          const radius = 3 + Math.sqrt(counts[index] / maximumCount) * 7;
+          svg.append(svgEl("circle", {cx: labelWidth + folds[index] / axis.maximum * plotWidth, cy: y + 14, r: radius, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum), stroke: color("--ink"), "stroke-opacity": .28, "stroke-width": 1}));
+          const count = svgEl("text", {x: labelWidth + plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = `n=${number(counts[index])}`; svg.append(count);
+        } else {
+          svg.append(svgEl("rect", {x: labelWidth, y: y + 4, width: Math.max(2, counts[index] / axis.maximum * plotWidth), height: 20, fill: fdrColor(fdrValues[index], fdrMinimum, fdrMaximum)}));
+          const count = svgEl("text", {x: labelWidth + counts[index] / axis.maximum * plotWidth + 7, y: y + 18, fill: color("--ink"), "font-family": "Arial, sans-serif", "font-size": 11}); count.textContent = number(counts[index]); svg.append(count);
+        }
+      });
+      const axisTitle = svgEl("text", {x: labelWidth + plotWidth / 2, y: height - 5, fill: color("--muted"), "font-family": "Arial, sans-serif", "font-size": 11, "text-anchor": "middle"}); axisTitle.textContent = plotType === "dot" ? "Fold enrichment" : "Count"; svg.append(axisTitle);
+      const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(svg)}`;
+      triggerDownload(new Blob([markup], {type: "image/svg+xml;charset=utf-8"}), enrichmentFilename(branchId, eventKind, `${enrichment.source}-${plotType}`, "svg"));
+    }
+    function enrichmentTermLabel(row) {
+      const name = row.term_name || row.term_id;
+      return name !== row.term_id ? `${row.term_id} — ${name}` : row.term_id;
+    }
+    function officialTermUrl(source, termId) {
+      if (source === "KEGG module") return `https://www.kegg.jp/module/${encodeURIComponent(termId)}`;
+      if (source === "KEGG pathway") return `https://www.kegg.jp/pathway/${encodeURIComponent(termId)}`;
+      if (source.startsWith("KEGG ")) return `https://www.kegg.jp/entry/${encodeURIComponent(termId)}`;
+      if (source === "GO") return `https://amigo.geneontology.org/amigo/term/${encodeURIComponent(termId)}`;
+      return "";
+    }
+    function createOfficialTermLink(row, className = "term-link") {
+      const url = officialTermUrl(row.source, row.term_id);
+      if (!url) return null;
+      const link = document.createElement("a"); link.className = className; link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = row.term_id;
+      link.title = `Open ${row.term_id} in the official ${row.source} database`;
+      return link;
+    }
+    function appendChartTerm(container, row) {
+      const name = row.term_name || row.term_id;
+      if (row.source === "COG category") { container.textContent = name; return; }
+      const link = createOfficialTermLink(row);
+      if (!link) { container.textContent = enrichmentTermLabel(row); return; }
+      container.append(link);
+      if (name !== row.term_id) container.append(document.createTextNode(` — ${name}`));
+    }
+    function appendTableTerm(container, row) {
+      const name = row.term_name || row.term_id;
+      const link = createOfficialTermLink(row, name !== row.term_id ? "term-id term-link" : "term-link");
+      if (name !== row.term_id) container.append(document.createTextNode(name));
+      if (link) container.append(link); else if (name === row.term_id) container.textContent = row.term_id;
+      else { const id = document.createElement("span"); id.className = "term-id"; id.textContent = row.term_id; container.append(id); }
+    }
+    function niceCountAxis(value) {
+      const rawStep = value / 5;
+      const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+      const fraction = rawStep / magnitude;
+      const step = Math.max(1, (fraction <= 1 ? 1 : fraction <= 2 ? 2 : fraction <= 5 ? 5 : 10) * magnitude);
+      return { step, maximum: Math.ceil(value / step) * step };
+    }
+    function formatAxisTick(value) { return number(value); }
+    function fdrColor(value, minimum, maximum) {
+      const denominator = Math.log10(maximum) - Math.log10(minimum);
+      const position = denominator > 0 ? Math.min(1, Math.max(0, (Math.log10(value) - Math.log10(minimum)) / denominator)) : 0;
+      const stops = position <= 0.5
+        ? [[245, 28, 52], [201, 0, 170], position * 2]
+        : [[201, 0, 170], [35, 52, 235], (position - 0.5) * 2];
+      const rgb = stops[0].map((channel, index) => Math.round(channel + (stops[1][index] - channel) * stops[2]));
+      return `rgb(${rgb.join(",")})`;
+    }
+    function createFdrLegend(minimum, maximum) {
+      const legend = document.createElement("div"); legend.className = "fdr-legend"; legend.setAttribute("aria-label", "FDR color scale; lower values are red");
+      const title = document.createElement("div"); title.className = "fdr-legend-title"; title.textContent = "FDR"; legend.append(title);
+      for (let index = 0; index < 4; index += 1) {
+        const position = index / 3;
+        const value = 10 ** (Math.log10(minimum) + (Math.log10(maximum) - Math.log10(minimum)) * position);
+        const step = document.createElement("div"); step.className = "fdr-step";
+        const swatch = document.createElement("span"); swatch.className = "fdr-swatch"; swatch.style.backgroundColor = fdrColor(value, minimum, maximum);
+        const label = document.createElement("span"); label.textContent = formatProbability(value);
+        step.append(swatch, label); legend.append(step);
+      }
+      const direction = document.createElement("div"); direction.className = "fdr-direction"; direction.textContent = "red = lower"; legend.append(direction);
+      return legend;
+    }
     function formatProbability(value) { return value < 0.001 ? Number(value).toExponential(1) : Number(value).toFixed(3); }
     function formatFold(value) { return value >= 10 ? Number(value).toFixed(0) : Number(value).toFixed(1); }
-    async function showFamily(familyId) {
+    async function showFamily(familyId, returnContext = null) {
       openDetailPanel();
+      resetDetailScroll();
+      if (returnContext?.type === "branch") configureDetailBack("Back", () => selectBranch(returnContext.branchId, returnContext.eventKind || null));
+      else if (returnContext?.type === "candidates") configureDetailBack("Back", showCandidates);
+      else configureDetailBack("", null);
       const result = await api(`/api/family?id=${encodeURIComponent(familyId)}`);
-      $("detailTitle").textContent = familyId; $("detailSubtitle").textContent = "Gene-family members";
+      $("detailTitle").classList.add("family-title");
+      $("detailTitle").textContent = familyId; $("detailSubtitle").textContent = ""; $("detailSubtitle").hidden = true;
       const body = $("detailBody"); body.replaceChildren();
       if (result.preferred_name || result.description || result.annotations?.length) {
-        const functionTitle = document.createElement("div"); functionTitle.className = "section-title"; functionTitle.textContent = "Functional annotation"; body.append(functionTitle);
+        const functionTitle = document.createElement("div"); functionTitle.className = "section-title functional-title"; functionTitle.textContent = "Functional annotation"; body.append(functionTitle);
         if (result.preferred_name) { const name = document.createElement("div"); name.className = "function-name"; name.textContent = result.preferred_name; body.append(name); }
         if (result.description) { const description = document.createElement("div"); description.className = "function-description"; description.textContent = result.description; body.append(description); }
-        if (result.annotations?.length) { const terms = document.createElement("div"); terms.className = "annotation-list"; terms.textContent = result.annotations.map(item => `${item.source}: ${item.term_name || item.term_id}`).join(" · "); body.append(terms); }
+        if (result.annotations?.length) {
+          const terms = document.createElement("div"); terms.className = "annotation-list";
+          for (const item of result.annotations) {
+            const annotation = document.createElement("div"); annotation.className = "function-annotation";
+            const annotationName = item.term_name || item.term_id; annotation.append(document.createTextNode(`${item.source}: ${annotationName}`));
+            if (annotationName !== item.term_id) { const annotationLink = createOfficialTermLink(item, "term-link inline-term-id"); if (annotationLink) annotation.append(annotationLink); }
+            else { const annotationLink = createOfficialTermLink(item, "term-link"); if (annotationLink) { annotation.replaceChildren(document.createTextNode(`${item.source}: `), annotationLink); } }
+            terms.append(annotation);
+          }
+          body.append(terms);
+        }
       }
-      const eventTitle = document.createElement("div"); eventTitle.className = "section-title"; eventTitle.textContent = "Inferred events"; body.append(eventTitle);
-      const eventText = document.createElement("div"); eventText.textContent = result.events.map(e => `${e.branch_id} ${e.event}`).join(" · ") || "No transitions"; body.append(eventText);
-      const memberTitle = document.createElement("div"); memberTitle.className = "section-title"; memberTitle.textContent = "Genes by species"; body.append(memberTitle);
       const entries = Object.entries(result.members);
       if (!entries.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Gene members were not indexed."; body.append(empty); }
-      for (const [species, genes] of entries) {
-        const speciesNode = document.createElement("div"); speciesNode.className = "member-species"; speciesNode.textContent = species;
+      const memberList = document.createElement("div"); memberList.className = "member-list";
+      for (const [assembly, genes] of entries) {
+        const row = document.createElement("div"); row.className = "member-row";
+        const assemblyNode = document.createElement("div"); assemblyNode.className = "member-assembly"; assemblyNode.textContent = `Assembly: ${assembly}`;
         const geneNode = document.createElement("div"); geneNode.className = "genes"; geneNode.textContent = genes.join(", ");
-        body.append(speciesNode, geneNode);
+        row.append(assemblyNode, geneNode); memberList.append(row);
       }
+      body.append(memberList);
     }
     async function phenotypeChanged() {
       const phenotype = $("phenotypeSelect").value;
@@ -462,8 +1280,12 @@
     }
     async function showCandidates() {
       openDetailPanel();
+      configureDetailBack("", null);
+      resetDetailScroll();
       const phenotype = $("phenotypeSelect").value;
+      $("detailTitle").classList.remove("family-title");
       $("detailTitle").textContent = "Candidate gene families";
+      $("detailSubtitle").hidden = false;
       $("detailSubtitle").textContent = phenotype ? `Coincident with ${phenotype} gains` : "Select a phenotype first";
       const body = $("detailBody"); body.replaceChildren();
       if (!phenotype) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Choose a phenotype from the toolbar."; body.append(empty); return; }
@@ -472,7 +1294,7 @@
       table.innerHTML = "<thead><tr><th>Family</th><th>Score</th><th>Family gains</th></tr></thead>";
       const tbody = document.createElement("tbody");
       for (const row of rows) {
-        const tr = document.createElement("tr"); const familyCell = document.createElement("td"); const button = document.createElement("button"); button.textContent = row.family_id; button.addEventListener("click", () => showFamily(row.family_id)); familyCell.append(button);
+        const tr = document.createElement("tr"); const familyCell = document.createElement("td"); const button = document.createElement("button"); button.textContent = row.family_id; button.addEventListener("click", () => showFamily(row.family_id, {type: "candidates"})); familyCell.append(button);
         const score = document.createElement("td"); score.textContent = row.score; const gains = document.createElement("td"); gains.textContent = row.family_gains; tr.append(familyCell, score, gains); tbody.append(tr);
       }
       table.append(tbody); body.append(table);
@@ -487,10 +1309,92 @@
       $("treeViewport").scrollTo({top: 0, left: 0});
       renderTree();
     });
+    $("cladeLabelSelect").addEventListener("change", event => {
+      state.cladeLabelMode = event.target.value;
+      localStorage.setItem("species-map-clade-labels", state.cladeLabelMode);
+      renderTree();
+    });
+    $("treeOrderSelect").addEventListener("change", event => {
+      state.treeOrder = event.target.value;
+      state.flippedNodes.clear();
+      closeDetailPanel();
+      $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
+    $("supportCollapseSelect").addEventListener("change", event => {
+      state.supportThreshold = Number(event.target.value);
+      state.expandedGroups.clear();
+      closeDetailPanel();
+      $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
+    $("downloadSvg").addEventListener("click", downloadCurrentTreeSvg);
     $("detailClose").addEventListener("click", closeDetailPanel);
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
+    function enableDetailResize() {
+      const panel = document.querySelector(".detail-panel");
+      const workspace = document.querySelector(".workspace");
+      const handle = $("detailResizeHandle");
+      const storedWidth = Number(localStorage.getItem("species-map-detail-width"));
+      if (Number.isFinite(storedWidth) && storedWidth > 0) panel.style.setProperty("--detail-panel-width", `${storedWidth}px`);
+      const limits = () => {
+        const maximum = Math.max(320, workspace.clientWidth - 40);
+        return {minimum: Math.min(420, maximum), maximum};
+      };
+      const setWidth = width => {
+        const {minimum, maximum} = limits();
+        const next = Math.round(Math.min(maximum, Math.max(minimum, width)));
+        panel.style.setProperty("--detail-panel-width", `${next}px`);
+        handle.setAttribute("aria-valuemin", String(minimum));
+        handle.setAttribute("aria-valuemax", String(maximum));
+        handle.setAttribute("aria-valuenow", String(next));
+        return next;
+      };
+      let active = false;
+      let startX = 0;
+      let startWidth = 0;
+      handle.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || window.matchMedia("(max-width: 950px)").matches) return;
+        active = true;
+        startX = event.clientX;
+        startWidth = panel.getBoundingClientRect().width;
+        handle.setPointerCapture(event.pointerId);
+        document.body.classList.add("detail-resizing");
+        event.preventDefault();
+      });
+      handle.addEventListener("pointermove", event => {
+        if (!active) return;
+        setWidth(startWidth + startX - event.clientX);
+      });
+      const finishResize = event => {
+        if (!active) return;
+        active = false;
+        document.body.classList.remove("detail-resizing");
+        if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+        localStorage.setItem("species-map-detail-width", String(Math.round(panel.getBoundingClientRect().width)));
+      };
+      handle.addEventListener("pointerup", finishResize);
+      handle.addEventListener("pointercancel", finishResize);
+      handle.addEventListener("keydown", event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const delta = event.key === "ArrowLeft" ? 40 : -40;
+        const next = setWidth(panel.getBoundingClientRect().width + delta);
+        localStorage.setItem("species-map-detail-width", String(next));
+        event.preventDefault();
+      });
+      window.addEventListener("resize", () => {
+        if (!window.matchMedia("(max-width: 950px)").matches) setWidth(panel.getBoundingClientRect().width);
+      });
+      setWidth(storedWidth || 760);
+    }
+    function expandCollapsedNode(nodeId) {
+      state.manuallyCollapsed.delete(nodeId);
+      if (state.collapseRank) state.expandedGroups.add(`${state.collapseRank}:${nodeId}`);
+      if (state.supportThreshold > 0) state.expandedGroups.add(`support:${state.supportThreshold}:${nodeId}`);
+    }
     function enableTreePan() {
       const viewport = $("treeViewport");
+      const actionHint = $("treeActionHint");
       let active = false;
       let moved = false;
       let startX = 0;
@@ -498,14 +1402,22 @@
       let startLeft = 0;
       let startTop = 0;
       let pendingBranch = null;
+      let pendingEvent = null;
       let pendingExpandNode = null;
+      let pendingCollapseNode = null;
+      let pendingFlipNode = null;
       let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
+        actionHint.hidden = true;
         active = true;
         moved = false;
         pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
-        pendingBranch = pendingExpandNode ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
+        pendingCollapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode || null;
+        pendingFlipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode || null;
+        const hasTreeAction = pendingExpandNode || pendingCollapseNode || pendingFlipNode;
+        pendingBranch = hasTreeAction ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
+        pendingEvent = hasTreeAction ? null : (event.target.closest("[data-event]")?.dataset.event || null);
         startX = event.clientX;
         startY = event.clientY;
         startLeft = viewport.scrollLeft;
@@ -523,35 +1435,77 @@
         viewport.scrollTop = startTop - dy;
         event.preventDefault();
       });
+      viewport.addEventListener("pointermove", event => {
+        if (active && moved) { actionHint.hidden = true; return; }
+        const action = event.target.closest("[data-action-hint]");
+        if (!action) { actionHint.hidden = true; return; }
+        const bounds = viewport.getBoundingClientRect();
+        actionHint.textContent = action.dataset.actionHint;
+        actionHint.style.left = `${event.clientX - bounds.left + viewport.scrollLeft + 9}px`;
+        actionHint.style.top = `${event.clientY - bounds.top + viewport.scrollTop - 13}px`;
+        actionHint.hidden = false;
+      });
+      viewport.addEventListener("pointerleave", () => { actionHint.hidden = true; });
       const finishPan = event => {
         if (!active) return;
         active = false;
         viewport.classList.remove("dragging");
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
         if (!moved && pendingExpandNode) {
-          state.expandedGroups.add(`${state.collapseRank}:${pendingExpandNode}`);
+          lastPointerSelection = Date.now();
+          expandCollapsedNode(pendingExpandNode);
+          renderTree();
+        } else if (!moved && pendingCollapseNode) {
+          lastPointerSelection = Date.now();
+          if (state.manuallyCollapsed.has(pendingCollapseNode)) state.manuallyCollapsed.delete(pendingCollapseNode);
+          else state.manuallyCollapsed.add(pendingCollapseNode);
+          renderTree();
+        } else if (!moved && pendingFlipNode) {
+          lastPointerSelection = Date.now();
+          if (state.flippedNodes.has(pendingFlipNode)) state.flippedNodes.delete(pendingFlipNode);
+          else state.flippedNodes.add(pendingFlipNode);
           renderTree();
         } else if (!moved && pendingBranch) {
           lastPointerSelection = Date.now();
-          selectBranch(pendingBranch);
+          selectBranch(pendingBranch, pendingEvent);
         }
         pendingBranch = null;
+        pendingEvent = null;
         pendingExpandNode = null;
+        pendingCollapseNode = null;
+        pendingFlipNode = null;
       };
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);
       viewport.addEventListener("click", event => {
         if (Date.now() - lastPointerSelection < 250) return;
+        const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
+        const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
+        const flipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode;
+        if (expandNode) { expandCollapsedNode(expandNode); renderTree(); return; }
+        if (collapseNode) { state.manuallyCollapsed.has(collapseNode) ? state.manuallyCollapsed.delete(collapseNode) : state.manuallyCollapsed.add(collapseNode); renderTree(); return; }
+        if (flipNode) { state.flippedNodes.has(flipNode) ? state.flippedNodes.delete(flipNode) : state.flippedNodes.add(flipNode); renderTree(); return; }
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
-        if (branch) selectBranch(branch);
+        const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
+        if (branch) selectBranch(branch, eventKind);
       });
       viewport.addEventListener("keydown", event => {
         if (event.key !== "Enter" && event.key !== " ") return;
+        const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
+        const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
+        const flipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode;
+        if (expandNode) { event.preventDefault(); expandCollapsedNode(expandNode); renderTree(); return; }
+        if (collapseNode) { event.preventDefault(); state.manuallyCollapsed.has(collapseNode) ? state.manuallyCollapsed.delete(collapseNode) : state.manuallyCollapsed.add(collapseNode); renderTree(); return; }
+        if (flipNode) { event.preventDefault(); state.flippedNodes.has(flipNode) ? state.flippedNodes.delete(flipNode) : state.flippedNodes.add(flipNode); renderTree(); return; }
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
-        if (branch) { event.preventDefault(); selectBranch(branch); }
+        const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
+        if (branch) { event.preventDefault(); selectBranch(branch, eventKind); }
       });
     }
     enableTreePan();
+    enableTreeZoom();
+    enableTreeLayoutControls();
+    enableDetailResize();
     const themes = new Set(["white", "black", "brown", "green", "blue"]);
     function applyTheme(theme) {
       const selected = themes.has(theme) ? theme : "white";

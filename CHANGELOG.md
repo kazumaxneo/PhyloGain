@@ -1,5 +1,61 @@
 # Changelog
 
+## 0.4.0 — 2026-08-15
+
+- Add a database selector for KEGG pathway/module/KO, GO, Pfam, COG, and KEGG reaction enrichment.
+- Correct multiple testing separately within the selected annotation database.
+- Redesign enrichment charts with gene-family count on the axis and FDR encoded by a labelled red-to-blue color scale.
+- Add background frequencies to the exact enrichment tables.
+- Make the branch-detail panel width draggable and persistent.
+- Give the detail panel a subtly distinct background in every color theme.
+- Add compact orthogroup member lists and a back button to return to the originating branch or candidate list.
+- Remove the redundant inferred-event branch list from individual orthogroup views.
+- Label orthogroup member groups as assemblies instead of species and remove the redundant member-list heading.
+- Separate assembly members from annotations with compact, underlined, theme-neutral assembly labels.
+- Prefix each functional annotation item with a middle dot and increase spacing before assembly members.
+- Use colon-separated, regular-weight assembly labels and emphasize functional annotation headings and items.
+- Unify functional-annotation typography, simplify orthogroup headers, and emphasize the Back button.
+- Replace boxed gene-family event buttons with compact single-line gain/loss, orthogroup, and annotation rows.
+- Fetch and cache official KEGG KO, pathway, module, and reaction names at build time.
+- Link KEGG and GO term identifiers in branch and orthogroup panels to their official database pages.
+- Mark legacy module IDs missing from the current KEGG release instead of leaving unexplained bare IDs.
+- Give KEGG reaction charts a wider label column and a more compact plotting area for long reaction descriptions.
+- Widen term-label columns across all enrichment databases while keeping KEGG reaction labels widest.
+- Add independent Gain and Loss range filters that fade only unmatched count labels while preserving every branch, node, and tip.
+- Omit single-letter COG category codes from chart labels while retaining them in the result table.
+- Stack Gain and Loss filter bars vertically, enlarge their labels and values, and simplify Reset to an unboxed text control.
+- Rename the public interface from Species Innovation Map to Gene Gain/Loss Viewer.
+- Move the four dataset statistics into the title bar to preserve vertical space on laptop screens.
+- Clarify the gained- and lost-family functional-enrichment headings in the branch detail panel.
+- Show Newick internal-node support values below branches on a normalized 0–1 scale.
+- Add a persistent 60–200% phylogenetic-tree zoom slider that keeps the current viewport centered.
+- Move phenotype, candidate-gene, and collapse controls into the title bar and remove the separate toolbar.
+- Arrange shorter Gain and Loss sliders with Zoom in one horizontal row to maximize tree height.
+- Make Gain and Loss label fading independent and enlarge the displayed filter ranges.
+- Open event-specific branch panels: Gain numbers show only gained-family enrichment and lists, while Loss numbers show only lost-family results.
+- Add interactive clade collapse/expand on horizontal branches and child-order flipping on vertical connectors.
+- Slightly lengthen Gain/Loss sliders and place Zoom followed immediately by a compact Reset control.
+- Add subtle English hover tooltips for clade collapse, expansion, and vertical-branch flipping.
+- Replace delayed boxed browser tooltips with immediate, unboxed text hints beside the cursor.
+- Enlarge tree-action hints with theme-aware contrast, add global ascending/descending clade ordering, and optionally collapse low-support branches while defaulting to the full tree.
+- Offer bootstrap-collapse thresholds from 0.10 through 1.00 in 0.10 increments.
+- Add labelled horizontal and vertical spacing sliders plus Rectangular and Circular display layouts.
+- Rotate Circular tip labels with their terminal branches, keep left-side labels readable, and add a 6–16 px tip-font slider.
+- Widen the Zoom, spacing, and tip-font slider tracks by moving their values above the gauges.
+- Align Gain/Loss with the other controls by placing their labels and values above full-width gauges.
+- Move Download SVG directly beside Reset instead of grouping it with the branch statistics.
+- Increase all tree-adjustment labels and values to 11 px and rebalance gauge widths and spacing for compact screens.
+- Keep Gain/Loss gauges at fixed widths on wide displays and leave surplus space on the right.
+- Download each enrichment bar plot as SVG and its complete significant-term table as UTF-8 TSV.
+- Include a labelled FDR color legend and Count axis title in downloaded enrichment SVGs.
+- Rename Gain/Loss controls to Filter (gain)/Filter (loss), enlarge their labels, and use pure white text in the black theme.
+- Match downloaded enrichment SVGs to the web view with a vertical FDR legend on the plot's right side.
+- Shorten the spacing-control labels to Horizontal and Vertical.
+- Add optional GTDB family and genus labels at their inferred crown nodes within the tree.
+- Add Bar plot and Dot plot enrichment views, plus an All-databases view with FDR correction retained within each database.
+- Export the complete current tree view as a self-contained SVG from the upper-right control row.
+- Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
+
 ## 0.3.1 — 2026-08-15
 
 - Widen the branch-detail panel for enrichment results.
