@@ -161,8 +161,10 @@ class ProjectTests(unittest.TestCase):
             self.assertNotIn('textContent = "Inferred events"', html)
             self.assertNotIn('textContent = "Genes by species"', html)
             self.assertIn('assemblyNode.textContent = `Assembly, ${assembly}`', html)
-            self.assertIn(".member-list { display: grid; gap: 0; margin-top: 16px; }", html)
+            self.assertIn(".member-list { display: grid; gap: 0; margin-top: 32px; }", html)
             self.assertIn("text-decoration: underline", html)
+            self.assertIn('content: "・"', html)
+            self.assertIn('annotation.className = "function-annotation"', html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

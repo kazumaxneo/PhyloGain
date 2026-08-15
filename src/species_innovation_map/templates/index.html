@@ -209,6 +209,7 @@
     .function-name { margin-bottom: 5px; font-weight: 650; }
     .function-description { color: var(--muted); font-size: 12px; line-height: 1.45; }
     .annotation-list { margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .function-name::before, .function-description::before, .function-annotation::before { content: "・"; margin-right: 3px; }
     .tag { padding: 1px 6px; border-radius: 10px; font: 700 10px/1.5 sans-serif; text-transform: uppercase; }
     .tag.gain { color: var(--gain); background: var(--gain-soft); }
     .tag.loss { color: var(--loss); background: var(--loss-soft); }
@@ -218,7 +219,7 @@
     th { color: var(--muted); text-align: left; font-weight: 600; border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .member-list { display: grid; gap: 0; margin-top: 16px; }
+    .member-list { display: grid; gap: 0; margin-top: 32px; }
     .member-row { padding: 4px 0; border-bottom: 1px solid var(--line); }
     .member-assembly { margin: 0 0 1px; color: var(--ink); font-size: 9px; font-weight: 650; line-height: 1.2; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
     .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; line-height: 1.25; word-break: break-all; }
@@ -564,7 +565,13 @@
         const functionTitle = document.createElement("div"); functionTitle.className = "section-title"; functionTitle.textContent = "Functional annotation"; body.append(functionTitle);
         if (result.preferred_name) { const name = document.createElement("div"); name.className = "function-name"; name.textContent = result.preferred_name; body.append(name); }
         if (result.description) { const description = document.createElement("div"); description.className = "function-description"; description.textContent = result.description; body.append(description); }
-        if (result.annotations?.length) { const terms = document.createElement("div"); terms.className = "annotation-list"; terms.textContent = result.annotations.map(item => `${item.source}: ${item.term_name || item.term_id}`).join(" · "); body.append(terms); }
+        if (result.annotations?.length) {
+          const terms = document.createElement("div"); terms.className = "annotation-list";
+          for (const item of result.annotations) {
+            const annotation = document.createElement("div"); annotation.className = "function-annotation"; annotation.textContent = `${item.source}: ${item.term_name || item.term_id}`; terms.append(annotation);
+          }
+          body.append(terms);
+        }
       }
       const entries = Object.entries(result.members);
       if (!entries.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Gene members were not indexed."; body.append(empty); }
