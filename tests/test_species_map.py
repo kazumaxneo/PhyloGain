@@ -238,6 +238,8 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('id="supportCollapseSelect"', html)
             self.assertIn('value="original">Original', html)
             self.assertIn('value="0">All', html)
+            for threshold in range(1, 11):
+                self.assertIn(f'&lt;{threshold / 10:.2f}</option>', html)
             self.assertIn("state.treeOrder !== \"original\"", html)
             self.assertIn("node.supportCollapsed = Boolean", html)
             self.assertIn("function expandCollapsedNode(nodeId)", html)
