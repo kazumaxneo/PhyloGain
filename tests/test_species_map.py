@@ -11,11 +11,13 @@ from pathlib import Path
 from species_innovation_map.analysis import Reconstruction
 from species_innovation_map.project import build_project, validate_inputs
 from species_innovation_map.tree import leaf_labels, parse_newick
+from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxonomy
 
 
 HERE = Path(__file__).parent
 FIXTURE = HERE / "fixtures" / "orthofinder"
 PHENOTYPES = HERE / "fixtures" / "phenotypes.tsv"
+GTDB_TAXONOMY = HERE / "fixtures" / "gtdb_taxonomy.tsv"
 
 
 class TreeTests(unittest.TestCase):
@@ -74,6 +76,44 @@ class ProjectTests(unittest.TestCase):
                     "SELECT members_json FROM families WHERE family_id='OG0000001'"
                 ).fetchone()[0]
                 self.assertIn("gene_A1", zlib.decompress(members).decode("utf-8"))
+
+    def test_build_project_with_gtdb_taxonomy(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            result = build_project(FIXTURE, output, gtdb_taxonomy_path=GTDB_TAXONOMY)
+            self.assertEqual(result["taxonomy_species"], 4)
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(project["taxonomy"]["mapped_species"], 4)
+            self.assertEqual(project["taxonomy"]["species"]["species_A"]["genus"], "Genus_A")
+            self.assertIn("family", project["taxonomy"]["ranks"])
+            self.assertTrue((output / "gtdb_taxonomy.tsv").is_file())
+
+
+class TaxonomyTests(unittest.TestCase):
+    def test_parse_and_match_taxonomy(self):
+        parsed = parse_gtdb_taxonomy("d__Bacteria;f__Nostocaceae;g__Nostoc;s__")
+        self.assertEqual(parsed, {"domain": "Bacteria", "family": "Nostocaceae", "genus": "Nostoc"})
+        taxonomy, report = read_gtdb_taxonomy(
+            GTDB_TAXONOMY, ["species_A", "species_B", "species_C", "species_D"]
+        )
+        self.assertEqual(report["mapped_species"], 4)
+        self.assertEqual(taxonomy["species_D"]["family"], "Family_B")
+
+    def test_match_gtdbtk_summary_accession(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "gtdbtk.bac120.summary.tsv"
+            path.write_text(
+                "user_genome\tclassification\n"
+                "GCA_123456789\td__Bacteria;p__Cyanobacteriota;f__Nostocaceae;g__Nostoc\n",
+                encoding="utf-8",
+            )
+            taxonomy, report = read_gtdb_taxonomy(
+                path, ["Nostocaceae__GCA_123456789.1_GTDB"]
+            )
+            self.assertEqual(report["mapped_species"], 1)
+            self.assertEqual(
+                taxonomy["Nostocaceae__GCA_123456789.1_GTDB"]["genus"], "Nostoc"
+            )
 
 
 if __name__ == "__main__":

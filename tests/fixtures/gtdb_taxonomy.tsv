@@ -1,0 +1,5 @@
+species_id	gtdb_taxonomy
+species_A	d__Bacteria;p__Cyanobacteriota;c__Cyanobacteriia;o__Cyanobacteriales;f__Family_A;g__Genus_A;s__Species_A
+species_B	d__Bacteria;p__Cyanobacteriota;c__Cyanobacteriia;o__Cyanobacteriales;f__Family_A;g__Genus_A;s__Species_B
+species_C	d__Bacteria;p__Cyanobacteriota;c__Cyanobacteriia;o__Cyanobacteriales;f__Family_B;g__Genus_B;s__Species_C
+species_D	d__Bacteria;p__Cyanobacteriota;c__Cyanobacteriia;o__Cyanobacteriales;f__Family_B;g__Genus_C;s__Species_D

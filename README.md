@@ -77,6 +77,34 @@ This additionally creates:
 
 Repeat `--phenotype` to select several columns. Omit it to analyze all phenotype columns.
 
+## Collapse the tree by GTDB rank
+
+Add a GTDB taxonomy TSV to enable interactive collapse controls for phylum, class, order, family, and genus. Standard GTDB-Tk summary files are accepted directly (`user_genome` plus `classification`). A generic TSV may instead use `species_id` or `genome_id` plus `gtdb_taxonomy`.
+
+```tsv
+species_id	gtdb_taxonomy
+species_A	d__Bacteria;p__Cyanobacteriota;c__Cyanobacteriia;o__Cyanobacteriales;f__Nostocaceae;g__Nostoc;s__Nostoc sp.
+```
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
+  --output gtdb_collapsible_map
+```
+
+The viewer collapses each maximal monophyletic clade sharing the selected rank. A repeated taxon label means that taxon is non-monophyletic in the supplied species tree. Click a collapsed label to expand only that group. Gain/Loss values remain the events on the branch entering the collapsed clade; hidden descendant events are not added to that number.
+
+To use a different rooted topology, including a pruned and relabeled GTDB tree whose tips exactly match the OrthoFinder species IDs:
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --species-tree gtdb_pruned_rooted.nwk \
+  --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
+  --output gtdb_tree_map
+```
+
 ## OrthoFinder inputs
 
 The program reads only standard OrthoFinder outputs:
@@ -107,6 +135,8 @@ species-map validate \
 --root-state auto|0|1      Root family/phenotype state (default: auto)
 --presence-threshold INT   Copies required for presence (default: 1)
 --no-members               Skip Orthogroups.tsv to make a smaller output
+--species-tree FILE        Rooted Newick tree replacing the OrthoFinder tree
+--gtdb-taxonomy FILE       GTDB/GTDB-Tk taxonomy TSV for rank collapsing
 ```
 
 Example with gains penalized relative to losses:

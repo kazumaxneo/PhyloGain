@@ -9,16 +9,26 @@
     :root {
       --ink: #17212b;
       --muted: #66727f;
-      --paper: #f6f4ee;
-      --panel: #fffefa;
-      --line: #d9d6cc;
+      --paper: #f4f6f8;
+      --panel: #ffffff;
+      --line: #d9dee3;
       --gain: #087f5b;
+      --gain-text: #16a36a;
       --gain-soft: #dff5ec;
       --loss: #b42345;
+      --loss-text: #df4f64;
       --loss-soft: #fde8ee;
       --accent: #214f72;
-      --shadow: 0 12px 34px rgba(32, 45, 54, .08);
+      --header: #ffffff;
+      --header-ink: #17212b;
+      --control: #ffffff;
+      --tree-grid: rgba(33,79,114,.025);
+      --shadow: 0 8px 24px rgba(32, 45, 54, .07);
     }
+    html[data-theme="black"] { --ink: #f1f3f5; --muted: #aeb6bf; --paper: #111315; --panel: #1b1e21; --line: #353b40; --gain-soft: #123c30; --loss-soft: #47202b; --accent: #8bb8d5; --header: #0c0d0e; --header-ink: #ffffff; --control: #24282c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="brown"] { --ink: #2d2824; --muted: #756a61; --paper: #eee8df; --panel: #faf7f2; --line: #d7cdc0; --accent: #76553b; --header: #4b392c; --header-ink: #ffffff; --control: #fffdf9; --tree-grid: rgba(91,65,45,.04); }
+    html[data-theme="green"] { --ink: #edf4f0; --muted: #a9bbb1; --paper: #102019; --panel: #182b22; --line: #355044; --gain-soft: #214c3b; --loss-soft: #4b2730; --accent: #93c9ae; --header: #0a1912; --header-ink: #ffffff; --control: #21372c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="blue"] { --ink: #edf3f8; --muted: #aab8c5; --paper: #101c26; --panel: #192a38; --line: #354c5f; --gain-soft: #174638; --loss-soft: #4a2632; --accent: #91c1df; --header: #0a1721; --header-ink: #ffffff; --control: #213746; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -28,37 +38,40 @@
     }
     header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
-      gap: 24px;
-      padding: 22px 28px;
-      color: white;
-      background: #18384d;
+      gap: 14px;
+      padding: 18px 24px;
+      color: var(--header-ink);
+      background: var(--header);
+      border-bottom: 1px solid var(--line);
     }
-    h1 { margin: 0; font: 650 24px/1.1 Georgia, serif; letter-spacing: .01em; }
-    header p { margin: 5px 0 0; color: #d7e6ef; font-size: 13px; }
-    .header-mark { font: 700 11px/1 monospace; letter-spacing: .12em; color: #b8d7e8; }
+    h1 { margin: 0; font: 650 21px/1.1 Georgia, serif; letter-spacing: .01em; }
+    .theme-picker { display: flex; align-items: center; gap: 5px; }
+    .theme-picker button { width: 18px; height: 18px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
+    .theme-picker button.active { border-color: var(--swatch); background: var(--swatch); box-shadow: 0 0 0 2px var(--header), 0 0 0 4px var(--accent); }
+    .theme-picker button[data-theme-value="white"] { --swatch: #ffffff; }
+    .theme-picker button[data-theme-value="black"] { --swatch: #17191b; }
+    .theme-picker button[data-theme-value="brown"] { --swatch: #6b4f3b; }
+    .theme-picker button[data-theme-value="green"] { --swatch: #173c2b; }
+    .theme-picker button[data-theme-value="blue"] { --swatch: #173c57; }
     .summary {
       display: grid;
-      grid-template-columns: repeat(4, minmax(120px, 1fr));
-      gap: 12px;
-      padding: 16px 20px 0;
+      grid-template-columns: 130px max-content;
+      column-gap: 18px;
+      row-gap: 1px;
+      padding: 10px 24px 0;
     }
     .card {
-      padding: 13px 15px;
-      background: var(--panel);
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      box-shadow: var(--shadow);
+      display: contents;
     }
-    .card span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; }
-    .card strong { display: block; margin-top: 2px; font: 650 22px/1.2 Georgia, serif; }
+    .card span { color: var(--muted); font-size: 12px; }
+    .card strong { color: var(--ink); font-size: 12px; font-weight: 600; text-align: right; }
     .workspace {
-      display: grid;
-      grid-template-columns: minmax(600px, 1fr) 370px;
-      gap: 14px;
-      height: calc(100vh - 171px);
+      position: relative;
+      height: calc(100vh - 145px);
       padding: 14px 20px 20px;
+      overflow: hidden;
     }
     .map-panel, .detail-panel {
       min-height: 0;
@@ -67,6 +80,7 @@
       border-radius: 9px;
       box-shadow: var(--shadow);
     }
+    .map-panel { width: 100%; height: 100%; }
     .toolbar {
       display: flex;
       align-items: center;
@@ -77,9 +91,9 @@
     }
     label { color: var(--muted); font-size: 12px; }
     select, button {
-      border: 1px solid #bfc5c8;
+      border: 1px solid var(--line);
       border-radius: 6px;
-      background: white;
+      background: var(--control);
       color: var(--ink);
       padding: 7px 10px;
       font: inherit;
@@ -90,27 +104,47 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; }
-    #treeSvg { display: block; background: linear-gradient(90deg, rgba(33,79,114,.025) 1px, transparent 1px); background-size: 110px 100%; }
-    .branch { stroke: #83909a; stroke-width: 1.5; cursor: pointer; transition: stroke .12s, stroke-width .12s; }
-    .branch:hover, .branch.selected { stroke: var(--accent); stroke-width: 4; }
+    #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
+    #treeViewport.dragging { cursor: grabbing; }
+    #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
+    .branch-hit { stroke: transparent; stroke-width: 14; cursor: pointer; }
+    .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
+    .branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
     .connector { stroke: #a6afb5; stroke-width: 1.2; }
-    .branch-label { font: 600 10px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; paint-order: stroke; stroke: var(--panel); stroke-width: 4px; stroke-linejoin: round; }
-    .tip-label { font-size: 11px; fill: #273643; }
+    .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
+    .gain-value { fill: var(--gain-text); }
+    .loss-value { fill: var(--loss-text); }
+    .tip-label { font-size: 11px; fill: var(--ink); }
+    .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
+    .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
     .phenotype-gain { fill: var(--gain); stroke: white; stroke-width: 2; }
     .phenotype-loss { fill: var(--loss); stroke: white; stroke-width: 2; }
-    .detail-panel { overflow: auto; }
-    .detail-head { padding: 17px 18px 13px; border-bottom: 1px solid var(--line); }
+    .detail-panel {
+      position: absolute;
+      z-index: 10;
+      top: 14px;
+      right: 20px;
+      bottom: 20px;
+      width: min(420px, calc(100% - 40px));
+      overflow: auto;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(calc(100% + 24px)) scale(.97);
+      transform-origin: right center;
+      transition: transform .2s ease, opacity .16s ease;
+      box-shadow: 0 16px 44px rgba(20, 30, 38, .22);
+    }
+    .workspace.detail-open .detail-panel { opacity: 1; pointer-events: auto; transform: translateX(0) scale(1); }
+    .detail-head { position: relative; padding: 17px 52px 13px 18px; border-bottom: 1px solid var(--line); }
+    .detail-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; font-size: 22px; line-height: 1; }
     .detail-head h2 { margin: 0; font: 650 18px/1.2 Georgia, serif; }
     .detail-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
     .detail-body { padding: 15px 18px 24px; }
     .empty { color: var(--muted); padding: 24px 4px; }
-    .counts { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-bottom: 15px; }
-    .count { border-radius: 7px; padding: 10px 12px; }
-    .count.gain { color: var(--gain); background: var(--gain-soft); }
-    .count.loss { color: var(--loss); background: var(--loss-soft); }
-    .count strong { display: block; font-size: 20px; }
+    .counts { display: flex; gap: 22px; margin-bottom: 14px; color: var(--muted); font-size: 12px; }
+    .count { padding: 0; }
+    .count strong { margin-left: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
     .section-title { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
     .event-list { display: grid; gap: 5px; }
     .family-button { display: flex; justify-content: space-between; width: 100%; text-align: left; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
@@ -121,23 +155,28 @@
     .tabs button.active { color: white; border-color: var(--accent); background: var(--accent); }
     table { width: 100%; border-collapse: collapse; font-size: 12px; }
     th { color: var(--muted); text-align: left; font-weight: 600; border-bottom: 1px solid var(--line); padding: 7px 5px; }
-    td { border-bottom: 1px solid #ebe8df; padding: 7px 5px; }
+    td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     .member-species { margin: 10px 0 4px; color: var(--accent); font-weight: 650; word-break: break-all; }
-    .genes { color: #46545f; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
+    .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
     #status { padding: 40px; color: var(--muted); }
     @media (max-width: 950px) {
-      .workspace { grid-template-columns: 1fr; height: auto; }
-      .map-panel { height: 70vh; }
-      .detail-panel { min-height: 400px; }
-      .summary { grid-template-columns: repeat(2, 1fr); }
+      .workspace { height: calc(100vh - 145px); }
+      .detail-panel { left: 20px; width: auto; }
+      .summary { grid-template-columns: 130px max-content; }
     }
   </style>
 </head>
 <body>
   <header>
-    <div><h1>Species Innovation Map</h1><p>Branch-level gene-family gains and losses from OrthoFinder</p></div>
-    <div class="header-mark">EVOLUTION, BRANCH BY BRANCH</div>
+    <div class="theme-picker" aria-label="Color theme">
+      <button type="button" data-theme-value="white" aria-label="White theme" title="White"></button>
+      <button type="button" data-theme-value="black" aria-label="Black theme" title="Black"></button>
+      <button type="button" data-theme-value="brown" aria-label="Brown theme" title="Brown"></button>
+      <button type="button" data-theme-value="green" aria-label="Green theme" title="Green"></button>
+      <button type="button" data-theme-value="blue" aria-label="Blue theme" title="Blue"></button>
+    </div>
+    <h1>Species Innovation Map</h1>
   </header>
   <section class="summary">
     <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
@@ -151,18 +190,22 @@
         <label for="phenotypeSelect">Phenotype</label>
         <select id="phenotypeSelect"><option value="">None</option></select>
         <button id="candidateButton" type="button">Candidate genes</button>
+        <span id="taxonomyControl" hidden>
+          <label for="collapseSelect">Collapse</label>
+          <select id="collapseSelect"><option value="">None</option></select>
+        </span>
         <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
     </section>
-    <aside class="detail-panel">
-      <div class="detail-head"><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
+    <aside class="detail-panel" aria-hidden="true">
+      <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
       <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
     </aside>
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, collapseRank: "", expandedGroups: new Set() };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -187,6 +230,13 @@
           const option = document.createElement("option"); option.value = phenotype; option.textContent = phenotype;
           $("phenotypeSelect").append(option);
         }
+        const rankLabels = {domain: "Domain", phylum: "Phylum", class: "Class", order: "Order", family: "Family", genus: "Genus", species: "Species"};
+        const ranks = (project.taxonomy?.ranks || []).filter(rank => rank !== "domain" && rank !== "species");
+        for (const rank of ranks) {
+          const option = document.createElement("option"); option.value = rank; option.textContent = rankLabels[rank] || rank;
+          $("collapseSelect").append(option);
+        }
+        $("taxonomyControl").hidden = ranks.length === 0;
         $("status").remove();
         renderTree();
       } catch (error) {
@@ -198,48 +248,92 @@
       const svg = $("treeSvg"); svg.replaceChildren();
       const nodes = new Map(state.project.nodes.map(node => [node.id, {...node}]));
       const root = [...nodes.values()].find(node => !node.parent_id);
+      const taxonomy = state.project.taxonomy?.species || {};
+      const rank = state.collapseRank;
+      function summarize(node) {
+        const children = node.children.map(id => nodes.get(id));
+        if (!children.length) {
+          node.leafCount = 1;
+          node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
+          return;
+        }
+        children.forEach(summarize);
+        node.leafCount = children.reduce((sum, child) => sum + child.leafCount, 0);
+        const values = new Set(children.map(child => child.rankValue));
+        node.rankValue = values.size === 1 && !values.has("") ? [...values][0] : "";
+        node.collapsed = Boolean(
+          rank && node.parent_id && node.rankValue && node.leafCount > 1 &&
+          !state.expandedGroups.has(`${rank}:${node.id}`)
+        );
+      }
+      summarize(root);
+      const visibleNodes = [];
+      function collect(node) {
+        visibleNodes.push(node);
+        if (!node.collapsed) node.children.map(id => nodes.get(id)).forEach(collect);
+      }
+      collect(root);
+      const visibleIds = new Set(visibleNodes.map(node => node.id));
       let leafIndex = 0;
       const spacing = 25;
       function position(node) {
-        const children = node.children.map(id => nodes.get(id));
+        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id));
         children.forEach(position);
         node.x = 35 + node.depth * 110;
         node.y = children.length ? children.reduce((sum, child) => sum + child.y, 0) / children.length : 24 + leafIndex++ * spacing;
       }
       position(root);
-      const maxDepth = Math.max(...[...nodes.values()].map(node => node.depth));
+      const maxDepth = Math.max(...visibleNodes.map(node => node.depth));
       svg.setAttribute("width", Math.max(900, 110 * maxDepth + 440));
       svg.setAttribute("height", Math.max(500, leafIndex * spacing + 40));
-      for (const node of nodes.values()) {
-        const children = node.children.map(id => nodes.get(id));
+      for (const node of visibleNodes) {
+        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id)).filter(child => visibleIds.has(child.id));
         if (children.length > 1) svg.append(svgEl("line", {x1: node.x, y1: Math.min(...children.map(c => c.y)), x2: node.x, y2: Math.max(...children.map(c => c.y)), class: "connector"}));
       }
-      for (const node of nodes.values()) {
+      for (const node of visibleNodes) {
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
+        const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: "branch-hit", "data-branch": node.branch_id});
+        svg.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
-        line.addEventListener("click", () => selectBranch(node.branch_id)); svg.append(line);
+        svg.append(line);
         const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id});
-        const gain = svgEl("tspan", {fill: "#087f5b"}); gain.textContent = `+${branch.gain_count}`;
-        const loss = svgEl("tspan", {fill: "#b42345", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
-        label.append(gain, loss); label.addEventListener("click", () => selectBranch(node.branch_id)); svg.append(label);
+        const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
+        const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
+        label.append(gain, loss); svg.append(label);
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
         if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
         else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
-        if (node.is_leaf) {
+        if (node.collapsed) {
+          const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
+          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
+          tip.textContent = `${node.rankValue} (${number(node.leafCount)})`;
+          svg.append(marker, tip);
+        } else if (node.is_leaf) {
           const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: "tip-label"}); tip.textContent = node.label; svg.append(tip);
         }
       }
     }
+    function openDetailPanel() {
+      document.querySelector(".workspace").classList.add("detail-open");
+      document.querySelector(".detail-panel").setAttribute("aria-hidden", "false");
+    }
+    function closeDetailPanel() {
+      document.querySelector(".workspace").classList.remove("detail-open");
+      document.querySelector(".detail-panel").setAttribute("aria-hidden", "true");
+      state.selectedBranch = null;
+      if (state.project) renderTree();
+    }
     async function selectBranch(branchId) {
+      openDetailPanel();
       state.selectedBranch = branchId; renderTree();
       const branch = state.branches.get(branchId);
       $("detailTitle").textContent = branchId;
       $("detailSubtitle").textContent = branch.tip_label || `${branch.parent_node} → ${branch.child_node}`;
       const body = $("detailBody"); body.replaceChildren();
       const counts = document.createElement("div"); counts.className = "counts";
-      counts.innerHTML = `<div class="count gain"><strong>+${number(branch.gain_count)}</strong>gained families</div><div class="count loss"><strong>−${number(branch.loss_count)}</strong>lost families</div>`;
+      counts.innerHTML = `<div class="count">Gain <strong>+${number(branch.gain_count)}</strong></div><div class="count">Loss <strong>−${number(branch.loss_count)}</strong></div>`;
       body.append(counts);
       const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading gene families…"; body.append(loading);
       const result = await api(`/api/branch?id=${encodeURIComponent(branchId)}&limit=500`);
@@ -258,6 +352,7 @@
       }
     }
     async function showFamily(familyId) {
+      openDetailPanel();
       const result = await api(`/api/family?id=${encodeURIComponent(familyId)}`);
       $("detailTitle").textContent = familyId; $("detailSubtitle").textContent = "Gene-family members";
       const body = $("detailBody"); body.replaceChildren();
@@ -283,6 +378,7 @@
       renderTree();
     }
     async function showCandidates() {
+      openDetailPanel();
       const phenotype = $("phenotypeSelect").value;
       $("detailTitle").textContent = "Candidate gene families";
       $("detailSubtitle").textContent = phenotype ? `Coincident with ${phenotype} gains` : "Select a phenotype first";
@@ -301,6 +397,79 @@
     }
     $("phenotypeSelect").addEventListener("change", phenotypeChanged);
     $("candidateButton").addEventListener("click", showCandidates);
+    $("collapseSelect").addEventListener("change", event => {
+      state.collapseRank = event.target.value;
+      state.expandedGroups.clear();
+      closeDetailPanel();
+      $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
+    $("detailClose").addEventListener("click", closeDetailPanel);
+    document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
+    function enableTreePan() {
+      const viewport = $("treeViewport");
+      let active = false;
+      let moved = false;
+      let startX = 0;
+      let startY = 0;
+      let startLeft = 0;
+      let startTop = 0;
+      let pendingBranch = null;
+      let pendingExpandNode = null;
+      viewport.addEventListener("pointerdown", event => {
+        if (event.button !== 0) return;
+        active = true;
+        moved = false;
+        pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
+        pendingBranch = pendingExpandNode ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
+        startX = event.clientX;
+        startY = event.clientY;
+        startLeft = viewport.scrollLeft;
+        startTop = viewport.scrollTop;
+        viewport.setPointerCapture(event.pointerId);
+        viewport.classList.add("dragging");
+      });
+      viewport.addEventListener("pointermove", event => {
+        if (!active) return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (Math.abs(dx) > 10 || Math.abs(dy) > 10) moved = true;
+        if (!moved) return;
+        viewport.scrollLeft = startLeft - dx;
+        viewport.scrollTop = startTop - dy;
+        event.preventDefault();
+      });
+      const finishPan = event => {
+        if (!active) return;
+        active = false;
+        viewport.classList.remove("dragging");
+        if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+        if (!moved && pendingExpandNode) {
+          state.expandedGroups.add(`${state.collapseRank}:${pendingExpandNode}`);
+          renderTree();
+        } else if (!moved && pendingBranch) {
+          selectBranch(pendingBranch);
+        }
+        pendingBranch = null;
+        pendingExpandNode = null;
+      };
+      viewport.addEventListener("pointerup", finishPan);
+      viewport.addEventListener("pointercancel", finishPan);
+    }
+    enableTreePan();
+    const themes = new Set(["white", "black", "brown", "green", "blue"]);
+    function applyTheme(theme) {
+      const selected = themes.has(theme) ? theme : "white";
+      document.documentElement.dataset.theme = selected;
+      document.querySelectorAll("[data-theme-value]").forEach(button => {
+        const active = button.dataset.themeValue === selected;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-pressed", String(active));
+      });
+      localStorage.setItem("species-map-theme", selected);
+    }
+    document.querySelectorAll("[data-theme-value]").forEach(button => button.addEventListener("click", () => applyTheme(button.dataset.themeValue)));
+    applyTheme(localStorage.getItem("species-map-theme") || "white");
     start();
   </script>
 </body>
