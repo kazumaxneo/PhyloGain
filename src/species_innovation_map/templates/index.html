@@ -108,17 +108,20 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; }
+    .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 10px; }
     .tree-zoom { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; white-space: nowrap; }
-    .tree-zoom input { width: 100px; accent-color: var(--accent); }
+    .tree-zoom input { width: 75px; accent-color: var(--accent); }
     .tree-zoom output { width: 34px; color: var(--ink); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .spacing-controls { display: flex; align-items: center; gap: 4px; color: var(--muted); font-size: 10px; white-space: nowrap; }
+    .spacing-controls button { border: 0; border-radius: 0; padding: 1px 2px; background: transparent; color: var(--muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+    .spacing-controls output { width: 31px; color: var(--ink); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: center; }
     .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: 315px 315px max-content max-content minmax(150px, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 14px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
-    .range-filter { display: grid; grid-template-columns: 34px 180px 82px; align-items: center; gap: 7px; }
+    .branch-filters { display: grid; grid-template-columns: 308px 308px max-content max-content minmax(80px, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 14px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: 34px 180px 75px; align-items: center; gap: 7px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
     .range-filter-name { color: var(--ink); font-size: 13px; font-weight: 600; }
@@ -137,8 +140,9 @@
     .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch-hit { fill: transparent; cursor: pointer; }
+    .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
-    .branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
+    .branch-hit:hover + .branch, .radial-branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
     .connector-hit { fill: transparent; cursor: ns-resize; }
     .connector { stroke: #a6afb5; stroke-width: 1.2; pointer-events: none; }
     .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: 3; }
@@ -274,7 +278,8 @@
       .filter-status { grid-column: 3; grid-row: 1 / 3; }
     }
     @media (max-width: 1400px) {
-      .summary .card:last-child { display: none; }
+      .summary .card:nth-child(3), .summary .card:last-child { display: none; }
+      .filter-status .legend { display: none; }
     }
     @media (max-width: 1180px) {
       .header-controls > label, .header-controls .header-field > label { display: none; }
@@ -327,6 +332,14 @@
           <option value="1">&lt;1.00</option>
         </select>
       </span>
+      <span class="header-field">
+        <label for="treeLayoutSelect">Layout</label>
+        <select id="treeLayoutSelect" title="Tree layout" aria-label="Tree layout">
+          <option value="rectangular">Rectangular</option>
+          <option value="circular">Circular</option>
+          <option value="unrooted">Unrooted</option>
+        </select>
+      </span>
     </div>
     <div class="summary" aria-label="Dataset summary">
       <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
@@ -343,6 +356,14 @@
           <label for="treeZoom">Zoom</label>
           <input id="treeZoom" type="range" min="60" max="200" step="10" value="100" aria-label="Phylogenetic tree zoom">
           <output id="treeZoomValue" for="treeZoom">100%</output>
+          </div>
+          <div class="spacing-controls" aria-label="Tree spacing controls">
+            <button id="horizontalSpacingDown" type="button" title="Decrease horizontal spacing">H−</button>
+            <output id="horizontalSpacingValue">100%</output>
+            <button id="horizontalSpacingUp" type="button" title="Increase horizontal spacing">H+</button>
+            <button id="verticalSpacingDown" type="button" title="Decrease vertical spacing">V−</button>
+            <output id="verticalSpacingValue">100%</output>
+            <button id="verticalSpacingUp" type="button" title="Increase vertical spacing">V+</button>
           </div>
         </div>
         <div class="range-filter gain-filter">
@@ -373,7 +394,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", supportThreshold: 0, treeOrder: "original", expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -525,21 +546,119 @@
       }
       collect(root);
       const visibleIds = new Set(visibleNodes.map(node => node.id));
+      if (state.treeLayout !== "rectangular") {
+        const terminals = [];
+        function assignAngles(node) {
+          const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+          if (!children.length) {
+            terminals.push(node);
+            return;
+          }
+          children.forEach(assignAngles);
+        }
+        assignAngles(root);
+        terminals.forEach((node, index) => { node.angle = -Math.PI / 2 + index * Math.PI * 2 / Math.max(1, terminals.length); });
+        function averageAngles(node) {
+          const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+          children.forEach(averageAngles);
+          if (children.length) node.angle = children.reduce((sum, child) => sum + child.angle, 0) / children.length;
+        }
+        averageAngles(root);
+        const maxDepth = Math.max(1, ...visibleNodes.map(node => node.depth));
+        const circumferenceRadius = terminals.length * 18 * state.verticalSpacing / (Math.PI * 2);
+        const radialStep = Math.max(55 * state.horizontalSpacing, circumferenceRadius / maxDepth);
+        const outerRadius = 28 + maxDepth * radialStep;
+        const margin = 230;
+        const baseSize = Math.max(760, (outerRadius + margin) * 2);
+        const center = baseSize / 2;
+        visibleNodes.forEach(node => {
+          node.radius = 28 + node.depth * radialStep;
+          node.x = center + node.radius * Math.cos(node.angle);
+          node.y = center + node.radius * Math.sin(node.angle);
+        });
+        svg.setAttribute("width", baseSize * zoom);
+        svg.setAttribute("height", baseSize * zoom);
+        svg.style.backgroundImage = "none";
+        function radialPath(parent, node) {
+          if (state.treeLayout === "unrooted") return `M ${parent.x} ${parent.y} L ${node.x} ${node.y}`;
+          const turnX = center + parent.radius * Math.cos(node.angle);
+          const turnY = center + parent.radius * Math.sin(node.angle);
+          const delta = node.angle - parent.angle;
+          const largeArc = Math.abs(delta) > Math.PI ? 1 : 0;
+          const sweep = delta >= 0 ? 1 : 0;
+          return `M ${parent.x} ${parent.y} A ${parent.radius} ${parent.radius} 0 ${largeArc} ${sweep} ${turnX} ${turnY} L ${node.x} ${node.y}`;
+        }
+        for (const node of visibleNodes) {
+          if (!node.parent_id) continue;
+          const parent = nodes.get(node.parent_id);
+          const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
+          const pathData = radialPath(parent, node);
+          const hitAttributes = {d: pathData, class: "radial-branch-hit"};
+          if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
+          const hitPath = svgEl("path", hitAttributes);
+          if (!node.is_leaf) addSvgTooltip(hitPath, node.collapsed ? "Expand clade" : "Collapse clade");
+          canvas.append(hitPath);
+          canvas.append(svgEl("path", {d: pathData, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id, fill: "none"}));
+          const middleX = (parent.x + node.x) / 2;
+          const middleY = (parent.y + node.y) / 2;
+          const label = svgEl("text", {x: middleX, y: middleY - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
+          const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
+          const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
+          const gain = svgEl("tspan", {class: gainClass, "data-branch": node.branch_id, "data-event": "gain", role: "button", tabindex: "0", "aria-label": `Gained gene families on branch ${node.branch_id}`}); gain.textContent = `+${branch.gain_count}`;
+          const loss = svgEl("tspan", {class: lossClass, "data-branch": node.branch_id, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${node.branch_id}`, dx: "5"}); loss.textContent = `−${branch.loss_count}`;
+          label.append(gain, loss); canvas.append(label);
+          const support = normalizedBranchSupport(node);
+          if (support != null) {
+            const supportLabel = svgEl("text", {x: middleX, y: middleY + 11, "text-anchor": "middle", class: "support-label"});
+            supportLabel.textContent = support.toFixed(3);
+            canvas.append(supportLabel);
+          }
+          const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
+          if (phenotypeEvent) canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
+          else canvas.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
+          const ux = Math.cos(node.angle);
+          const uy = Math.sin(node.angle);
+          const anchor = ux >= 0 ? "start" : "end";
+          if (node.collapsed) {
+            const px = -uy;
+            const py = ux;
+            const baseX = node.x + ux * 3;
+            const baseY = node.y + uy * 3;
+            const tipX = node.x + ux * 16;
+            const tipY = node.y + uy * 16;
+            const marker = svgEl("polygon", {points: `${baseX + px * 6},${baseY + py * 6} ${tipX},${tipY} ${baseX - px * 6},${baseY - py * 6}`, class: "collapsed-marker", "data-expand-node": node.id});
+            const tip = svgEl("text", {x: node.x + ux * 23, y: node.y + uy * 23 + 4, "text-anchor": anchor, class: "collapsed-label", "data-expand-node": node.id});
+            tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+            addSvgTooltip(marker, "Expand clade");
+            addSvgTooltip(tip, "Expand clade");
+            canvas.append(marker, tip);
+          } else if (node.is_leaf) {
+            const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+            const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
+            const tip = svgEl("text", {x: node.x + ux * 10, y: node.y + uy * 10 + 4, "text-anchor": anchor, class: tipClass});
+            tip.textContent = taxonomyLabel;
+            canvas.append(tip);
+          }
+        }
+        return;
+      }
+      svg.style.backgroundImage = "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
       let leafIndex = 0;
-      const spacing = 25;
+      const spacing = 25 * state.verticalSpacing;
+      const depthSpacing = 110 * state.horizontalSpacing;
       function position(node) {
         const children = node.collapsed ? [] : childNodes(node);
         children.forEach(position);
-        node.x = 35 + node.depth * 110;
+        node.x = 35 + node.depth * depthSpacing;
         node.y = children.length ? children.reduce((sum, child) => sum + child.y, 0) / children.length : 24 + leafIndex++ * spacing;
       }
       position(root);
       const maxDepth = Math.max(...visibleNodes.map(node => node.depth));
-      const baseWidth = Math.max(900, 110 * maxDepth + 440);
+      const baseWidth = Math.max(900, depthSpacing * maxDepth + 440);
       const baseHeight = Math.max(500, leafIndex * spacing + 40);
       svg.setAttribute("width", baseWidth * zoom);
       svg.setAttribute("height", baseHeight * zoom);
-      svg.style.backgroundSize = `${110 * zoom}px 100%`;
+      svg.style.backgroundSize = `${depthSpacing * zoom}px 100%`;
       for (const node of visibleNodes) {
         const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
         if (children.length > 1) {
@@ -610,6 +729,42 @@
         renderTree();
         viewport.scrollLeft = centerX * state.treeZoom - viewport.clientWidth / 2;
         viewport.scrollTop = centerY * state.treeZoom - viewport.clientHeight / 2;
+      });
+    }
+    function enableTreeLayoutControls() {
+      const viewport = $("treeViewport");
+      function rerenderKeepingCenter() {
+        if (!state.project) return;
+        const oldWidth = Math.max(1, viewport.scrollWidth);
+        const oldHeight = Math.max(1, viewport.scrollHeight);
+        const centerX = (viewport.scrollLeft + viewport.clientWidth / 2) / oldWidth;
+        const centerY = (viewport.scrollTop + viewport.clientHeight / 2) / oldHeight;
+        renderTree();
+        viewport.scrollLeft = centerX * viewport.scrollWidth - viewport.clientWidth / 2;
+        viewport.scrollTop = centerY * viewport.scrollHeight - viewport.clientHeight / 2;
+      }
+      function setSpacing(axis, value) {
+        const next = Math.round(Math.min(3, Math.max(.5, value)) * 10) / 10;
+        state[`${axis}Spacing`] = next;
+        $(`${axis}SpacingValue`).textContent = `${Math.round(next * 100)}%`;
+        localStorage.setItem(`species-map-${axis}-spacing`, String(next));
+        rerenderKeepingCenter();
+      }
+      for (const axis of ["horizontal", "vertical"]) {
+        const stored = Number(localStorage.getItem(`species-map-${axis}-spacing`));
+        if (Number.isFinite(stored) && stored >= .5 && stored <= 3) state[`${axis}Spacing`] = stored;
+        $(`${axis}SpacingValue`).textContent = `${Math.round(state[`${axis}Spacing`] * 100)}%`;
+        $(`${axis}SpacingDown`).addEventListener("click", () => setSpacing(axis, state[`${axis}Spacing`] - .1));
+        $(`${axis}SpacingUp`).addEventListener("click", () => setSpacing(axis, state[`${axis}Spacing`] + .1));
+      }
+      $("treeLayoutSelect").addEventListener("change", event => {
+        state.treeLayout = event.target.value;
+        renderTree();
+        if (state.treeLayout === "rectangular") viewport.scrollTo({top: 0, left: 0});
+        else viewport.scrollTo({
+          left: Math.max(0, (viewport.scrollWidth - viewport.clientWidth) / 2),
+          top: Math.max(0, (viewport.scrollHeight - viewport.clientHeight) / 2)
+        });
       });
     }
     function openDetailPanel() {
@@ -1084,6 +1239,7 @@
     }
     enableTreePan();
     enableTreeZoom();
+    enableTreeLayoutControls();
     enableDetailResize();
     const themes = new Set(["white", "black", "brown", "green", "blue"]);
     function applyTheme(theme) {

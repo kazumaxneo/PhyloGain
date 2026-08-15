@@ -39,6 +39,7 @@
 - Replace delayed boxed browser tooltips with immediate, unboxed text hints beside the cursor.
 - Enlarge tree-action hints with theme-aware contrast, add global ascending/descending clade ordering, and optionally collapse low-support branches while defaulting to the full tree.
 - Offer bootstrap-collapse thresholds from 0.10 through 1.00 in 0.10 increments.
+- Add independent horizontal and vertical tree-spacing controls plus Rectangular, Circular, and Unrooted display layouts.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

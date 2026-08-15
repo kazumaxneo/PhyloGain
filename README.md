@@ -182,6 +182,10 @@ Numeric internal-node support labels in the selected Newick tree are shown below
 their branches on a 0–1 scale. Values supplied as percentages (for example, `95`)
 are normalized to `0.950`; branches without support labels remain unlabelled.
 The Zoom slider scales the complete tree while preserving the current viewport center.
+Use H−/H+ to change the distance between successive tree depths and V−/V+ to
+change the spacing between displayed tips. These controls are especially useful
+after collapsing a large clade. Layout switches among Rectangular, Circular, and
+Unrooted views without changing the topology, branch events, or collapsed-node state.
 Click a horizontal internal branch to collapse its descendant clade, and click the
 collapsed marker to expand it again. Clicking a vertical connector flips the display
 order of its child clades without changing the topology or inferred events.
