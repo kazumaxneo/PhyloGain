@@ -46,19 +46,19 @@
       justify-content: flex-start;
       align-items: center;
       flex: 0 0 auto;
-      gap: 14px;
-      padding: 14px 24px;
+      gap: 9px;
+      padding: 12px 18px;
       color: var(--header-ink);
       background: var(--header);
       border-bottom: 1px solid var(--line);
     }
-    h1 { margin: 0; font: 650 21px/1.1 Georgia, serif; letter-spacing: .01em; }
+    h1 { margin: 0; font: 650 19px/1.1 Georgia, serif; letter-spacing: .01em; white-space: nowrap; }
     .header-controls { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
     .header-controls label { color: var(--header-ink); font-size: 10px; opacity: .72; }
     .header-controls select, .header-controls button { min-width: 0; border-color: color-mix(in srgb, var(--header-ink) 25%, transparent); padding: 4px 7px; background: color-mix(in srgb, var(--header) 88%, var(--control)); color: var(--header-ink); font-size: 11px; }
     .header-field { display: inline-flex; align-items: center; gap: 4px; }
-    .theme-picker { display: flex; align-items: center; gap: 5px; }
-    .theme-picker button { width: 18px; height: 18px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
+    .theme-picker { display: flex; align-items: center; gap: 4px; }
+    .theme-picker button { width: 16px; height: 16px; padding: 0; border: 1px solid #7f878d; border-radius: 2px; background: var(--swatch); }
     .theme-picker button.active { border-color: var(--swatch); background: var(--swatch); box-shadow: 0 0 0 2px var(--header), 0 0 0 4px var(--accent); }
     .theme-picker button[data-theme-value="white"] { --swatch: #ffffff; }
     .theme-picker button[data-theme-value="black"] { --swatch: #17191b; }
@@ -68,8 +68,8 @@
     .summary {
       display: flex;
       align-items: baseline;
-      flex-wrap: wrap;
-      gap: 6px 18px;
+      flex-wrap: nowrap;
+      gap: 4px 10px;
       min-width: 0;
       margin-left: auto;
     }
@@ -134,7 +134,7 @@
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
-    .tree-action-hint { position: absolute; z-index: 4; color: var(--muted); font-size: 10px; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
+    .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
@@ -273,6 +273,9 @@
       .filter-reset { grid-column: 2; grid-row: 2; justify-self: start; }
       .filter-status { grid-column: 3; grid-row: 1 / 3; }
     }
+    @media (max-width: 1400px) {
+      .summary .card:last-child { display: none; }
+    }
     @media (max-width: 1180px) {
       .header-controls > label, .header-controls .header-field > label { display: none; }
     }
@@ -299,6 +302,24 @@
       <span class="header-field" id="taxonomyControl" hidden>
         <label for="collapseSelect">Collapse</label>
         <select id="collapseSelect" title="Collapse taxonomic rank"><option value="">None</option></select>
+      </span>
+      <span class="header-field">
+        <label for="treeOrderSelect">Order</label>
+        <select id="treeOrderSelect" title="Order child clades" aria-label="Order child clades">
+          <option value="original">Original</option>
+          <option value="ascending">Ascending</option>
+          <option value="descending">Descending</option>
+        </select>
+      </span>
+      <span class="header-field">
+        <label for="supportCollapseSelect">Support</label>
+        <select id="supportCollapseSelect" title="Collapse branches below bootstrap support" aria-label="Collapse branches below bootstrap support">
+          <option value="0">All</option>
+          <option value="0.5">&lt;0.50</option>
+          <option value="0.7">&lt;0.70</option>
+          <option value="0.9">&lt;0.90</option>
+          <option value="0.95">&lt;0.95</option>
+        </select>
       </span>
     </div>
     <div class="summary" aria-label="Dataset summary">
@@ -346,7 +367,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", supportThreshold: 0, treeOrder: "original", expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -451,8 +472,21 @@
       const root = [...nodes.values()].find(node => !node.parent_id);
       const taxonomy = state.project.taxonomy?.species || {};
       const rank = state.collapseRank;
+      const cladeSizes = new Map();
+      function cladeSize(node) {
+        if (cladeSizes.has(node.id)) return cladeSizes.get(node.id);
+        const size = node.children.length ? node.children.reduce((sum, id) => sum + cladeSize(nodes.get(id)), 0) : 1;
+        cladeSizes.set(node.id, size);
+        return size;
+      }
+      cladeSize(root);
       function childNodes(node) {
-        const ids = state.flippedNodes.has(node.id) ? [...node.children].reverse() : node.children;
+        let ids = [...node.children];
+        if (state.treeOrder !== "original") {
+          const direction = state.treeOrder === "ascending" ? 1 : -1;
+          ids.sort((left, right) => direction * (cladeSizes.get(left) - cladeSizes.get(right)) || left.localeCompare(right));
+        }
+        if (state.flippedNodes.has(node.id)) ids.reverse();
         return ids.map(id => nodes.get(id));
       }
       function summarize(node) {
@@ -470,7 +504,12 @@
           rank && node.parent_id && node.rankValue && node.leafCount > 1 &&
           !state.expandedGroups.has(`${rank}:${node.id}`)
         );
-        node.collapsed = state.manuallyCollapsed.has(node.id) || node.taxonomyCollapsed;
+        const support = normalizedBranchSupport(node);
+        node.supportCollapsed = Boolean(
+          state.supportThreshold > 0 && node.parent_id && support != null && support < state.supportThreshold &&
+          !state.expandedGroups.has(`support:${state.supportThreshold}:${node.id}`)
+        );
+        node.collapsed = state.manuallyCollapsed.has(node.id) || node.taxonomyCollapsed || node.supportCollapsed;
       }
       summarize(root);
       const visibleNodes = [];
@@ -850,6 +889,20 @@
       $("treeViewport").scrollTo({top: 0, left: 0});
       renderTree();
     });
+    $("treeOrderSelect").addEventListener("change", event => {
+      state.treeOrder = event.target.value;
+      state.flippedNodes.clear();
+      closeDetailPanel();
+      $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
+    $("supportCollapseSelect").addEventListener("change", event => {
+      state.supportThreshold = Number(event.target.value);
+      state.expandedGroups.clear();
+      closeDetailPanel();
+      $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
     $("detailClose").addEventListener("click", closeDetailPanel);
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
     function enableDetailResize() {
@@ -907,6 +960,11 @@
         if (!window.matchMedia("(max-width: 950px)").matches) setWidth(panel.getBoundingClientRect().width);
       });
       setWidth(storedWidth || 760);
+    }
+    function expandCollapsedNode(nodeId) {
+      state.manuallyCollapsed.delete(nodeId);
+      if (state.collapseRank) state.expandedGroups.add(`${state.collapseRank}:${nodeId}`);
+      if (state.supportThreshold > 0) state.expandedGroups.add(`support:${state.supportThreshold}:${nodeId}`);
     }
     function enableTreePan() {
       const viewport = $("treeViewport");
@@ -969,8 +1027,7 @@
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
         if (!moved && pendingExpandNode) {
           lastPointerSelection = Date.now();
-          state.manuallyCollapsed.delete(pendingExpandNode);
-          state.expandedGroups.add(`${state.collapseRank}:${pendingExpandNode}`);
+          expandCollapsedNode(pendingExpandNode);
           renderTree();
         } else if (!moved && pendingCollapseNode) {
           lastPointerSelection = Date.now();
@@ -999,7 +1056,7 @@
         const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
         const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
         const flipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode;
-        if (expandNode) { state.manuallyCollapsed.delete(expandNode); state.expandedGroups.add(`${state.collapseRank}:${expandNode}`); renderTree(); return; }
+        if (expandNode) { expandCollapsedNode(expandNode); renderTree(); return; }
         if (collapseNode) { state.manuallyCollapsed.has(collapseNode) ? state.manuallyCollapsed.delete(collapseNode) : state.manuallyCollapsed.add(collapseNode); renderTree(); return; }
         if (flipNode) { state.flippedNodes.has(flipNode) ? state.flippedNodes.delete(flipNode) : state.flippedNodes.add(flipNode); renderTree(); return; }
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
@@ -1011,7 +1068,7 @@
         const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
         const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
         const flipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode;
-        if (expandNode) { event.preventDefault(); state.manuallyCollapsed.delete(expandNode); state.expandedGroups.add(`${state.collapseRank}:${expandNode}`); renderTree(); return; }
+        if (expandNode) { event.preventDefault(); expandCollapsedNode(expandNode); renderTree(); return; }
         if (collapseNode) { event.preventDefault(); state.manuallyCollapsed.has(collapseNode) ? state.manuallyCollapsed.delete(collapseNode) : state.manuallyCollapsed.add(collapseNode); renderTree(); return; }
         if (flipNode) { event.preventDefault(); state.flippedNodes.has(flipNode) ? state.flippedNodes.delete(flipNode) : state.flippedNodes.add(flipNode); renderTree(); return; }
         const branch = event.target.closest("[data-branch]")?.dataset.branch;

@@ -37,6 +37,7 @@
 - Slightly lengthen Gain/Loss sliders and place Zoom followed immediately by a compact Reset control.
 - Add subtle English hover tooltips for clade collapse, expansion, and vertical-branch flipping.
 - Replace delayed boxed browser tooltips with immediate, unboxed text hints beside the cursor.
+- Enlarge tree-action hints with theme-aware contrast, add global ascending/descending clade ordering, and optionally collapse low-support branches while defaulting to the full tree.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

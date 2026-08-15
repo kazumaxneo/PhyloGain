@@ -186,6 +186,9 @@ Click a horizontal internal branch to collapse its descendant clade, and click t
 collapsed marker to expand it again. Clicking a vertical connector flips the display
 order of its child clades without changing the topology or inferred events.
 Subtle hover tooltips identify these actions as Collapse clade, Expand clade, or Flip clades.
+The Order control ladderizes every node by descendant-tip count in ascending or
+descending order. The Support control can collapse branches below a selected
+0–1 bootstrap threshold; its default All setting leaves the complete tree visible.
 
 Example with gains penalized relative to losses:
 
