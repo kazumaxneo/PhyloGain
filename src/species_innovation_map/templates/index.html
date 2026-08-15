@@ -121,7 +121,7 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(0, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
     .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; min-width: 235px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
     .loss-filter { grid-column: 2; grid-row: 1; }
@@ -159,7 +159,7 @@
     .taxonomy-label-badge { cursor: move; }
     .clade-taxonomy-label-bg { fill-opacity: .82; pointer-events: all; cursor: move; }
     .clade-taxonomy-label-accent { pointer-events: none; }
-    .clade-taxonomy-label { fill: #fff; font: 600 9px/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+    .clade-taxonomy-label { fill: #fff; font: 600 var(--taxonomy-label-font-size, 9px)/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
     .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
     .taxonomy-legend-label { fill: var(--muted); font: 9px Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
     .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
@@ -408,6 +408,11 @@
             <input id="branchWidth" type="range" min="1" max="8" step="0.5" value="1.5" aria-label="Phylogenetic tree branch width">
             <output id="branchWidthValue" for="branchWidth">1.5px</output>
           </div>
+          <div class="tree-scale-control">
+            <label for="taxonomyLabelFontSize">GTDB labels</label>
+            <input id="taxonomyLabelFontSize" type="range" min="6" max="24" step="1" value="9" aria-label="GTDB clade label font size">
+            <output id="taxonomyLabelFontSizeValue" for="taxonomyLabelFontSize">9px</output>
+          </div>
         </div>
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Filter (gain)</span>
@@ -440,7 +445,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -650,8 +655,11 @@
       $("treeSvg").style.setProperty("--branch-width", `${state.branchWidth}px`);
       $("treeSvg").style.setProperty("--connector-width", `${state.branchWidth * .8}px`);
     }
+    function applyTaxonomyLabelFontSize() {
+      $("treeSvg").style.setProperty("--taxonomy-label-font-size", `${state.taxonomyLabelFontSize}px`);
+    }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth();
+      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyTaxonomyLabelFontSize();
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -718,15 +726,16 @@
       function appendCladeTaxonomyLabel(node, circular = false) {
         const labels = cladeTaxonomyLabels(node);
         if (!labels.length) return;
+        const labelScale = state.taxonomyLabelFontSize / 9;
         if (circular) {
           const ux = Math.cos(node.angle); const uy = Math.sin(node.angle);
           const px = -uy; const py = ux;
           const anchor = ux >= 0 ? "start" : "end";
           const angle = node.angle * 180 / Math.PI + (ux < 0 ? 180 : 0);
           labels.forEach((item, index) => {
-            const offset = (index - (labels.length - 1) / 2) * 12;
-            const x = node.x + ux * 9 + px * offset;
-            const y = node.y + uy * 9 + py * offset;
+            const offset = (index - (labels.length - 1) / 2) * 12 * labelScale;
+            const x = node.x + ux * 9 * labelScale + px * offset;
+            const y = node.y + uy * 9 * labelScale + py * offset;
             const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
             appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, x, y, anchor, `rotate(${angle} ${x} ${y})`);
           });
@@ -734,7 +743,7 @@
         }
         labels.forEach((item, index) => {
           const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
-          appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, node.x + 7, node.y + 15 + index * 15);
+          appendTaxonomyBadge(text, item.rank, item.value, `${item.rank}:${node.id}`, node.x + 7, node.y + 15 * labelScale + index * 15 * labelScale);
         });
       }
       function taxonomyColorIndex(taxonomyRank, value, occurrenceKey = "") {
@@ -754,14 +763,16 @@
       const taxonomyColor = (rankName, value, key = "") => taxonomyHsl(rankName, value, key, false);
       const taxonomyLabelColor = (rankName, value, key = "") => taxonomyHsl(rankName, value, key, true);
       function appendTaxonomyBadge(text, taxonomyRank, value, key, x, y, anchor = "start", transform = "") {
-        const width = Math.max(44, text.length * 5.4 + 10);
+        const scale = state.taxonomyLabelFontSize / 9;
+        const width = Math.max(44 * scale, text.length * 5.4 * scale + 10 * scale);
+        const height = 14 * scale;
         const left = anchor === "end" ? x - width : x;
         const offset = state.taxonomyLabelOffsets.get(key) || {x: 0, y: 0};
         const group = svgEl("g", {class: "taxonomy-label-badge", "data-taxonomy-label-key": key, transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
         const rotated = svgEl("g", transform ? {transform} : {});
-        rotated.append(svgEl("rect", {x: left - 4, y: y - 10, width, height: 14, rx: 2, class: "clade-taxonomy-label-bg", style: `fill:${taxonomyLabelColor(taxonomyRank, value, key)}`}));
-        rotated.append(svgEl("rect", {x: left - 4, y: y - 10, width: 3, height: 14, rx: 1, class: "clade-taxonomy-label-accent", style: `fill:${taxonomyColor(taxonomyRank, value, key)}`}));
-        const labelNode = svgEl("text", {x, y, "text-anchor": anchor, class: `clade-taxonomy-label ${taxonomyRank}`});
+        rotated.append(svgEl("rect", {x: left - 4 * scale, y: y - 10 * scale, width, height, rx: 2 * scale, class: "clade-taxonomy-label-bg", style: `fill:${taxonomyLabelColor(taxonomyRank, value, key)}`}));
+        rotated.append(svgEl("rect", {x: left - 4 * scale, y: y - 10 * scale, width: 3 * scale, height, rx: scale, class: "clade-taxonomy-label-accent", style: `fill:${taxonomyColor(taxonomyRank, value, key)}`}));
+        const labelNode = svgEl("text", {x, y, "text-anchor": anchor, style: `font-size:${state.taxonomyLabelFontSize}px`, class: `clade-taxonomy-label ${taxonomyRank}`});
         labelNode.textContent = text;
         rotated.append(labelNode); group.append(rotated); canvas.append(group);
       }
@@ -820,7 +831,13 @@
         const circumferenceRadius = terminals.length * 18 * state.verticalSpacing / (Math.PI * 2);
         const radialStep = Math.max(55 * state.horizontalSpacing, circumferenceRadius / maximumDepth);
         const outerRadius = 28 + maximumDepth * radialStep;
-        const margin = 230;
+        const taxonomyLabelScale = state.taxonomyLabelFontSize / 9;
+        const maximumTaxonomyLabelWidth = Math.max(0, ...visibleNodes.flatMap(node => cladeTaxonomyLabels(node).map(item => {
+          const text = `${({family: "Family", genus: "Genus", species: "Species"})[item.rank] || item.rank}: ${item.value}`;
+          return Math.max(44 * taxonomyLabelScale, text.length * 5.4 * taxonomyLabelScale + 10 * taxonomyLabelScale);
+        })));
+        const taxonomyBandOuterRadius = outerRadius + (state.cladeLabelMode ? maximumTaxonomyLabelWidth + 20 * taxonomyLabelScale : 65);
+        const margin = Math.max(230, taxonomyBandOuterRadius - outerRadius + 35);
         const baseSize = Math.max(760, (outerRadius + margin) * 2);
         const center = baseSize / 2;
         visibleNodes.forEach(node => {
@@ -858,7 +875,7 @@
             const angles = visibleTerminalAngles(node);
             const padding = Math.min(.035, Math.PI / Math.max(24, terminals.length));
             const startAngle = Math.min(...angles) - padding; const endAngle = Math.max(...angles) + padding;
-            const path = annularSectorPath(Math.max(18, node.radius - radialStep * .18), outerRadius + 65, startAngle, endAngle);
+            const path = annularSectorPath(Math.max(18, node.radius - radialStep * .18), taxonomyBandOuterRadius, startAngle, endAngle);
             labels.forEach(item => canvas.append(svgEl("path", {d: path, class: `clade-taxonomy-band ${item.rank}`, style: `fill:${taxonomyColor(item.rank, item.value, `${item.rank}:${node.id}`)}`})));
           }
         }
@@ -1081,6 +1098,17 @@
         applyBranchWidth();
       });
       enableRangeTrack($("branchWidth"));
+      const storedTaxonomyLabelFontSize = Number(localStorage.getItem("species-map-taxonomy-label-font-size"));
+      if (Number.isFinite(storedTaxonomyLabelFontSize) && storedTaxonomyLabelFontSize >= 6 && storedTaxonomyLabelFontSize <= 24) state.taxonomyLabelFontSize = storedTaxonomyLabelFontSize;
+      $("taxonomyLabelFontSize").value = String(state.taxonomyLabelFontSize);
+      $("taxonomyLabelFontSizeValue").textContent = `${state.taxonomyLabelFontSize}px`;
+      $("taxonomyLabelFontSize").addEventListener("input", event => {
+        state.taxonomyLabelFontSize = Number(event.target.value);
+        $("taxonomyLabelFontSizeValue").textContent = `${state.taxonomyLabelFontSize}px`;
+        localStorage.setItem("species-map-taxonomy-label-font-size", String(state.taxonomyLabelFontSize));
+        rerenderKeepingCenter();
+      });
+      enableRangeTrack($("taxonomyLabelFontSize"));
       $("treeLayoutSelect").addEventListener("change", event => {
         state.treeLayout = event.target.value;
         renderTree();
@@ -1130,7 +1158,7 @@
         .clade-taxonomy-band { fill-opacity: .16; }
         .clade-taxonomy-band.species { fill-opacity: .20; }
         .clade-taxonomy-label-bg { fill-opacity: .82; }
-        .clade-taxonomy-label { fill: #fff; font: 600 9px sans-serif; }
+        .clade-taxonomy-label { fill: #fff; font: 600 ${state.taxonomyLabelFontSize}px sans-serif; }
         .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
         .taxonomy-legend-label { fill: ${color("--muted")}; font: 9px sans-serif; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
