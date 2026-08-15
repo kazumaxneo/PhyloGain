@@ -23,13 +23,14 @@
       --header: #ffffff;
       --header-ink: #17212b;
       --control: #ffffff;
+      --tree-branch-color: #000000;
       --tree-grid: rgba(33,79,114,.025);
       --shadow: 0 8px 24px rgba(32, 45, 54, .07);
     }
-    html[data-theme="black"] { --ink: #f1f3f5; --muted: #aeb6bf; --paper: #111315; --panel: #1b1e21; --detail-panel: #202428; --line: #353b40; --gain-soft: #123c30; --loss-soft: #47202b; --accent: #8bb8d5; --header: #0c0d0e; --header-ink: #ffffff; --control: #24282c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="black"] { --ink: #f1f3f5; --muted: #aeb6bf; --paper: #111315; --panel: #1b1e21; --detail-panel: #202428; --line: #353b40; --gain-soft: #123c30; --loss-soft: #47202b; --accent: #8bb8d5; --header: #0c0d0e; --header-ink: #ffffff; --control: #24282c; --tree-branch-color: #d7dde2; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
     html[data-theme="brown"] { --ink: #2d2824; --muted: #756a61; --paper: #eee8df; --panel: #faf7f2; --detail-panel: #f6f1ea; --line: #d7cdc0; --accent: #76553b; --header: #4b392c; --header-ink: #ffffff; --control: #fffdf9; --tree-grid: rgba(91,65,45,.04); }
-    html[data-theme="green"] { --ink: #edf4f0; --muted: #a9bbb1; --paper: #102019; --panel: #182b22; --detail-panel: #1d3228; --line: #355044; --gain-soft: #214c3b; --loss-soft: #4b2730; --accent: #93c9ae; --header: #0a1912; --header-ink: #ffffff; --control: #21372c; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
-    html[data-theme="blue"] { --ink: #edf3f8; --muted: #aab8c5; --paper: #101c26; --panel: #192a38; --detail-panel: #1e3040; --line: #354c5f; --gain-soft: #174638; --loss-soft: #4a2632; --accent: #91c1df; --header: #0a1721; --header-ink: #ffffff; --control: #213746; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="green"] { --ink: #edf4f0; --muted: #a9bbb1; --paper: #102019; --panel: #182b22; --detail-panel: #1d3228; --line: #355044; --gain-soft: #214c3b; --loss-soft: #4b2730; --accent: #93c9ae; --header: #0a1912; --header-ink: #ffffff; --control: #21372c; --tree-branch-color: #d7e0da; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
+    html[data-theme="blue"] { --ink: #edf3f8; --muted: #aab8c5; --paper: #101c26; --panel: #192a38; --detail-panel: #1e3040; --line: #354c5f; --gain-soft: #174638; --loss-soft: #4a2632; --accent: #91c1df; --header: #0a1721; --header-ink: #ffffff; --control: #213746; --tree-branch-color: #d5dee5; --tree-grid: rgba(255,255,255,.035); --shadow: none; }
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -144,11 +145,11 @@
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; will-change: transform; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
-    .branch { stroke: #83909a; stroke-width: var(--branch-width, 1.5px); pointer-events: none; transition: stroke .12s, stroke-width .12s; }
-    .branch-hit:hover + .branch, .radial-branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: calc(var(--branch-width, 1.5px) + 2.5px); }
+    .branch { stroke: var(--tree-branch-color); stroke-width: var(--branch-width, 1.5px); stroke-opacity: var(--branch-opacity, .75); stroke-linecap: square; stroke-linejoin: miter; pointer-events: none; transition: stroke .12s, stroke-width .12s, stroke-opacity .12s; }
+    .branch-hit:hover + .branch, .radial-branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: calc(var(--branch-width, 1.5px) + 2.5px); stroke-opacity: 1; }
     .connector-hit { fill: transparent; cursor: ns-resize; }
-    .connector { stroke: #a6afb5; stroke-width: var(--connector-width, 1.2px); pointer-events: none; }
-    .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: calc(var(--connector-width, 1.2px) + 1.8px); }
+    .connector { stroke: var(--tree-branch-color); stroke-width: var(--connector-width, 1.2px); stroke-opacity: var(--branch-opacity, .75); stroke-linecap: square; pointer-events: none; }
+    .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: calc(var(--connector-width, 1.2px) + 1.8px); stroke-opacity: 1; }
     .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
     .support-label { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
@@ -410,6 +411,11 @@
             <output id="branchWidthValue" for="branchWidth">1.5px</output>
           </div>
           <div class="tree-scale-control">
+            <label for="branchOpacity">Branch opacity</label>
+            <input id="branchOpacity" type="range" min="10" max="100" step="5" value="75" aria-label="Phylogenetic tree branch opacity">
+            <output id="branchOpacityValue" for="branchOpacity">75%</output>
+          </div>
+          <div class="tree-scale-control">
             <label for="taxonomyLabelFontSize">GTDB labels</label>
             <input id="taxonomyLabelFontSize" type="range" min="6" max="24" step="1" value="9" aria-label="GTDB clade label font size">
             <output id="taxonomyLabelFontSizeValue" for="taxonomyLabelFontSize">9px</output>
@@ -447,7 +453,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -660,11 +666,14 @@
       $("treeSvg").style.setProperty("--branch-width", `${state.branchWidth}px`);
       $("treeSvg").style.setProperty("--connector-width", `${state.branchWidth * .8}px`);
     }
+    function applyBranchOpacity() {
+      $("treeSvg").style.setProperty("--branch-opacity", String(state.branchOpacity));
+    }
     function applyTaxonomyLabelFontSize() {
       $("treeSvg").style.setProperty("--taxonomy-label-font-size", `${state.taxonomyLabelFontSize}px`);
     }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyTaxonomyLabelFontSize();
+      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize();
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -1107,6 +1116,17 @@
         applyBranchWidth();
       });
       enableRangeTrack($("branchWidth"));
+      const storedBranchOpacity = Number(localStorage.getItem("species-map-branch-opacity"));
+      if (Number.isFinite(storedBranchOpacity) && storedBranchOpacity >= .1 && storedBranchOpacity <= 1) state.branchOpacity = storedBranchOpacity;
+      $("branchOpacity").value = String(Math.round(state.branchOpacity * 100));
+      $("branchOpacityValue").textContent = `${Math.round(state.branchOpacity * 100)}%`;
+      $("branchOpacity").addEventListener("input", event => {
+        state.branchOpacity = Number(event.target.value) / 100;
+        $("branchOpacityValue").textContent = `${event.target.value}%`;
+        localStorage.setItem("species-map-branch-opacity", String(state.branchOpacity));
+        applyBranchOpacity();
+      });
+      enableRangeTrack($("branchOpacity"));
       const storedTaxonomyLabelFontSize = Number(localStorage.getItem("species-map-taxonomy-label-font-size"));
       if (Number.isFinite(storedTaxonomyLabelFontSize) && storedTaxonomyLabelFontSize >= 6 && storedTaxonomyLabelFontSize <= 24) state.taxonomyLabelFontSize = storedTaxonomyLabelFontSize;
       $("taxonomyLabelFontSize").value = String(state.taxonomyLabelFontSize);
@@ -1154,9 +1174,9 @@
       const color = name => theme.getPropertyValue(name).trim();
       const style = document.createElementNS(SVG, "style");
       style.textContent = `
-        .branch { stroke: #83909a; stroke-width: ${state.branchWidth}; fill: none; }
-        .branch.selected { stroke: ${color("--accent")}; stroke-width: ${state.branchWidth + 2.5}; }
-        .connector { stroke: #a6afb5; stroke-width: ${state.branchWidth * .8}; }
+        .branch { stroke: ${color("--tree-branch-color")}; stroke-width: ${state.branchWidth}; stroke-opacity: ${state.branchOpacity}; stroke-linecap: square; stroke-linejoin: miter; fill: none; }
+        .branch.selected { stroke: ${color("--accent")}; stroke-width: ${state.branchWidth + 2.5}; stroke-opacity: 1; }
+        .connector { stroke: ${color("--tree-branch-color")}; stroke-width: ${state.branchWidth * .8}; stroke-opacity: ${state.branchOpacity}; stroke-linecap: square; }
         .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
         .support-label { fill: ${color("--muted")}; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
         .gain-value { fill: ${color("--gain-text")}; }
