@@ -66,11 +66,10 @@
     .card span { color: var(--muted); font-size: 12px; }
     .card strong { color: var(--ink); font-size: 12px; font-weight: 600; text-align: right; }
     .workspace {
-      display: grid;
-      grid-template-columns: minmax(600px, 1fr) 370px;
-      gap: 14px;
+      position: relative;
       height: calc(100vh - 145px);
       padding: 14px 20px 20px;
+      overflow: hidden;
     }
     .map-panel, .detail-panel {
       min-height: 0;
@@ -79,6 +78,7 @@
       border-radius: 9px;
       box-shadow: var(--shadow);
     }
+    .map-panel { width: 100%; height: 100%; }
     .toolbar {
       display: flex;
       align-items: center;
@@ -102,7 +102,8 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; }
+    #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
+    #treeViewport.dragging { cursor: grabbing; }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch { stroke: #83909a; stroke-width: 1.5; cursor: pointer; transition: stroke .12s, stroke-width .12s; }
     .branch:hover, .branch.selected { stroke: var(--accent); stroke-width: 4; }
@@ -112,8 +113,24 @@
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
     .phenotype-gain { fill: var(--gain); stroke: white; stroke-width: 2; }
     .phenotype-loss { fill: var(--loss); stroke: white; stroke-width: 2; }
-    .detail-panel { overflow: auto; }
-    .detail-head { padding: 17px 18px 13px; border-bottom: 1px solid var(--line); }
+    .detail-panel {
+      position: absolute;
+      z-index: 10;
+      top: 14px;
+      right: 20px;
+      bottom: 20px;
+      width: min(420px, calc(100% - 40px));
+      overflow: auto;
+      opacity: 0;
+      pointer-events: none;
+      transform: translateX(calc(100% + 24px)) scale(.97);
+      transform-origin: right center;
+      transition: transform .2s ease, opacity .16s ease;
+      box-shadow: 0 16px 44px rgba(20, 30, 38, .22);
+    }
+    .workspace.detail-open .detail-panel { opacity: 1; pointer-events: auto; transform: translateX(0) scale(1); }
+    .detail-head { position: relative; padding: 17px 52px 13px 18px; border-bottom: 1px solid var(--line); }
+    .detail-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; font-size: 22px; line-height: 1; }
     .detail-head h2 { margin: 0; font: 650 18px/1.2 Georgia, serif; }
     .detail-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
     .detail-body { padding: 15px 18px 24px; }
@@ -139,9 +156,8 @@
     .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
     #status { padding: 40px; color: var(--muted); }
     @media (max-width: 950px) {
-      .workspace { grid-template-columns: 1fr; height: auto; }
-      .map-panel { height: 70vh; }
-      .detail-panel { min-height: 400px; }
+      .workspace { height: calc(100vh - 145px); }
+      .detail-panel { left: 20px; width: auto; }
       .summary { grid-template-columns: 130px max-content; }
     }
   </style>
@@ -173,14 +189,15 @@
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
     </section>
-    <aside class="detail-panel">
-      <div class="detail-head"><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
+    <aside class="detail-panel" aria-hidden="true">
+      <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
       <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
     </aside>
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
     const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null };
+    let suppressTreeClick = false;
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -237,11 +254,11 @@
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
-        line.addEventListener("click", () => selectBranch(node.branch_id)); svg.append(line);
+        line.addEventListener("click", () => { if (!suppressTreeClick) selectBranch(node.branch_id); }); svg.append(line);
         const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id});
         const gain = svgEl("tspan", {fill: "#087f5b"}); gain.textContent = `+${branch.gain_count}`;
         const loss = svgEl("tspan", {fill: "#b42345", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
-        label.append(gain, loss); label.addEventListener("click", () => selectBranch(node.branch_id)); svg.append(label);
+        label.append(gain, loss); label.addEventListener("click", () => { if (!suppressTreeClick) selectBranch(node.branch_id); }); svg.append(label);
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
         if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
         else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
@@ -250,7 +267,18 @@
         }
       }
     }
+    function openDetailPanel() {
+      document.querySelector(".workspace").classList.add("detail-open");
+      document.querySelector(".detail-panel").setAttribute("aria-hidden", "false");
+    }
+    function closeDetailPanel() {
+      document.querySelector(".workspace").classList.remove("detail-open");
+      document.querySelector(".detail-panel").setAttribute("aria-hidden", "true");
+      state.selectedBranch = null;
+      if (state.project) renderTree();
+    }
     async function selectBranch(branchId) {
+      openDetailPanel();
       state.selectedBranch = branchId; renderTree();
       const branch = state.branches.get(branchId);
       $("detailTitle").textContent = branchId;
@@ -276,6 +304,7 @@
       }
     }
     async function showFamily(familyId) {
+      openDetailPanel();
       const result = await api(`/api/family?id=${encodeURIComponent(familyId)}`);
       $("detailTitle").textContent = familyId; $("detailSubtitle").textContent = "Gene-family members";
       const body = $("detailBody"); body.replaceChildren();
@@ -301,6 +330,7 @@
       renderTree();
     }
     async function showCandidates() {
+      openDetailPanel();
       const phenotype = $("phenotypeSelect").value;
       $("detailTitle").textContent = "Candidate gene families";
       $("detailSubtitle").textContent = phenotype ? `Coincident with ${phenotype} gains` : "Select a phenotype first";
@@ -319,6 +349,51 @@
     }
     $("phenotypeSelect").addEventListener("change", phenotypeChanged);
     $("candidateButton").addEventListener("click", showCandidates);
+    $("detailClose").addEventListener("click", closeDetailPanel);
+    document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
+    function enableTreePan() {
+      const viewport = $("treeViewport");
+      let active = false;
+      let moved = false;
+      let startX = 0;
+      let startY = 0;
+      let startLeft = 0;
+      let startTop = 0;
+      viewport.addEventListener("pointerdown", event => {
+        if (event.button !== 0) return;
+        active = true;
+        moved = false;
+        startX = event.clientX;
+        startY = event.clientY;
+        startLeft = viewport.scrollLeft;
+        startTop = viewport.scrollTop;
+        viewport.setPointerCapture(event.pointerId);
+        viewport.classList.add("dragging");
+      });
+      viewport.addEventListener("pointermove", event => {
+        if (!active) return;
+        const dx = event.clientX - startX;
+        const dy = event.clientY - startY;
+        if (Math.abs(dx) > 4 || Math.abs(dy) > 4) moved = true;
+        if (!moved) return;
+        viewport.scrollLeft = startLeft - dx;
+        viewport.scrollTop = startTop - dy;
+        event.preventDefault();
+      });
+      const finishPan = event => {
+        if (!active) return;
+        active = false;
+        viewport.classList.remove("dragging");
+        if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+        if (moved) {
+          suppressTreeClick = true;
+          setTimeout(() => { suppressTreeClick = false; }, 0);
+        }
+      };
+      viewport.addEventListener("pointerup", finishPan);
+      viewport.addEventListener("pointercancel", finishPan);
+    }
+    enableTreePan();
     const themes = new Set(["white", "black", "brown", "green", "blue"]);
     function applyTheme(theme) {
       const selected = themes.has(theme) ? theme : "white";
