@@ -185,6 +185,7 @@ The Zoom slider scales the complete tree while preserving the current viewport c
 Click a horizontal internal branch to collapse its descendant clade, and click the
 collapsed marker to expand it again. Clicking a vertical connector flips the display
 order of its child clades without changing the topology or inferred events.
+Subtle hover tooltips identify these actions as Collapse clade, Expand clade, or Flip clades.
 
 Example with gains penalized relative to losses:
 

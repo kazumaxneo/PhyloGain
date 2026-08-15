@@ -353,6 +353,12 @@
       for (const [key, value] of Object.entries(attrs)) node.setAttribute(key, value);
       return node;
     };
+    function addSvgTooltip(node, text) {
+      const title = svgEl("title");
+      title.textContent = text;
+      node.append(title);
+      return node;
+    }
     async function api(path) {
       const response = await fetch(path);
       if (!response.ok) throw new Error((await response.json()).error || response.statusText);
@@ -496,7 +502,8 @@
           const minimumY = Math.min(...children.map(c => c.y));
           const maximumY = Math.max(...children.map(c => c.y));
           const connectorAttributes = {x1: node.x, y1: minimumY, x2: node.x, y2: maximumY};
-          canvas.append(svgEl("rect", {x: node.x - 7, y: minimumY, width: 14, height: Math.max(14, maximumY - minimumY), class: "connector-hit", "data-flip-node": node.id, role: "button", tabindex: "0", "aria-label": `Flip child clades at node ${node.id}`}));
+          const connectorHit = svgEl("rect", {x: node.x - 7, y: minimumY, width: 14, height: Math.max(14, maximumY - minimumY), class: "connector-hit", "data-flip-node": node.id, role: "button", tabindex: "0", "aria-label": `Flip child clades at node ${node.id}`});
+          canvas.append(addSvgTooltip(connectorHit, "Flip clades"));
           canvas.append(svgEl("line", {...connectorAttributes, class: "connector"}));
         }
       }
@@ -507,6 +514,7 @@
         const hitAttributes = {x: parent.x, y: node.y - 7, width: Math.max(14, node.x - parent.x), height: 14, class: "branch-hit"};
         if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
         const hitLine = svgEl("rect", hitAttributes);
+        if (!node.is_leaf) addSvgTooltip(hitLine, node.collapsed ? "Expand clade" : "Collapse clade");
         canvas.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
         canvas.append(line);
@@ -529,6 +537,8 @@
           const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
           const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
           tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+          addSvgTooltip(marker, "Expand clade");
+          addSvgTooltip(tip, "Expand clade");
           canvas.append(marker, tip);
         } else if (node.is_leaf) {
           const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
