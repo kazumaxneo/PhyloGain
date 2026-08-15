@@ -99,7 +99,8 @@ class ProjectTests(unittest.TestCase):
             annotation.write_text(
                 "#query\tPreferred_name\tDescription\tGOs\tKEGG_ko\tKEGG_Pathway\t"
                 "KEGG_Module\tKEGG_Reaction\tCOG_category\tPFAMs\n"
-                "g000001_1\tnifH\tnitrogenase iron protein\tGO:0009399\tko:K02588\t"
+                "g000001_1;representative_genome=species_A;locus_tag=gene_A1\t"
+                "nifH\tnitrogenase iron protein\tGO:0009399\tko:K02588\t"
                 "map00910\tM00175\tR00001\tC\tFer4_NifH\n",
                 encoding="utf-8",
             )
