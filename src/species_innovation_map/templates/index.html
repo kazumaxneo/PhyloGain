@@ -97,7 +97,7 @@
       border-radius: 9px;
       box-shadow: var(--shadow);
     }
-    .map-panel { display: flex; flex-direction: column; width: 100%; height: 100%; }
+    .map-panel { position: relative; display: flex; flex-direction: column; width: 100%; height: 100%; overflow: hidden; }
     label { color: var(--muted); font-size: 12px; }
     select, button {
       border: 1px solid var(--line);
@@ -109,6 +109,17 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
+    .tree-control-window { position: absolute; z-index: 6; top: 12px; left: 12px; width: min(1520px, calc(100% - 24px)); overflow: hidden; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--panel) 90%, transparent); box-shadow: 0 8px 24px rgba(15, 23, 30, .14); backdrop-filter: blur(6px); }
+    .tree-control-window.minimized { width: 160px; }
+    .tree-control-window-head { display: flex; align-items: center; justify-content: space-between; min-height: 30px; padding: 5px 10px; color: var(--ink); }
+    .tree-control-window-title { font-size: 12px; font-weight: 650; }
+    .tree-control-window-toggle { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
+    .tree-control-window-body { max-height: min(42vh, 390px); overflow: auto; border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
+    .tree-control-window.minimized .tree-control-window-body { display: none; }
+    .tree-control-window .header-controls { display: flex; flex-wrap: wrap; gap: 6px 8px; padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
+    .tree-control-window .header-controls label { color: var(--ink); opacity: .72; }
+    .tree-control-window .header-controls select, .tree-control-window .header-controls button { border-color: color-mix(in srgb, var(--ink) 22%, transparent); background: color-mix(in srgb, var(--control) 82%, transparent); color: var(--ink); }
+    .tree-control-window .branch-filters { border-bottom: 0; background: transparent; }
     .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 7px; }
     .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; width: 134px; color: var(--muted); white-space: nowrap; }
     .tree-scale-control label { grid-column: 1; grid-row: 1; overflow: hidden; font-size: 11px; line-height: 1; text-overflow: ellipsis; }
@@ -383,6 +394,13 @@
   </header>
   <main class="workspace">
     <section class="map-panel">
+      <div class="tree-control-window" id="treeControlWindow">
+        <div class="tree-control-window-head">
+          <span class="tree-control-window-title">Controls</span>
+          <button class="tree-control-window-toggle" id="treeControlWindowToggle" type="button" aria-controls="treeControlWindowBody" aria-expanded="true">Minimize</button>
+        </div>
+        <div class="tree-control-window-body" id="treeControlWindowBody"></div>
+      </div>
       <div class="branch-filters" aria-label="Branch event filters">
         <div class="tree-tools">
           <div class="tree-scale-control">
@@ -1829,6 +1847,21 @@
         if (branch) { event.preventDefault(); selectBranch(branch, eventKind); }
       });
     }
+    function initializeTreeControlWindow() {
+      const panel = $("treeControlWindow");
+      const body = $("treeControlWindowBody");
+      const toggle = $("treeControlWindowToggle");
+      body.append(document.querySelector(".header-controls"), document.querySelector(".branch-filters"));
+      const setMinimized = minimized => {
+        panel.classList.toggle("minimized", minimized);
+        toggle.textContent = minimized ? "Open" : "Minimize";
+        toggle.setAttribute("aria-expanded", String(!minimized));
+        localStorage.setItem("species-map-controls-minimized", minimized ? "1" : "0");
+      };
+      setMinimized(localStorage.getItem("species-map-controls-minimized") === "1");
+      toggle.addEventListener("click", () => setMinimized(!panel.classList.contains("minimized")));
+    }
+    initializeTreeControlWindow();
     enableTreePan();
     enableTreeZoom();
     enableTreeLayoutControls();
