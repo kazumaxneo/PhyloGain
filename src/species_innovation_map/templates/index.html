@@ -109,17 +109,31 @@
     }
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
-    .tree-control-window { position: absolute; z-index: 6; top: 12px; left: 12px; width: min(1520px, calc(100% - 24px)); overflow: hidden; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--panel) 90%, transparent); box-shadow: 0 8px 24px rgba(15, 23, 30, .14); backdrop-filter: blur(6px); }
+    .tree-control-window { position: absolute; z-index: 6; top: 12px; left: 12px; width: min(430px, calc(100% - 24px)); overflow: hidden; border: 1px solid color-mix(in srgb, var(--ink) 18%, transparent); border-radius: 5px; background: color-mix(in srgb, var(--panel) 90%, transparent); box-shadow: 0 8px 24px rgba(15, 23, 30, .14); backdrop-filter: blur(6px); }
     .tree-control-window.minimized { width: 160px; }
-    .tree-control-window-head { display: flex; align-items: center; justify-content: space-between; min-height: 30px; padding: 5px 10px; color: var(--ink); }
+    .tree-control-window-head { display: flex; align-items: center; justify-content: space-between; min-height: 30px; padding: 5px 10px; color: var(--ink); cursor: move; touch-action: none; user-select: none; }
     .tree-control-window-title { font-size: 12px; font-weight: 650; }
-    .tree-control-window-toggle { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; }
-    .tree-control-window-body { max-height: min(42vh, 390px); overflow: auto; border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
+    .tree-control-window-toggle { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+    .tree-control-window-body { max-height: min(78vh, 760px); overflow: auto; border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
     .tree-control-window.minimized .tree-control-window-body { display: none; }
-    .tree-control-window .header-controls { display: flex; flex-wrap: wrap; gap: 6px 8px; padding: 8px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); }
-    .tree-control-window .header-controls label { color: var(--ink); opacity: .72; }
-    .tree-control-window .header-controls select, .tree-control-window .header-controls button { border-color: color-mix(in srgb, var(--ink) 22%, transparent); background: color-mix(in srgb, var(--control) 82%, transparent); color: var(--ink); }
-    .tree-control-window .branch-filters { border-bottom: 0; background: transparent; }
+    .control-section-title { padding: 7px 12px 4px; color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .tree-control-window .header-controls { display: grid; gap: 0; padding: 0; border-bottom: 0; }
+    .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 120px minmax(0, 1fr); align-items: center; gap: 9px; min-height: 37px; padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .control-row > label, .tree-control-window .header-field > label, .control-row-label { display: block; color: var(--ink); font-size: 11px; opacity: .76; }
+    .tree-control-window .header-controls select, .tree-control-window .header-controls button, .tree-control-window .control-row select, .tree-control-window .control-row button { width: 100%; min-width: 0; border-color: color-mix(in srgb, var(--ink) 22%, transparent); background: color-mix(in srgb, var(--control) 82%, transparent); color: var(--ink); }
+    .tree-control-window .branch-filters { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 0; min-height: 0; padding: 0; overflow: visible; border-bottom: 0; background: transparent; }
+    .tree-control-window .tree-tools { display: grid; grid-column: 1; grid-row: auto; gap: 0; width: 100%; }
+    .tree-control-window .tree-scale-control { display: grid; grid-template-columns: 120px minmax(0, 1fr) 45px; grid-template-rows: auto; align-items: center; gap: 9px; width: 100%; min-height: 37px; padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .tree-scale-control label { grid-column: 1; grid-row: 1; display: block; color: var(--ink); font-size: 11px; opacity: .76; }
+    .tree-control-window .tree-scale-control input { grid-column: 2; grid-row: 1; width: 100%; }
+    .tree-control-window .tree-scale-control output { grid-column: 3; grid-row: 1; width: 45px; }
+    .tree-control-window .range-filter { display: grid; grid-template-columns: 120px minmax(0, 1fr) 66px; grid-template-rows: auto; grid-column: 1; grid-row: auto; gap: 9px; width: 100%; min-width: 0; min-height: 40px; padding: 5px 12px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .range-filter-name { grid-column: 1; grid-row: 1; color: var(--ink); font-size: 11px; opacity: .76; }
+    .tree-control-window .range-filter .dual-range { grid-column: 2; grid-row: 1; }
+    .tree-control-window .range-filter output { grid-column: 3; grid-row: 1; }
+    .tree-control-window .filter-actions { display: grid; grid-column: 1; grid-row: auto; gap: 0; }
+    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: space-between; justify-self: stretch; padding: 7px 12px; }
+    .tree-control-window .taxonomy-color-shuffle { margin: 0; }
     .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 7px; }
     .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; width: 134px; color: var(--muted); white-space: nowrap; }
     .tree-scale-control label { grid-column: 1; grid-row: 1; overflow: hidden; font-size: 11px; line-height: 1; text-overflow: ellipsis; }
@@ -161,21 +175,21 @@
     .connector-hit { fill: transparent; cursor: ns-resize; }
     .connector { stroke: var(--tree-branch-color); stroke-width: var(--connector-width, 1.2px); stroke-opacity: var(--branch-opacity, .75); stroke-linecap: square; pointer-events: none; }
     .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: calc(var(--connector-width, 1.2px) + 1.8px); stroke-opacity: 1; }
-    .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
-    .support-label { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
+    .branch-label { font: 650 11px var(--tree-label-font, ui-monospace, SFMono-Regular, Consolas, monospace); cursor: pointer; }
+    .support-label { fill: var(--muted); font: 9px var(--tree-label-font, ui-monospace, SFMono-Regular, Consolas, monospace); pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
-    .tip-label { font-size: 11px; fill: var(--ink); }
-    .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
+    .tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; fill: var(--ink); }
+    .taxonomy-tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); }
     .clade-taxonomy-band { fill-opacity: .16; pointer-events: none; }
     .clade-taxonomy-band.species { fill-opacity: .20; }
     .taxonomy-label-badge { cursor: move; }
     .clade-taxonomy-label-bg { fill-opacity: .82; pointer-events: all; cursor: move; }
     .clade-taxonomy-label-accent { pointer-events: none; }
-    .clade-taxonomy-label { fill: #fff; font: 600 var(--taxonomy-label-font-size, 9px)/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
+    .clade-taxonomy-label { fill: #fff; font: 600 var(--taxonomy-label-font-size, 9px)/1 var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
     .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
-    .taxonomy-legend-label { fill: var(--muted); font: 9px Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; }
-    .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
+    .taxonomy-legend-label { fill: var(--muted); font: 9px var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
+    .collapsed-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
     .phenotype-gain { fill: var(--gain); stroke: white; stroke-width: 2; }
@@ -315,9 +329,6 @@
       .filter-status .legend { display: none; }
       .filter-match-count { display: none; }
     }
-    @media (max-width: 1180px) {
-      .header-controls > label, .header-controls .header-field > label { display: none; }
-    }
     @media (max-width: 760px) {
       header { flex-wrap: wrap; gap: 8px 12px; padding: 10px 14px; }
       .summary { width: 100%; margin-left: 0; gap: 4px 14px; }
@@ -335,18 +346,25 @@
     </div>
     <h1 id="viewerTitle">Gene Gain/Loss Viewer</h1>
     <div class="header-controls" aria-label="Tree controls">
-      <label for="phenotypeSelect">Phenotype</label>
-      <select id="phenotypeSelect" title="Phenotype"><option value="">None</option></select>
-      <button id="candidateButton" type="button">Candidate genes</button>
-      <span class="header-field" id="taxonomyControl" hidden>
+      <div class="control-section-title">Analysis</div>
+      <span class="control-row">
+        <label for="phenotypeSelect">Phenotype</label>
+        <select id="phenotypeSelect" title="Phenotype"><option value="">None</option></select>
+      </span>
+      <span class="control-row">
+        <span class="control-row-label">Candidates</span>
+        <button id="candidateButton" type="button">Open candidate genes</button>
+      </span>
+      <div class="control-section-title">Tree</div>
+      <span class="header-field control-row" id="taxonomyControl" hidden>
         <label for="collapseSelect">Collapse</label>
         <select id="collapseSelect" title="Collapse taxonomic rank"><option value="">None</option></select>
       </span>
-      <span class="header-field" id="cladeLabelControl" hidden>
+      <span class="header-field control-row" id="cladeLabelControl" hidden>
         <label for="cladeLabelSelect">GTDB labels</label>
         <select id="cladeLabelSelect" title="Show GTDB clade labels" aria-label="Show GTDB clade labels"><option value="">Off</option></select>
       </span>
-      <span class="header-field">
+      <span class="header-field control-row">
         <label for="treeOrderSelect">Order</label>
         <select id="treeOrderSelect" title="Order child clades" aria-label="Order child clades">
           <option value="original">Original</option>
@@ -354,7 +372,7 @@
           <option value="descending">Descending</option>
         </select>
       </span>
-      <span class="header-field">
+      <span class="header-field control-row">
         <label for="supportCollapseSelect">Support</label>
         <select id="supportCollapseSelect" title="Collapse branches below bootstrap support" aria-label="Collapse branches below bootstrap support">
           <option value="0">All</option>
@@ -370,14 +388,14 @@
           <option value="1">&lt;1.00</option>
         </select>
       </span>
-      <span class="header-field">
+      <span class="header-field control-row">
         <label for="treeLayoutSelect">Layout</label>
         <select id="treeLayoutSelect" title="Tree layout" aria-label="Tree layout">
           <option value="rectangular">Rectangular</option>
           <option value="circular">Circular</option>
         </select>
       </span>
-      <span class="header-field">
+      <span class="header-field control-row">
         <label for="branchLengthSelect">Branches</label>
         <select id="branchLengthSelect" title="Horizontal branch scale" aria-label="Horizontal branch scale">
           <option value="cladogram">Cladogram</option>
@@ -395,13 +413,14 @@
   <main class="workspace">
     <section class="map-panel">
       <div class="tree-control-window" id="treeControlWindow">
-        <div class="tree-control-window-head">
+        <div class="tree-control-window-head" aria-label="Drag controls panel">
           <span class="tree-control-window-title">Controls</span>
           <button class="tree-control-window-toggle" id="treeControlWindowToggle" type="button" aria-controls="treeControlWindowBody" aria-expanded="true">Minimize</button>
         </div>
         <div class="tree-control-window-body" id="treeControlWindowBody"></div>
       </div>
       <div class="branch-filters" aria-label="Branch event filters">
+        <div class="control-section-title">Display</div>
         <div class="tree-tools">
           <div class="tree-scale-control">
             <label for="treeZoom">Zoom</label>
@@ -419,9 +438,18 @@
             <output id="verticalSpacingValue" for="verticalSpacing">100%</output>
           </div>
           <div class="tree-scale-control">
-            <label for="tipFontSize">Tip labels</label>
+            <label for="tipFontSize">Label size</label>
             <input id="tipFontSize" type="range" min="6" max="16" step="1" value="9" aria-label="Tip label font size">
             <output id="tipFontSizeValue" for="tipFontSize">9px</output>
+          </div>
+          <div class="control-row">
+            <label for="treeFontFamily">Label font</label>
+            <select id="treeFontFamily" aria-label="Tree label font family">
+              <option value="system">System sans</option>
+              <option value="arial">Arial</option>
+              <option value="serif">Times / serif</option>
+              <option value="mono">Monospace</option>
+            </select>
           </div>
           <div class="tree-scale-control">
             <label for="branchWidth">Branch width</label>
@@ -438,8 +466,12 @@
             <input id="taxonomyLabelFontSize" type="range" min="6" max="24" step="1" value="9" aria-label="GTDB clade label font size">
             <output id="taxonomyLabelFontSizeValue" for="taxonomyLabelFontSize">9px</output>
           </div>
-          <button class="filter-reset taxonomy-color-shuffle" id="shuffleTaxonomyColors" type="button" title="Assign another balanced GTDB color set" hidden>Shuffle colors</button>
+          <div class="control-row" id="taxonomyColorShuffleRow" hidden>
+            <span class="control-row-label">GTDB colors</span>
+            <button class="filter-reset taxonomy-color-shuffle" id="shuffleTaxonomyColors" type="button" title="Assign another balanced GTDB color set">Shuffle</button>
+          </div>
         </div>
+        <div class="control-section-title">Filters</div>
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Filter (gain)</span>
           <div class="dual-range" id="gainRange"><input id="gainMin" type="range" aria-label="Minimum gain count"><input id="gainMax" type="range" aria-label="Maximum gain count"></div>
@@ -451,8 +483,9 @@
           <output id="lossRangeValue"></output>
         </div>
         <div class="filter-actions">
-          <button class="filter-reset" id="filterReset" type="button">Reset</button>
-          <button class="svg-download" id="downloadSvg" type="button">Download SVG</button>
+          <div class="control-section-title">Output</div>
+          <div class="control-row"><span class="control-row-label">Settings</span><button class="filter-reset" id="filterReset" type="button">Reset</button></div>
+          <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
         </div>
         <div class="filter-status">
           <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
@@ -471,7 +504,13 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const treeFontFamilies = {
+      system: "Inter, ui-sans-serif, system-ui, sans-serif",
+      arial: "Arial, Helvetica, sans-serif",
+      serif: "Georgia, 'Times New Roman', serif",
+      mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
+    };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -539,7 +578,7 @@
           $("cladeLabelSelect").value = storedCladeLabels;
         }
         $("cladeLabelControl").hidden = cladeRanks.length === 0;
-        $("shuffleTaxonomyColors").hidden = cladeRanks.length === 0;
+        $("taxonomyColorShuffleRow").hidden = cladeRanks.length === 0;
         const storedTaxonomyColorSeed = Number(localStorage.getItem("species-map-taxonomy-color-seed"));
         if (Number.isInteger(storedTaxonomyColorSeed) && storedTaxonomyColorSeed >= 0) state.taxonomyColorSeed = storedTaxonomyColorSeed >>> 0;
         try {
@@ -690,8 +729,11 @@
     function applyTaxonomyLabelFontSize() {
       $("treeSvg").style.setProperty("--taxonomy-label-font-size", `${state.taxonomyLabelFontSize}px`);
     }
+    function applyTreeFontFamily() {
+      $("treeSvg").style.setProperty("--tree-label-font", treeFontFamilies[state.treeFontFamily] || treeFontFamilies.system);
+    }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize();
+      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily();
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -1123,6 +1165,14 @@
         rerenderKeepingCenter();
       });
       enableRangeTrack($("tipFontSize"));
+      const storedTreeFontFamily = localStorage.getItem("species-map-tree-font-family");
+      if (storedTreeFontFamily && treeFontFamilies[storedTreeFontFamily]) state.treeFontFamily = storedTreeFontFamily;
+      $("treeFontFamily").value = state.treeFontFamily;
+      $("treeFontFamily").addEventListener("change", event => {
+        state.treeFontFamily = treeFontFamilies[event.target.value] ? event.target.value : "system";
+        localStorage.setItem("species-map-tree-font-family", state.treeFontFamily);
+        rerenderKeepingCenter();
+      });
       const storedBranchWidth = Number(localStorage.getItem("species-map-branch-width"));
       if (Number.isFinite(storedBranchWidth) && storedBranchWidth >= 1 && storedBranchWidth <= 8) state.branchWidth = storedBranchWidth;
       $("branchWidth").value = String(state.branchWidth);
@@ -1191,23 +1241,24 @@
       const theme = getComputedStyle(document.documentElement);
       const color = name => theme.getPropertyValue(name).trim();
       const style = document.createElementNS(SVG, "style");
+      const treeLabelFont = treeFontFamilies[state.treeFontFamily] || treeFontFamilies.system;
       style.textContent = `
         .branch { stroke: ${color("--tree-branch-color")}; stroke-width: ${state.branchWidth}; stroke-opacity: ${state.branchOpacity}; stroke-linecap: square; stroke-linejoin: miter; fill: none; }
         .branch.selected { stroke: ${color("--accent")}; stroke-width: ${state.branchWidth + 2.5}; stroke-opacity: 1; }
         .connector { stroke: ${color("--tree-branch-color")}; stroke-width: ${state.branchWidth * .8}; stroke-opacity: ${state.branchOpacity}; stroke-linecap: square; }
-        .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; }
-        .support-label { fill: ${color("--muted")}; font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; }
+        .branch-label { font: 650 11px ${treeLabelFont}; }
+        .support-label { fill: ${color("--muted")}; font: 9px ${treeLabelFont}; }
         .gain-value { fill: ${color("--gain-text")}; }
         .loss-value { fill: ${color("--loss-text")}; }
         .filtered-branch-label { opacity: .1; }
-        .tip-label { font: 11px sans-serif; fill: ${color("--ink")}; }
-        .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
+        .tip-label { font: ${state.tipFontSize}px ${treeLabelFont}; fill: ${color("--ink")}; }
+        .taxonomy-tip-label, .collapsed-label { font: 650 ${state.tipFontSize}px ${treeLabelFont}; fill: ${color("--accent")}; }
         .clade-taxonomy-band { fill-opacity: .16; }
         .clade-taxonomy-band.species { fill-opacity: .20; }
         .clade-taxonomy-label-bg { fill-opacity: .82; }
-        .clade-taxonomy-label { fill: #fff; font: 600 ${state.taxonomyLabelFontSize}px sans-serif; }
+        .clade-taxonomy-label { fill: #fff; font: 600 ${state.taxonomyLabelFontSize}px ${treeLabelFont}; }
         .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
-        .taxonomy-legend-label { fill: ${color("--muted")}; font: 9px sans-serif; }
+        .taxonomy-legend-label { fill: ${color("--muted")}; font: 9px ${treeLabelFont}; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
         .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
         .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
@@ -1851,15 +1902,57 @@
       const panel = $("treeControlWindow");
       const body = $("treeControlWindowBody");
       const toggle = $("treeControlWindowToggle");
+      const header = panel.querySelector(".tree-control-window-head");
+      const container = panel.parentElement;
       body.append(document.querySelector(".header-controls"), document.querySelector(".branch-filters"));
+      const clampPosition = position => ({
+        x: Math.max(0, Math.min(Number(position.x) || 0, Math.max(0, container.clientWidth - panel.offsetWidth))),
+        y: Math.max(0, Math.min(Number(position.y) || 0, Math.max(0, container.clientHeight - panel.offsetHeight)))
+      });
+      const applyPosition = position => {
+        const next = clampPosition(position);
+        panel.style.left = `${next.x}px`;
+        panel.style.top = `${next.y}px`;
+        return next;
+      };
+      let savedPosition = {x: 12, y: 12};
+      try {
+        savedPosition = {...savedPosition, ...JSON.parse(localStorage.getItem("species-map-controls-position") || "{}")};
+      } catch (_) {}
+      requestAnimationFrame(() => { savedPosition = applyPosition(savedPosition); });
       const setMinimized = minimized => {
         panel.classList.toggle("minimized", minimized);
         toggle.textContent = minimized ? "Open" : "Minimize";
         toggle.setAttribute("aria-expanded", String(!minimized));
         localStorage.setItem("species-map-controls-minimized", minimized ? "1" : "0");
+        requestAnimationFrame(() => { savedPosition = applyPosition(savedPosition); });
       };
       setMinimized(localStorage.getItem("species-map-controls-minimized") === "1");
       toggle.addEventListener("click", () => setMinimized(!panel.classList.contains("minimized")));
+      let drag = null;
+      header.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || event.target.closest("button, input, select, a")) return;
+        const rect = panel.getBoundingClientRect();
+        const containerRect = container.getBoundingClientRect();
+        drag = {pointerId: event.pointerId, offsetX: event.clientX - rect.left, offsetY: event.clientY - rect.top, containerLeft: containerRect.left, containerTop: containerRect.top};
+        panel.classList.add("dragging");
+        header.setPointerCapture(event.pointerId);
+        event.preventDefault();
+      });
+      header.addEventListener("pointermove", event => {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        savedPosition = applyPosition({x: event.clientX - drag.containerLeft - drag.offsetX, y: event.clientY - drag.containerTop - drag.offsetY});
+      });
+      const finishDrag = event => {
+        if (!drag || drag.pointerId !== event.pointerId) return;
+        localStorage.setItem("species-map-controls-position", JSON.stringify(savedPosition));
+        panel.classList.remove("dragging");
+        if (header.hasPointerCapture(event.pointerId)) header.releasePointerCapture(event.pointerId);
+        drag = null;
+      };
+      header.addEventListener("pointerup", finishDrag);
+      header.addEventListener("pointercancel", finishDrag);
+      window.addEventListener("resize", () => { savedPosition = applyPosition(savedPosition); });
     }
     initializeTreeControlWindow();
     enableTreePan();
