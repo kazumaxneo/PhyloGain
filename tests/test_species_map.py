@@ -169,6 +169,9 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("font-weight: 400", html)
             self.assertIn('classList.add("family-title")', html)
             self.assertIn('detailSubtitle").hidden = true', html)
+            self.assertIn('eventKind.className = "event-kind"', html)
+            self.assertIn("grid-template-columns: 34px 92px minmax(0, 1fr)", html)
+            self.assertIn("text-overflow: ellipsis", html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

@@ -15,6 +15,7 @@
 - Prefix each functional annotation item with a middle dot and increase spacing before assembly members.
 - Use colon-separated, regular-weight assembly labels and emphasize functional annotation headings and items.
 - Unify functional-annotation typography, simplify orthogroup headers, and emphasize the Back button.
+- Replace boxed gene-family event buttons with compact single-line gain/loss, orthogroup, and annotation rows.
 
 ## 0.3.1 — 2026-08-15
 
