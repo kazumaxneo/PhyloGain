@@ -127,8 +127,8 @@
       top: 14px;
       right: 20px;
       bottom: 20px;
-      width: min(760px, calc(100% - 40px));
-      overflow: auto;
+      width: min(var(--detail-panel-width, 760px), calc(100% - 40px));
+      overflow: hidden;
       opacity: 0;
       pointer-events: none;
       transform: translateX(calc(100% + 24px)) scale(.97);
@@ -137,6 +137,24 @@
       box-shadow: 0 16px 44px rgba(20, 30, 38, .22);
     }
     .workspace.detail-open .detail-panel { opacity: 1; pointer-events: auto; transform: translateX(0) scale(1); }
+    .detail-scroll { height: 100%; overflow: auto; }
+    .detail-resize-handle {
+      position: absolute;
+      z-index: 3;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 12px;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: transparent;
+      cursor: col-resize;
+      touch-action: none;
+    }
+    .detail-resize-handle::after { content: ""; position: absolute; top: 0; bottom: 0; left: 5px; width: 1px; background: transparent; }
+    .detail-resize-handle:hover::after, .detail-resize-handle:focus-visible::after, body.detail-resizing .detail-resize-handle::after { background: var(--accent); }
+    body.detail-resizing { cursor: col-resize; user-select: none; }
     .detail-head { position: relative; padding: 17px 52px 13px 18px; border-bottom: 1px solid var(--line); }
     .detail-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; font-size: 22px; line-height: 1; }
     .detail-head h2 { margin: 0; font: 650 18px/1.2 Georgia, serif; }
@@ -198,6 +216,7 @@
     @media (max-width: 950px) {
       .workspace { height: calc(100vh - 145px); }
       .detail-panel { left: 20px; width: auto; }
+      .detail-resize-handle { display: none; }
       .summary { grid-template-columns: 130px max-content; }
     }
   </style>
@@ -234,8 +253,11 @@
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
-      <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
-      <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
+      <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
+      <div class="detail-scroll">
+        <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
+        <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
+      </div>
     </aside>
   </main>
   <script>
@@ -543,6 +565,62 @@
     });
     $("detailClose").addEventListener("click", closeDetailPanel);
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
+    function enableDetailResize() {
+      const panel = document.querySelector(".detail-panel");
+      const workspace = document.querySelector(".workspace");
+      const handle = $("detailResizeHandle");
+      const storedWidth = Number(localStorage.getItem("species-map-detail-width"));
+      if (Number.isFinite(storedWidth) && storedWidth > 0) panel.style.setProperty("--detail-panel-width", `${storedWidth}px`);
+      const limits = () => {
+        const maximum = Math.max(320, workspace.clientWidth - 40);
+        return {minimum: Math.min(420, maximum), maximum};
+      };
+      const setWidth = width => {
+        const {minimum, maximum} = limits();
+        const next = Math.round(Math.min(maximum, Math.max(minimum, width)));
+        panel.style.setProperty("--detail-panel-width", `${next}px`);
+        handle.setAttribute("aria-valuemin", String(minimum));
+        handle.setAttribute("aria-valuemax", String(maximum));
+        handle.setAttribute("aria-valuenow", String(next));
+        return next;
+      };
+      let active = false;
+      let startX = 0;
+      let startWidth = 0;
+      handle.addEventListener("pointerdown", event => {
+        if (event.button !== 0 || window.matchMedia("(max-width: 950px)").matches) return;
+        active = true;
+        startX = event.clientX;
+        startWidth = panel.getBoundingClientRect().width;
+        handle.setPointerCapture(event.pointerId);
+        document.body.classList.add("detail-resizing");
+        event.preventDefault();
+      });
+      handle.addEventListener("pointermove", event => {
+        if (!active) return;
+        setWidth(startWidth + startX - event.clientX);
+      });
+      const finishResize = event => {
+        if (!active) return;
+        active = false;
+        document.body.classList.remove("detail-resizing");
+        if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+        localStorage.setItem("species-map-detail-width", String(Math.round(panel.getBoundingClientRect().width)));
+      };
+      handle.addEventListener("pointerup", finishResize);
+      handle.addEventListener("pointercancel", finishResize);
+      handle.addEventListener("keydown", event => {
+        if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+        const delta = event.key === "ArrowLeft" ? 40 : -40;
+        const next = setWidth(panel.getBoundingClientRect().width + delta);
+        localStorage.setItem("species-map-detail-width", String(next));
+        event.preventDefault();
+      });
+      window.addEventListener("resize", () => {
+        if (!window.matchMedia("(max-width: 950px)").matches) setWidth(panel.getBoundingClientRect().width);
+      });
+      setWidth(storedWidth || 760);
+    }
     function enableTreePan() {
       const viewport = $("treeViewport");
       let active = false;
@@ -606,6 +684,7 @@
       });
     }
     enableTreePan();
+    enableDetailResize();
     const themes = new Set(["white", "black", "brown", "green", "blue"]);
     function applyTheme(theme) {
       const selected = themes.has(theme) ? theme : "white";

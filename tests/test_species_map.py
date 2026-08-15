@@ -146,8 +146,10 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("/api/annotation-sources", html)
             self.assertIn("chart-axis", html)
             self.assertIn("Background", html)
-            self.assertIn("width: min(760px", html)
+            self.assertIn("width: min(var(--detail-panel-width, 760px)", html)
             self.assertIn('className = `chart-bar ${eventType}`', html)
+            self.assertIn("detailResizeHandle", html)
+            self.assertIn("enableDetailResize", html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:
