@@ -375,7 +375,7 @@ def build_project(
         "format_version": 1,
         "tool": "species-innovation-map",
         "tool_version": __version__,
-        "title": "Species Innovation Map",
+        "title": "Gene Gain/Loss Viewer",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "species_count": len(species),
         "family_count": family_count,

@@ -24,6 +24,7 @@
 - Add independent Gain and Loss range filters that fade only unmatched count labels while preserving every branch, node, and tip.
 - Omit single-letter COG category codes from chart labels while retaining them in the result table.
 - Stack Gain and Loss filter bars vertically, enlarge their labels and values, and simplify Reset to an unboxed text control.
+- Rename the public interface from Species Innovation Map to Gene Gain/Loss Viewer.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

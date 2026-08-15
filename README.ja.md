@@ -1,4 +1,4 @@
-# Species Innovation Map
+# Gene Gain/Loss Viewer
 
 OrthoFinderの結果から、species treeの各branchにgene-familyの獲得数・欠失数を表示する対話型HTMLを作成します。
 
@@ -46,7 +46,7 @@ phenotypeの獲得branchと同じbranchでGainしたgene familyが`candidate_gen
 
 ## 主な出力
 
-- `index.html`：対話型Species Innovation Map
+- `index.html`：対話型Gene Gain/Loss Viewer
 - `branches.tsv`：branchごとのGain/Loss数
 - `gene_gain_loss.tsv`：各gene familyの推定Gain/Loss
 - `phenotype_gain_loss.tsv`：phenotypeの推定変化

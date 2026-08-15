@@ -60,7 +60,7 @@ def parser() -> argparse.ArgumentParser:
     build.add_argument("--annotation-cpu", type=int, default=1)
 
     serve = commands.add_parser("serve", help="Open a generated map in a local web server")
-    serve.add_argument("project", help="Generated Species Innovation Map directory")
+    serve.add_argument("project", help="Generated Gene Gain/Loss Viewer directory")
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, default=8000)
     serve.add_argument("--no-open", action="store_true", help="Do not open a browser")

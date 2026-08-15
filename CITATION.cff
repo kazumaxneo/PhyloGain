@@ -1,6 +1,6 @@
 cff-version: 1.2.0
-message: "If you use Species Innovation Map, please cite this software."
-title: "Species Innovation Map"
+message: "If you use Gene Gain/Loss Viewer, please cite this software."
+title: "Gene Gain/Loss Viewer"
 type: software
 authors:
   - name: "kazu"

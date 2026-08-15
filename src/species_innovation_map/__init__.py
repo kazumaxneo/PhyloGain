@@ -1,3 +1,3 @@
-"""Species Innovation Map."""
+"""Gene Gain/Loss Viewer."""
 
 __version__ = "0.4.0"

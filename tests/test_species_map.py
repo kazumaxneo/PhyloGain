@@ -149,6 +149,8 @@ class ProjectTests(unittest.TestCase):
             self.assertTrue((output / "functional_annotations.tsv").is_file())
             html = (output / "index.html").read_text(encoding="utf-8")
             self.assertIn("Gained-family enrichment", html)
+            self.assertIn("Gene Gain/Loss Viewer", html)
+            self.assertNotIn("Species Innovation Map", html)
             self.assertIn("/api/enrichment?branch=", html)
             self.assertIn("Functional annotation", html)
             self.assertIn("FDR corrected within database", html)

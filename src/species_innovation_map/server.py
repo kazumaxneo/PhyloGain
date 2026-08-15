@@ -171,11 +171,11 @@ def serve_project(
     required = [directory / "index.html", directory / "project.json", directory / "species_map.sqlite"]
     missing = [path.name for path in required if not path.is_file()]
     if missing:
-        raise ValueError(f"Not a Species Innovation Map directory; missing: {', '.join(missing)}")
+        raise ValueError(f"Not a Gene Gain/Loss Viewer directory; missing: {', '.join(missing)}")
     handler = type("BoundProjectHandler", (ProjectHandler,), {"project_dir": directory})
     server = ThreadingHTTPServer((host, port), handler)
     url = f"http://{host}:{server.server_port}/"
-    print(f"Species Innovation Map: {url}")
+    print(f"Gene Gain/Loss Viewer: {url}")
     print("Press Ctrl+C to stop.")
     if open_browser:
         webbrowser.open(url)
