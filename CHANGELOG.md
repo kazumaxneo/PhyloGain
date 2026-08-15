@@ -13,6 +13,7 @@
 - Label orthogroup member groups as assemblies instead of species and remove the redundant member-list heading.
 - Separate assembly members from annotations with compact, underlined, theme-neutral assembly labels.
 - Prefix each functional annotation item with a middle dot and increase spacing before assembly members.
+- Use colon-separated, regular-weight assembly labels and emphasize functional annotation headings and items.
 
 ## 0.3.1 — 2026-08-15
 
