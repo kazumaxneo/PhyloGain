@@ -154,6 +154,9 @@
     .loss-value { fill: var(--loss-text); }
     .tip-label { font-size: 11px; fill: var(--ink); }
     .taxonomy-tip-label { font-size: 11px; font-weight: 650; fill: var(--accent); }
+    .clade-taxonomy-label { font: 600 9px/1 Inter, ui-sans-serif, system-ui, sans-serif; pointer-events: none; paint-order: stroke; stroke: var(--panel); stroke-width: 3px; stroke-linejoin: round; }
+    .clade-taxonomy-label.family { fill: #4f8fc9; }
+    .clade-taxonomy-label.genus { fill: #a477c7; font-style: italic; }
     .collapsed-label { font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
@@ -317,6 +320,10 @@
         <label for="collapseSelect">Collapse</label>
         <select id="collapseSelect" title="Collapse taxonomic rank"><option value="">None</option></select>
       </span>
+      <span class="header-field" id="cladeLabelControl" hidden>
+        <label for="cladeLabelSelect">GTDB labels</label>
+        <select id="cladeLabelSelect" title="Show GTDB clade labels" aria-label="Show GTDB clade labels"><option value="">Off</option></select>
+      </span>
       <span class="header-field">
         <label for="treeOrderSelect">Order</label>
         <select id="treeOrderSelect" title="Order child clades" aria-label="Order child clades">
@@ -412,7 +419,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -451,6 +458,21 @@
           $("collapseSelect").append(option);
         }
         $("taxonomyControl").hidden = ranks.length === 0;
+        const cladeRanks = ["family", "genus"].filter(rank => ranks.includes(rank));
+        for (const rank of cladeRanks) {
+          const option = document.createElement("option"); option.value = rank; option.textContent = rankLabels[rank];
+          $("cladeLabelSelect").append(option);
+        }
+        if (cladeRanks.length === 2) {
+          const option = document.createElement("option"); option.value = "family,genus"; option.textContent = "Family + Genus";
+          $("cladeLabelSelect").append(option);
+        }
+        const storedCladeLabels = localStorage.getItem("species-map-clade-labels") || "";
+        if ([...$("cladeLabelSelect").options].some(option => option.value === storedCladeLabels)) {
+          state.cladeLabelMode = storedCladeLabels;
+          $("cladeLabelSelect").value = storedCladeLabels;
+        }
+        $("cladeLabelControl").hidden = cladeRanks.length === 0;
         $("status").remove();
         renderTree();
       } catch (error) {
@@ -539,10 +561,16 @@
         if (!children.length) {
           node.leafCount = 1;
           node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
+          node.taxonomyConsensus = Object.fromEntries(["family", "genus"].map(taxonomyRank => [taxonomyRank, taxonomy[node.label]?.[taxonomyRank] || ""]));
           return;
         }
         children.forEach(summarize);
         node.leafCount = children.reduce((sum, child) => sum + child.leafCount, 0);
+        node.taxonomyConsensus = {};
+        for (const taxonomyRank of ["family", "genus"]) {
+          const values = new Set(children.map(child => child.taxonomyConsensus[taxonomyRank]));
+          node.taxonomyConsensus[taxonomyRank] = values.size === 1 && !values.has("") ? [...values][0] : "";
+        }
         const values = new Set(children.map(child => child.rankValue));
         node.rankValue = values.size === 1 && !values.has("") ? [...values][0] : "";
         node.taxonomyCollapsed = Boolean(
@@ -557,6 +585,39 @@
         node.collapsed = state.manuallyCollapsed.has(node.id) || node.taxonomyCollapsed || node.supportCollapsed;
       }
       summarize(root);
+      function cladeTaxonomyLabels(node) {
+        if (node.is_leaf || node.collapsed || node.leafCount < 2 || !state.cladeLabelMode) return [];
+        const parent = node.parent_id ? nodes.get(node.parent_id) : null;
+        return state.cladeLabelMode.split(",").flatMap(taxonomyRank => {
+          const value = node.taxonomyConsensus[taxonomyRank];
+          if (!value || parent?.taxonomyConsensus?.[taxonomyRank] === value) return [];
+          return [{rank: taxonomyRank, value}];
+        });
+      }
+      function appendCladeTaxonomyLabel(node, circular = false) {
+        const labels = cladeTaxonomyLabels(node);
+        if (!labels.length) return;
+        if (circular) {
+          const ux = Math.cos(node.angle); const uy = Math.sin(node.angle);
+          const px = -uy; const py = ux;
+          const anchor = ux >= 0 ? "start" : "end";
+          const angle = node.angle * 180 / Math.PI + (ux < 0 ? 180 : 0);
+          labels.forEach((item, index) => {
+            const offset = (index - (labels.length - 1) / 2) * 12;
+            const x = node.x + ux * 9 + px * offset;
+            const y = node.y + uy * 9 + py * offset;
+            const labelNode = svgEl("text", {x, y, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${angle} ${x} ${y})`, class: `clade-taxonomy-label ${item.rank}`});
+            labelNode.textContent = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+            canvas.append(labelNode);
+          });
+          return;
+        }
+        labels.forEach((item, index) => {
+          const labelNode = svgEl("text", {x: node.x + 7, y: node.y + 15 + index * 11, class: `clade-taxonomy-label ${item.rank}`});
+          labelNode.textContent = `${item.rank === "family" ? "Family" : "Genus"}: ${item.value}`;
+          canvas.append(labelNode);
+        });
+      }
       const visibleNodes = [];
       function collect(node) {
         visibleNodes.push(node);
@@ -662,6 +723,7 @@
             canvas.append(tip);
           }
         }
+        visibleNodes.forEach(node => appendCladeTaxonomyLabel(node, true));
         return;
       }
       svg.style.backgroundImage = "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
@@ -731,6 +793,7 @@
           const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass}); tip.textContent = taxonomyLabel; canvas.append(tip);
         }
       }
+      visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
     }
     function enableTreeZoom() {
       const input = $("treeZoom");
@@ -826,6 +889,9 @@
         .filtered-branch-label { opacity: .1; }
         .tip-label { font: 11px sans-serif; fill: ${color("--ink")}; }
         .taxonomy-tip-label, .collapsed-label { font: 650 11px sans-serif; fill: ${color("--accent")}; }
+        .clade-taxonomy-label { font: 600 9px sans-serif; paint-order: stroke; stroke: ${color("--panel")}; stroke-width: 3px; stroke-linejoin: round; }
+        .clade-taxonomy-label.family { fill: #4f8fc9; }
+        .clade-taxonomy-label.genus { fill: #a477c7; font-style: italic; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
         .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
         .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
@@ -1201,6 +1267,11 @@
       state.expandedGroups.clear();
       closeDetailPanel();
       $("treeViewport").scrollTo({top: 0, left: 0});
+      renderTree();
+    });
+    $("cladeLabelSelect").addEventListener("change", event => {
+      state.cladeLabelMode = event.target.value;
+      localStorage.setItem("species-map-clade-labels", state.cladeLabelMode);
       renderTree();
     });
     $("treeOrderSelect").addEventListener("change", event => {

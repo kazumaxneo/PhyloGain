@@ -51,6 +51,7 @@
 - Rename Gain/Loss controls to Filter (gain)/Filter (loss), enlarge their labels, and use pure white text in the black theme.
 - Match downloaded enrichment SVGs to the web view with a vertical FDR legend on the plot's right side.
 - Shorten the spacing-control labels to Horizontal and Vertical.
+- Add optional GTDB family and genus labels at their inferred crown nodes within the tree.
 - Export the complete current tree view as a self-contained SVG from the upper-right control row.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
