@@ -456,6 +456,7 @@
       try {
         const [project, branches, annotationSources] = await Promise.all([api("/api/project"), api("/api/branches"), api("/api/annotation-sources")]);
         state.project = project;
+        initializeSupportControl(project.nodes);
         const inputName = project.input_format === "pirate" ? "PIRATE" : "OrthoFinder";
         $("viewerTitle").textContent = `Gene Gain/Loss Viewer · ${inputName}`;
         document.title = `Gene Gain/Loss Viewer · ${inputName}`;
@@ -562,9 +563,19 @@
     function normalizedBranchSupport(node) {
       let value = node.support;
       if (value == null && !node.is_leaf && /^\s*\d+(?:\.\d+)?\s*$/.test(node.label || "")) value = Number(node.label);
+      if (value == null || value === "") return null;
       value = Number(value);
       if (!Number.isFinite(value) || value < 0 || value > 100) return null;
       return value > 1 ? value / 100 : value;
+    }
+    function initializeSupportControl(nodes) {
+      const select = $("supportCollapseSelect");
+      const available = nodes.some(node => !node.is_leaf && normalizedBranchSupport(node) != null);
+      select.disabled = !available;
+      select.options[0].textContent = available ? "All" : "Unavailable";
+      select.title = available
+        ? "Collapse branches below bootstrap support"
+        : "The input tree does not contain branch-support values";
     }
     function applyTreePan() {
       $("treeSvg").style.transform = `translate(${state.treePanX}px, ${state.treePanY}px)`;

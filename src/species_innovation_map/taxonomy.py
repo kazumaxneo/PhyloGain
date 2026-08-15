@@ -45,6 +45,9 @@ def identifier_candidates(value: str) -> list[str]:
         cleaned = re.sub(r"^GTDB_R\d+_", "", cleaned)
         cleaned = re.sub(r"\.(?:fa|faa|fna|fasta|fas)$", "", cleaned, flags=re.I)
         add(cleaned)
+        # Genome-bin identifiers are commonly rewritten by tree/alignment tools,
+        # which replace hyphens and dots with underscores.
+        add(re.sub(r"[-.]+", "_", cleaned))
         accession = re.search(r"GC[AF]_\d+(?:\.\d+)?", cleaned)
         if accession:
             accession_id = accession.group(0)

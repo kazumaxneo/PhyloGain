@@ -321,6 +321,9 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("normalizedBranchSupport(node)", html)
             self.assertIn('class: "support-label"', html)
             self.assertIn("support.toFixed(3)", html)
+            self.assertIn('if (value == null || value === "") return null;', html)
+            self.assertIn("initializeSupportControl(project.nodes)", html)
+            self.assertIn('select.options[0].textContent = available ? "All" : "Unavailable";', html)
             self.assertEqual(html.count("if (!node.is_leaf && support != null)"), 2)
             self.assertIn('id="treeZoom"', html)
             self.assertIn('id="treeZoom" type="range" min="10" max="200"', html)
@@ -552,6 +555,21 @@ class TaxonomyTests(unittest.TestCase):
             self.assertEqual(
                 taxonomy["Nostocaceae__GCA_123456789.1_GTDB"]["genus"], "Nostoc"
             )
+
+    def test_match_gtdbtk_bin_ids_with_normalized_punctuation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "gtdbtk.bac120.summary.tsv"
+            path.write_text(
+                "user_genome\tclassification\n"
+                "ERR3440667-bin2\td__Bacteria;f__Leptolyngbyaceae;g__Leptolyngbya\n"
+                "maxbin2_ERR3494957.021\td__Bacteria;f__Leptolyngbyaceae;g__Leptolyngbya\n",
+                encoding="utf-8",
+            )
+            taxonomy, report = read_gtdb_taxonomy(
+                path, ["ERR3440667_bin2", "maxbin2_ERR3494957_021"]
+            )
+            self.assertEqual(report["mapped_species"], 2)
+            self.assertEqual(taxonomy["ERR3440667_bin2"]["genus"], "Leptolyngbya")
 
 
 if __name__ == "__main__":
