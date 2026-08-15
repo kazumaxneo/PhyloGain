@@ -295,6 +295,18 @@ def fetch_official_kegg_names(
         updates.append((term_name, source, term_id))
         cached_rows.append((source, term_id, term_name))
         counts[source] += 1
+    unavailable_modules = [
+        term_id
+        for source, term_id in existing
+        if source == "KEGG module" and term_id not in fetched["KEGG module"]
+    ]
+    retired_label = "Retired KEGG module (not present in the current KEGG release)"
+    updates.extend(
+        (retired_label, "KEGG module", term_id) for term_id in unavailable_modules
+    )
+    cached_rows.extend(
+        ("KEGG module", term_id, retired_label) for term_id in unavailable_modules
+    )
     connection.executemany(
         "UPDATE annotation_terms SET term_name=? WHERE source=? AND term_id=?",
         updates,
@@ -307,6 +319,7 @@ def fetch_official_kegg_names(
             writer.writerow(["source", "term_id", "term_name"])
             writer.writerows(sorted(cached_rows))
     counts["total"] = len(updates)
+    counts["retired_modules"] = len(unavailable_modules)
     return counts
 
 

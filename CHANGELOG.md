@@ -17,6 +17,8 @@
 - Unify functional-annotation typography, simplify orthogroup headers, and emphasize the Back button.
 - Replace boxed gene-family event buttons with compact single-line gain/loss, orthogroup, and annotation rows.
 - Fetch and cache official KEGG KO, pathway, module, and reaction names at build time.
+- Link KEGG and GO term identifiers in branch and orthogroup panels to their official database pages.
+- Mark legacy module IDs missing from the current KEGG release instead of leaving unexplained bare IDs.
 - Add `--go-obo` support and display official GO term names, including obsolete terms retained by older annotations.
 
 ## 0.3.1 — 2026-08-15

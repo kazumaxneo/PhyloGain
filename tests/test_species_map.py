@@ -14,6 +14,7 @@ from species_innovation_map.analysis import Reconstruction
 from species_innovation_map.annotation import (
     annotation_sources,
     branch_enrichment,
+    fetch_official_kegg_names,
     write_representative_fasta,
 )
 from species_innovation_map.project import build_project, validate_inputs
@@ -181,6 +182,12 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("grid-template-columns: 34px 92px minmax(0, 1fr)", html)
             self.assertIn("text-overflow: ellipsis", html)
             self.assertIn("enrichmentTermLabel(row)", html)
+            self.assertIn("officialTermUrl(source, termId)", html)
+            self.assertIn("https://www.kegg.jp/entry/", html)
+            self.assertIn("https://www.kegg.jp/module/", html)
+            self.assertIn("https://www.kegg.jp/pathway/", html)
+            self.assertIn("https://amigo.geneontology.org/amigo/term/", html)
+            self.assertIn('link.target = "_blank"', html)
 
     def test_import_official_go_names(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -242,6 +249,34 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("KEGG KO\tK02588\tnifH", cache.read_text(encoding="utf-8"))
             project = json.loads((output / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project["settings"]["named_kegg_terms"], 4)
+
+    def test_retired_kegg_modules_are_identified(self):
+        responses = {
+            "ko": "",
+            "pathway": "",
+            "module": "M00175\tNitrogen fixation, nitrogen => ammonia\n",
+            "reaction": "",
+        }
+
+        def fake_urlopen(request, timeout):
+            database = request.full_url.rsplit("/", 1)[-1]
+            return BytesIO(responses[database].encode("utf-8"))
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            build_project(FIXTURE, output, annotation_path=EGGNOG_ANNOTATIONS)
+            with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
+                connection.execute(
+                    "INSERT INTO annotation_terms(source,term_id,term_name,family_count) VALUES('KEGG module','M00207','M00207',1)"
+                )
+                with patch("species_innovation_map.annotation.urlopen", side_effect=fake_urlopen):
+                    with patch("species_innovation_map.annotation.time.sleep"):
+                        report = fetch_official_kegg_names(connection)
+                label = connection.execute(
+                    "SELECT term_name FROM annotation_terms WHERE source='KEGG module' AND term_id='M00207'"
+                ).fetchone()[0]
+                self.assertIn("Retired KEGG module", label)
+                self.assertEqual(report["retired_modules"], 1)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

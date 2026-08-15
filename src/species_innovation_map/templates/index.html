@@ -203,6 +203,9 @@
     .enrichment-table td { vertical-align: top; overflow-wrap: anywhere; }
     .enrichment-table td:first-child { font-weight: 550; }
     .term-id { display: block; margin-top: 2px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
+    .term-link { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+    .term-link:hover { color: var(--accent); }
+    .inline-term-id { margin-left: 6px; font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
     .number-cell { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
     .event-list { display: grid; gap: 0; border-top: 1px solid var(--line); }
     .family-button { display: grid; grid-template-columns: 34px 92px minmax(0, 1fr); align-items: baseline; gap: 6px; width: 100%; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 4px 2px; background: transparent; color: var(--ink); text-align: left; }
@@ -491,7 +494,7 @@
       const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = `Top significant ${enrichment.source} terms · bar length = hits`; chart.append(caption);
       plotted.forEach((row, index) => {
         const chartRow = document.createElement("div"); chartRow.className = "chart-row";
-        const term = document.createElement("div"); term.className = "chart-term"; term.textContent = enrichmentTermLabel(row); term.title = `${row.source}: ${row.term_id}`;
+        const term = document.createElement("div"); term.className = "chart-term"; appendChartTerm(term, row); term.title = `${row.source}: ${row.term_id}`;
         const track = document.createElement("div"); track.className = "chart-track";
         for (let tick = axis.step; tick <= axis.maximum; tick += axis.step) {
           const gridLine = document.createElement("span"); gridLine.className = "chart-grid-line"; gridLine.style.left = `${tick / axis.maximum * 100}%`; track.append(gridLine);
@@ -515,8 +518,7 @@
       const tbody = document.createElement("tbody");
       for (const row of significant) {
         const tr = document.createElement("tr");
-        const term = document.createElement("td"); term.textContent = row.term_name || row.term_id;
-        if ((row.term_name || row.term_id) !== row.term_id) { const id = document.createElement("span"); id.className = "term-id"; id.textContent = row.term_id; term.append(id); }
+        const term = document.createElement("td"); appendTableTerm(term, row);
         const hits = document.createElement("td"); hits.className = "number-cell"; hits.textContent = `${row.overlap}/${row.foreground}`;
         const background = document.createElement("td"); background.className = "number-cell"; background.textContent = `${row.term_total}/${row.universe}`;
         const fold = document.createElement("td"); fold.className = "number-cell"; fold.textContent = `${formatFold(row.fold_enrichment)}×`;
@@ -528,6 +530,34 @@
     function enrichmentTermLabel(row) {
       const name = row.term_name || row.term_id;
       return name !== row.term_id ? `${row.term_id} — ${name}` : row.term_id;
+    }
+    function officialTermUrl(source, termId) {
+      if (source === "KEGG module") return `https://www.kegg.jp/module/${encodeURIComponent(termId)}`;
+      if (source === "KEGG pathway") return `https://www.kegg.jp/pathway/${encodeURIComponent(termId)}`;
+      if (source.startsWith("KEGG ")) return `https://www.kegg.jp/entry/${encodeURIComponent(termId)}`;
+      if (source === "GO") return `https://amigo.geneontology.org/amigo/term/${encodeURIComponent(termId)}`;
+      return "";
+    }
+    function createOfficialTermLink(row, className = "term-link") {
+      const url = officialTermUrl(row.source, row.term_id);
+      if (!url) return null;
+      const link = document.createElement("a"); link.className = className; link.href = url; link.target = "_blank"; link.rel = "noopener noreferrer"; link.textContent = row.term_id;
+      link.title = `Open ${row.term_id} in the official ${row.source} database`;
+      return link;
+    }
+    function appendChartTerm(container, row) {
+      const link = createOfficialTermLink(row);
+      const name = row.term_name || row.term_id;
+      if (!link) { container.textContent = enrichmentTermLabel(row); return; }
+      container.append(link);
+      if (name !== row.term_id) container.append(document.createTextNode(` — ${name}`));
+    }
+    function appendTableTerm(container, row) {
+      const name = row.term_name || row.term_id;
+      const link = createOfficialTermLink(row, name !== row.term_id ? "term-id term-link" : "term-link");
+      if (name !== row.term_id) container.append(document.createTextNode(name));
+      if (link) container.append(link); else if (name === row.term_id) container.textContent = row.term_id;
+      else { const id = document.createElement("span"); id.className = "term-id"; id.textContent = row.term_id; container.append(id); }
     }
     function niceCountAxis(value) {
       const rawStep = value / 5;
@@ -579,7 +609,11 @@
         if (result.annotations?.length) {
           const terms = document.createElement("div"); terms.className = "annotation-list";
           for (const item of result.annotations) {
-            const annotation = document.createElement("div"); annotation.className = "function-annotation"; annotation.textContent = `${item.source}: ${item.term_name || item.term_id}`; terms.append(annotation);
+            const annotation = document.createElement("div"); annotation.className = "function-annotation";
+            const annotationName = item.term_name || item.term_id; annotation.append(document.createTextNode(`${item.source}: ${annotationName}`));
+            if (annotationName !== item.term_id) { const annotationLink = createOfficialTermLink(item, "term-link inline-term-id"); if (annotationLink) annotation.append(annotationLink); }
+            else { const annotationLink = createOfficialTermLink(item, "term-link"); if (annotationLink) { annotation.replaceChildren(document.createTextNode(`${item.source}: `), annotationLink); } }
+            terms.append(annotation);
           }
           body.append(terms);
         }
