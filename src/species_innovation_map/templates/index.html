@@ -81,7 +81,7 @@
       border-radius: 9px;
       box-shadow: var(--shadow);
     }
-    .map-panel { width: 100%; height: 100%; }
+    .map-panel { display: flex; flex-direction: column; width: 100%; height: 100%; }
     .toolbar {
       display: flex;
       align-items: center;
@@ -105,7 +105,23 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    #treeViewport { height: calc(100% - 55px); overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
+    .branch-filters { display: flex; align-items: center; gap: 18px; min-height: 52px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: 34px minmax(160px, 240px) 92px; align-items: center; gap: 8px; }
+    .range-filter-name { color: var(--ink); font-size: 11px; }
+    .range-filter output { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .dual-range { --low: 0%; --high: 100%; position: relative; width: 100%; height: 18px; background: linear-gradient(to right, var(--line) 0 var(--low), var(--accent) var(--low) var(--high), var(--line) var(--high) 100%); background-size: 100% 3px; background-position: center; background-repeat: no-repeat; }
+    .dual-range input { position: absolute; inset: 0; width: 100%; height: 18px; margin: 0; padding: 0; appearance: none; background: transparent; pointer-events: none; }
+    .dual-range input::-webkit-slider-runnable-track { height: 3px; background: transparent; }
+    .dual-range input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; appearance: none; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
+    .dual-range input::-moz-range-track { height: 3px; background: transparent; }
+    .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
+    .filter-toggle { display: inline-flex; align-items: center; gap: 5px; color: var(--ink); font-size: 10px; white-space: nowrap; }
+    .filter-toggle input { accent-color: var(--accent); }
+    .filter-reset { padding: 4px 8px; font-size: 10px; }
+    .filter-match-count { margin-left: auto; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .filtered-branch { opacity: .1; }
+    .hidden-branch { opacity: 0; pointer-events: none; }
+    #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
     .branch-hit { stroke: transparent; stroke-width: 14; cursor: pointer; }
@@ -239,6 +255,9 @@
       .detail-resize-handle { display: none; }
       .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
       .summary { grid-template-columns: 130px max-content; }
+      .branch-filters { flex-wrap: wrap; gap: 6px 14px; }
+      .range-filter { flex: 1 1 310px; }
+      .filter-match-count { margin-left: 0; }
     }
   </style>
 </head>
@@ -271,6 +290,21 @@
         </span>
         <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
       </div>
+      <div class="branch-filters" aria-label="Branch event filters">
+        <div class="range-filter">
+          <span class="range-filter-name">Gain</span>
+          <div class="dual-range" id="gainRange"><input id="gainMin" type="range" aria-label="Minimum gain count"><input id="gainMax" type="range" aria-label="Maximum gain count"></div>
+          <output id="gainRangeValue"></output>
+        </div>
+        <div class="range-filter">
+          <span class="range-filter-name">Loss</span>
+          <div class="dual-range" id="lossRange"><input id="lossMin" type="range" aria-label="Minimum loss count"><input id="lossMax" type="range" aria-label="Maximum loss count"></div>
+          <output id="lossRangeValue"></output>
+        </div>
+        <label class="filter-toggle"><input id="hideUnmatched" type="checkbox" checked>Hide unmatched</label>
+        <button class="filter-reset" id="filterReset" type="button">Reset</button>
+        <span class="filter-match-count" id="filterMatchCount"></span>
+      </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
@@ -283,7 +317,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, collapseRank: "", expandedGroups: new Set(), annotationSources: [], enrichmentSource: "" };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, collapseRank: "", expandedGroups: new Set(), annotationSources: [], enrichmentSource: "", branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0, hideUnmatched: true} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -301,6 +335,7 @@
         const [project, branches, annotationSources] = await Promise.all([api("/api/project"), api("/api/branches"), api("/api/annotation-sources")]);
         state.project = project;
         state.branches = new Map(branches.map(branch => [branch.branch_id, branch]));
+        initializeBranchFilters(branches);
         state.annotationSources = annotationSources;
         state.enrichmentSource = annotationSources.some(item => item.source === "KEGG pathway") ? "KEGG pathway" : (annotationSources[0]?.source || "");
         $("speciesCount").textContent = number(project.species_count);
@@ -323,6 +358,49 @@
         $("status").textContent = "The viewer needs the local API. Run: species-map serve <output-directory>";
         console.error(error);
       }
+    }
+    function initializeBranchFilters(branches) {
+      const maxima = {
+        gain: Math.max(0, ...branches.map(branch => Number(branch.gain_count || 0))),
+        loss: Math.max(0, ...branches.map(branch => Number(branch.loss_count || 0)))
+      };
+      for (const kind of ["gain", "loss"]) {
+        const minimum = $(`${kind}Min`); const maximum = $(`${kind}Max`);
+        minimum.min = 0; minimum.max = maxima[kind]; minimum.step = 1; minimum.value = 0;
+        maximum.min = 0; maximum.max = maxima[kind]; maximum.step = 1; maximum.value = maxima[kind];
+        minimum.addEventListener("input", () => syncBranchFilters(kind, "minimum"));
+        maximum.addEventListener("input", () => syncBranchFilters(kind, "maximum"));
+      }
+      $("hideUnmatched").addEventListener("change", () => syncBranchFilters());
+      $("filterReset").addEventListener("click", () => {
+        $("gainMin").value = 0; $("gainMax").value = maxima.gain;
+        $("lossMin").value = 0; $("lossMax").value = maxima.loss;
+        $("hideUnmatched").checked = true;
+        syncBranchFilters();
+      });
+      syncBranchFilters(null, null, false);
+    }
+    function syncBranchFilters(changedKind = null, changedHandle = null, rerender = true) {
+      for (const kind of ["gain", "loss"]) {
+        const minimum = $(`${kind}Min`); const maximum = $(`${kind}Max`);
+        if (Number(minimum.value) > Number(maximum.value)) {
+          if (kind === changedKind && changedHandle === "minimum") maximum.value = minimum.value;
+          else minimum.value = maximum.value;
+        }
+        const low = Number(minimum.value); const high = Number(maximum.value); const upper = Math.max(Number(maximum.max), 1);
+        state.branchFilter[`${kind}Min`] = low; state.branchFilter[`${kind}Max`] = high;
+        $(`${kind}Range`).style.setProperty("--low", `${low / upper * 100}%`);
+        $(`${kind}Range`).style.setProperty("--high", `${high / upper * 100}%`);
+        $(`${kind}RangeValue`).textContent = `${number(low)}–${number(high)}`;
+      }
+      state.branchFilter.hideUnmatched = $("hideUnmatched").checked;
+      const matched = [...state.branches.values()].filter(branchMatchesFilter).length;
+      $("filterMatchCount").textContent = `${number(matched)} / ${number(state.branches.size)} branches`;
+      if (rerender && state.project) renderTree();
+    }
+    function branchMatchesFilter(branch) {
+      const gain = Number(branch.gain_count || 0); const loss = Number(branch.loss_count || 0); const filter = state.branchFilter;
+      return gain >= filter.gainMin && gain <= filter.gainMax && loss >= filter.lossMin && loss <= filter.lossMax;
     }
     function renderTree() {
       const svg = $("treeSvg"); svg.replaceChildren();
@@ -374,26 +452,27 @@
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
-        const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: "branch-hit", "data-branch": node.branch_id});
+        const filterClass = branchMatchesFilter(branch) ? "" : (state.branchFilter.hideUnmatched ? " hidden-branch" : " filtered-branch");
+        const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch-hit${filterClass}`, "data-branch": node.branch_id});
         svg.append(hitLine);
-        const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
+        const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}${filterClass}`, "data-branch": node.branch_id});
         svg.append(line);
-        const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: "branch-label", "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
+        const label = svgEl("text", {x: (parent.x + node.x) / 2, y: node.y - 5, "text-anchor": "middle", class: `branch-label${filterClass}`, "data-branch": node.branch_id, role: "button", tabindex: "0", "aria-label": `Branch ${node.branch_id}`});
         const gain = svgEl("tspan", {class: "gain-value"}); gain.textContent = `+${branch.gain_count}`;
         const loss = svgEl("tspan", {class: "loss-value", dx: "5"}); loss.textContent = `−${branch.loss_count}`;
         label.append(gain, loss); svg.append(label);
         const phenotypeEvent = state.phenotypeEvents.get(node.branch_id);
-        if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}));
-        else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: "node-dot"}));
+        if (phenotypeEvent) svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 5.5, class: `${phenotypeEvent === "gain" ? "phenotype-gain" : "phenotype-loss"}${filterClass}`}));
+        else svg.append(svgEl("circle", {cx: node.x, cy: node.y, r: 2.8, class: `node-dot${filterClass}`}));
         if (node.collapsed) {
-          const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
-          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
+          const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: `collapsed-marker${filterClass}`, "data-expand-node": node.id});
+          const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: `collapsed-label${filterClass}`, "data-expand-node": node.id});
           tip.textContent = `${node.rankValue} (${number(node.leafCount)})`;
           svg.append(marker, tip);
         } else if (node.is_leaf) {
           const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: tipClass}); tip.textContent = taxonomyLabel; svg.append(tip);
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, class: `${tipClass}${filterClass}`}); tip.textContent = taxonomyLabel; svg.append(tip);
         }
       }
     }
