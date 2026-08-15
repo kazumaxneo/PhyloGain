@@ -8,6 +8,7 @@
 - Add background frequencies to the exact enrichment tables.
 - Make the branch-detail panel width draggable and persistent.
 - Give the detail panel a subtly distinct background in every color theme.
+- Add compact orthogroup member lists and a back button to return to the originating branch or candidate list.
 
 ## 0.3.1 — 2026-08-15
 

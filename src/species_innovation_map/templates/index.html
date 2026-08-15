@@ -158,6 +158,8 @@
     .detail-resize-handle:hover::after, .detail-resize-handle:focus-visible::after, body.detail-resizing .detail-resize-handle::after { background: var(--accent); }
     body.detail-resizing { cursor: col-resize; user-select: none; }
     .detail-head { position: relative; padding: 17px 52px 13px 18px; border-bottom: 1px solid var(--line); }
+    .detail-back { display: block; margin: 0 0 8px; border: 0; padding: 0; background: transparent; color: var(--accent); font-size: 11px; line-height: 1.2; }
+    .detail-back[hidden] { display: none; }
     .detail-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; font-size: 22px; line-height: 1; }
     .detail-head h2 { margin: 0; font: 650 18px/1.2 Georgia, serif; }
     .detail-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
@@ -216,8 +218,10 @@
     th { color: var(--muted); text-align: left; font-weight: 600; border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
-    .member-species { margin: 10px 0 4px; color: var(--accent); font-weight: 650; word-break: break-all; }
-    .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 11px; word-break: break-all; }
+    .member-list { display: grid; gap: 0; }
+    .member-row { padding: 4px 0; border-bottom: 1px solid var(--line); }
+    .member-species { margin: 0 0 1px; color: var(--accent); font-size: 10px; font-weight: 650; line-height: 1.2; word-break: break-all; }
+    .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; line-height: 1.25; word-break: break-all; }
     #status { padding: 40px; color: var(--muted); }
     @media (max-width: 950px) {
       .workspace { height: calc(100vh - 145px); }
@@ -262,7 +266,7 @@
     <aside class="detail-panel" aria-hidden="true">
       <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
       <div class="detail-scroll">
-        <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
+        <div class="detail-head"><button class="detail-close" id="detailClose" type="button" aria-label="Close gene panel">×</button><button class="detail-back" id="detailBack" type="button" hidden>← Back</button><h2 id="detailTitle">Branch details</h2><p id="detailSubtitle">Select a branch in the tree</p></div>
         <div class="detail-body" id="detailBody"><div class="empty">Each branch is annotated with the number of gained and lost gene families.</div></div>
       </div>
     </aside>
@@ -393,8 +397,17 @@
       state.selectedBranch = null;
       if (state.project) renderTree();
     }
+    function resetDetailScroll() { document.querySelector(".detail-scroll").scrollTop = 0; }
+    function configureDetailBack(label, action) {
+      const button = $("detailBack");
+      button.hidden = !action;
+      button.textContent = label || "← Back";
+      button.onclick = action || null;
+    }
     async function selectBranch(branchId) {
       openDetailPanel();
+      configureDetailBack("", null);
+      resetDetailScroll();
       state.selectedBranch = branchId; renderTree();
       const branch = state.branches.get(branchId);
       $("detailTitle").textContent = branchId;
@@ -434,7 +447,7 @@
         const annotation = event.preferred_name || event.description;
         if (annotation) { const description = document.createElement("span"); description.className = "family-description"; description.textContent = [event.preferred_name, event.description].filter(Boolean).join(" — "); family.append(description); }
         const tag = document.createElement("span"); tag.className = `tag ${event.event}`; tag.textContent = event.event;
-        button.append(family, tag); button.addEventListener("click", () => showFamily(event.family_id)); list.append(button);
+        button.append(family, tag); button.addEventListener("click", () => showFamily(event.family_id, {type: "branch", branchId})); list.append(button);
       }
       body.append(list);
       if (result.total > result.events.length) {
@@ -538,8 +551,12 @@
     }
     function formatProbability(value) { return value < 0.001 ? Number(value).toExponential(1) : Number(value).toFixed(3); }
     function formatFold(value) { return value >= 10 ? Number(value).toFixed(0) : Number(value).toFixed(1); }
-    async function showFamily(familyId) {
+    async function showFamily(familyId, returnContext = null) {
       openDetailPanel();
+      resetDetailScroll();
+      if (returnContext?.type === "branch") configureDetailBack(`← Back to ${returnContext.branchId}`, () => selectBranch(returnContext.branchId));
+      else if (returnContext?.type === "candidates") configureDetailBack("← Back to candidates", showCandidates);
+      else configureDetailBack("", null);
       const result = await api(`/api/family?id=${encodeURIComponent(familyId)}`);
       $("detailTitle").textContent = familyId; $("detailSubtitle").textContent = "Gene-family members";
       const body = $("detailBody"); body.replaceChildren();
@@ -554,11 +571,14 @@
       const memberTitle = document.createElement("div"); memberTitle.className = "section-title"; memberTitle.textContent = "Genes by species"; body.append(memberTitle);
       const entries = Object.entries(result.members);
       if (!entries.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Gene members were not indexed."; body.append(empty); }
+      const memberList = document.createElement("div"); memberList.className = "member-list";
       for (const [species, genes] of entries) {
+        const row = document.createElement("div"); row.className = "member-row";
         const speciesNode = document.createElement("div"); speciesNode.className = "member-species"; speciesNode.textContent = species;
         const geneNode = document.createElement("div"); geneNode.className = "genes"; geneNode.textContent = genes.join(", ");
-        body.append(speciesNode, geneNode);
+        row.append(speciesNode, geneNode); memberList.append(row);
       }
+      body.append(memberList);
     }
     async function phenotypeChanged() {
       const phenotype = $("phenotypeSelect").value;
@@ -572,6 +592,8 @@
     }
     async function showCandidates() {
       openDetailPanel();
+      configureDetailBack("", null);
+      resetDetailScroll();
       const phenotype = $("phenotypeSelect").value;
       $("detailTitle").textContent = "Candidate gene families";
       $("detailSubtitle").textContent = phenotype ? `Coincident with ${phenotype} gains` : "Select a phenotype first";
@@ -582,7 +604,7 @@
       table.innerHTML = "<thead><tr><th>Family</th><th>Score</th><th>Family gains</th></tr></thead>";
       const tbody = document.createElement("tbody");
       for (const row of rows) {
-        const tr = document.createElement("tr"); const familyCell = document.createElement("td"); const button = document.createElement("button"); button.textContent = row.family_id; button.addEventListener("click", () => showFamily(row.family_id)); familyCell.append(button);
+        const tr = document.createElement("tr"); const familyCell = document.createElement("td"); const button = document.createElement("button"); button.textContent = row.family_id; button.addEventListener("click", () => showFamily(row.family_id, {type: "candidates"})); familyCell.append(button);
         const score = document.createElement("td"); score.textContent = row.score; const gains = document.createElement("td"); gains.textContent = row.family_gains; tr.append(familyCell, score, gains); tbody.append(tr);
       }
       table.append(tbody); body.append(table);

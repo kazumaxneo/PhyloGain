@@ -155,6 +155,9 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("enableDetailResize", html)
             self.assertIn("background: var(--detail-panel)", html)
             self.assertIn('--detail-panel: #202428', html)
+            self.assertIn('id="detailBack"', html)
+            self.assertIn("Back to ${returnContext.branchId}", html)
+            self.assertIn("font-size: 9px", html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:
