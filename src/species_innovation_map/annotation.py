@@ -176,7 +176,7 @@ def import_eggnog_annotations(
                 raise ValueError("eggNOG annotation file has no #query header")
             values = line.rstrip("\r\n").split("\t")
             row = dict(zip(header, values))
-            family = row.get("query", "").strip()
+            family = row.get("query", "").strip().split(";", 1)[0]
             if family not in valid_families and "_" in family:
                 pirate_family = family.rsplit("_", 1)[0]
                 if pirate_family in valid_families:
