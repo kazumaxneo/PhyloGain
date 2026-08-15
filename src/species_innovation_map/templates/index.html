@@ -105,18 +105,20 @@
     .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
     .dot.gain { background: var(--gain); }
     .dot.loss { background: var(--loss); }
-    .branch-filters { display: flex; align-items: center; gap: 18px; min-height: 52px; padding: 7px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
-    .range-filter { display: grid; grid-template-columns: 34px minmax(160px, 240px) 92px; align-items: center; gap: 8px; }
-    .range-filter-name { color: var(--ink); font-size: 11px; }
-    .range-filter output { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .branch-filters { display: grid; grid-template-columns: minmax(390px, 590px) minmax(120px, 1fr) max-content; grid-template-rows: auto auto; align-items: center; gap: 6px 18px; min-height: 72px; padding: 8px 14px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
+    .range-filter { display: grid; grid-template-columns: 42px minmax(210px, 1fr) 112px; align-items: center; gap: 10px; }
+    .gain-filter { grid-column: 1; grid-row: 1; }
+    .loss-filter { grid-column: 1; grid-row: 2; }
+    .range-filter-name { color: var(--ink); font-size: 13px; font-weight: 600; }
+    .range-filter output { color: var(--muted); font: 12px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .dual-range { --low: 0%; --high: 100%; position: relative; width: 100%; height: 18px; background: linear-gradient(to right, var(--line) 0 var(--low), var(--accent) var(--low) var(--high), var(--line) var(--high) 100%); background-size: 100% 3px; background-position: center; background-repeat: no-repeat; }
     .dual-range input { position: absolute; inset: 0; width: 100%; height: 18px; margin: 0; padding: 0; appearance: none; background: transparent; pointer-events: none; }
     .dual-range input::-webkit-slider-runnable-track { height: 3px; background: transparent; }
     .dual-range input::-webkit-slider-thumb { width: 12px; height: 12px; margin-top: -4.5px; appearance: none; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
     .dual-range input::-moz-range-track { height: 3px; background: transparent; }
     .dual-range input::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid var(--accent); border-radius: 50%; background: var(--panel); pointer-events: auto; cursor: ew-resize; }
-    .filter-reset { padding: 4px 8px; font-size: 10px; }
-    .filter-match-count { margin-left: auto; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
+    .filter-reset { grid-column: 3; grid-row: 1 / 3; align-self: center; justify-self: end; border: 0; border-radius: 0; padding: 2px; background: transparent; color: var(--muted); font-size: 11px; text-decoration: underline; text-underline-offset: 2px; }
+    .filter-match-count { grid-column: 2; grid-row: 1 / 3; align-self: center; justify-self: end; color: var(--muted); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; white-space: nowrap; }
     .filtered-branch-label { opacity: .1; }
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
@@ -252,9 +254,9 @@
       .detail-resize-handle { display: none; }
       .chart-layout { grid-template-columns: minmax(0, 1fr) 64px; gap: 8px; }
       .summary { grid-template-columns: 130px max-content; }
-      .branch-filters { flex-wrap: wrap; gap: 6px 14px; }
-      .range-filter { flex: 1 1 310px; }
-      .filter-match-count { margin-left: 0; }
+      .branch-filters { grid-template-columns: minmax(300px, 1fr) max-content; }
+      .filter-reset { grid-column: 2; }
+      .filter-match-count { grid-column: 1 / 3; grid-row: 3; justify-self: start; }
     }
   </style>
 </head>
@@ -288,12 +290,12 @@
         <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
       </div>
       <div class="branch-filters" aria-label="Branch event filters">
-        <div class="range-filter">
+        <div class="range-filter gain-filter">
           <span class="range-filter-name">Gain</span>
           <div class="dual-range" id="gainRange"><input id="gainMin" type="range" aria-label="Minimum gain count"><input id="gainMax" type="range" aria-label="Maximum gain count"></div>
           <output id="gainRangeValue"></output>
         </div>
-        <div class="range-filter">
+        <div class="range-filter loss-filter">
           <span class="range-filter-name">Loss</span>
           <div class="dual-range" id="lossRange"><input id="lossMin" type="range" aria-label="Minimum loss count"><input id="lossMax" type="range" aria-label="Maximum loss count"></div>
           <output id="lossRangeValue"></output>
