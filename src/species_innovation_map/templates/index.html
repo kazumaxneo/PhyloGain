@@ -134,10 +134,12 @@
     #treeViewport { flex: 1; min-height: 0; overflow: auto; position: relative; cursor: grab; user-select: none; touch-action: none; }
     #treeViewport.dragging { cursor: grabbing; }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; }
-    .branch-hit { stroke: transparent; stroke-width: 14; cursor: pointer; }
+    .branch-hit { fill: transparent; cursor: pointer; }
     .branch { stroke: #83909a; stroke-width: 1.5; pointer-events: none; transition: stroke .12s, stroke-width .12s; }
     .branch-hit:hover + .branch, .branch.selected { stroke: var(--accent); stroke-width: 4; }
-    .connector { stroke: #a6afb5; stroke-width: 1.2; }
+    .connector-hit { fill: transparent; cursor: ns-resize; }
+    .connector { stroke: #a6afb5; stroke-width: 1.2; pointer-events: none; }
+    .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: 3; }
     .branch-label { font: 650 11px ui-monospace, SFMono-Regular, Consolas, monospace; cursor: pointer; }
     .support-label { fill: var(--muted); font: 9px ui-monospace, SFMono-Regular, Consolas, monospace; pointer-events: none; }
     .gain-value { fill: var(--gain-text); }
@@ -340,7 +342,7 @@
   </main>
   <script>
     const SVG = "http://www.w3.org/2000/svg";
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", expandedGroups: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), annotationSources: [], enrichmentSource: "", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -441,8 +443,12 @@
       const root = [...nodes.values()].find(node => !node.parent_id);
       const taxonomy = state.project.taxonomy?.species || {};
       const rank = state.collapseRank;
+      function childNodes(node) {
+        const ids = state.flippedNodes.has(node.id) ? [...node.children].reverse() : node.children;
+        return ids.map(id => nodes.get(id));
+      }
       function summarize(node) {
-        const children = node.children.map(id => nodes.get(id));
+        const children = childNodes(node);
         if (!children.length) {
           node.leafCount = 1;
           node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
@@ -452,23 +458,24 @@
         node.leafCount = children.reduce((sum, child) => sum + child.leafCount, 0);
         const values = new Set(children.map(child => child.rankValue));
         node.rankValue = values.size === 1 && !values.has("") ? [...values][0] : "";
-        node.collapsed = Boolean(
+        node.taxonomyCollapsed = Boolean(
           rank && node.parent_id && node.rankValue && node.leafCount > 1 &&
           !state.expandedGroups.has(`${rank}:${node.id}`)
         );
+        node.collapsed = state.manuallyCollapsed.has(node.id) || node.taxonomyCollapsed;
       }
       summarize(root);
       const visibleNodes = [];
       function collect(node) {
         visibleNodes.push(node);
-        if (!node.collapsed) node.children.map(id => nodes.get(id)).forEach(collect);
+        if (!node.collapsed) childNodes(node).forEach(collect);
       }
       collect(root);
       const visibleIds = new Set(visibleNodes.map(node => node.id));
       let leafIndex = 0;
       const spacing = 25;
       function position(node) {
-        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id));
+        const children = node.collapsed ? [] : childNodes(node);
         children.forEach(position);
         node.x = 35 + node.depth * 110;
         node.y = children.length ? children.reduce((sum, child) => sum + child.y, 0) / children.length : 24 + leafIndex++ * spacing;
@@ -481,14 +488,22 @@
       svg.setAttribute("height", baseHeight * zoom);
       svg.style.backgroundSize = `${110 * zoom}px 100%`;
       for (const node of visibleNodes) {
-        const children = node.collapsed ? [] : node.children.map(id => nodes.get(id)).filter(child => visibleIds.has(child.id));
-        if (children.length > 1) canvas.append(svgEl("line", {x1: node.x, y1: Math.min(...children.map(c => c.y)), x2: node.x, y2: Math.max(...children.map(c => c.y)), class: "connector"}));
+        const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
+        if (children.length > 1) {
+          const minimumY = Math.min(...children.map(c => c.y));
+          const maximumY = Math.max(...children.map(c => c.y));
+          const connectorAttributes = {x1: node.x, y1: minimumY, x2: node.x, y2: maximumY};
+          canvas.append(svgEl("rect", {x: node.x - 7, y: minimumY, width: 14, height: Math.max(14, maximumY - minimumY), class: "connector-hit", "data-flip-node": node.id, role: "button", tabindex: "0", "aria-label": `Flip child clades at node ${node.id}`}));
+          canvas.append(svgEl("line", {...connectorAttributes, class: "connector"}));
+        }
       }
       for (const node of visibleNodes) {
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
-        const hitLine = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: "branch-hit", "data-branch": node.branch_id});
+        const hitAttributes = {x: parent.x, y: node.y - 7, width: Math.max(14, node.x - parent.x), height: 14, class: "branch-hit"};
+        if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
+        const hitLine = svgEl("rect", hitAttributes);
         canvas.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
         canvas.append(line);
@@ -510,7 +525,7 @@
         if (node.collapsed) {
           const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
           const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, class: "collapsed-label", "data-expand-node": node.id});
-          tip.textContent = `${node.rankValue} (${number(node.leafCount)})`;
+          tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
           canvas.append(marker, tip);
         } else if (node.is_leaf) {
           const taxonomyLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
@@ -892,14 +907,19 @@
       let pendingBranch = null;
       let pendingEvent = null;
       let pendingExpandNode = null;
+      let pendingCollapseNode = null;
+      let pendingFlipNode = null;
       let lastPointerSelection = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         active = true;
         moved = false;
         pendingExpandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode || null;
-        pendingBranch = pendingExpandNode ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
-        pendingEvent = pendingExpandNode ? null : (event.target.closest("[data-event]")?.dataset.event || null);
+        pendingCollapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode || null;
+        pendingFlipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode || null;
+        const hasTreeAction = pendingExpandNode || pendingCollapseNode || pendingFlipNode;
+        pendingBranch = hasTreeAction ? null : (event.target.closest("[data-branch]")?.dataset.branch || null);
+        pendingEvent = hasTreeAction ? null : (event.target.closest("[data-event]")?.dataset.event || null);
         startX = event.clientX;
         startY = event.clientY;
         startLeft = viewport.scrollLeft;
@@ -923,7 +943,19 @@
         viewport.classList.remove("dragging");
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
         if (!moved && pendingExpandNode) {
+          lastPointerSelection = Date.now();
+          state.manuallyCollapsed.delete(pendingExpandNode);
           state.expandedGroups.add(`${state.collapseRank}:${pendingExpandNode}`);
+          renderTree();
+        } else if (!moved && pendingCollapseNode) {
+          lastPointerSelection = Date.now();
+          if (state.manuallyCollapsed.has(pendingCollapseNode)) state.manuallyCollapsed.delete(pendingCollapseNode);
+          else state.manuallyCollapsed.add(pendingCollapseNode);
+          renderTree();
+        } else if (!moved && pendingFlipNode) {
+          lastPointerSelection = Date.now();
+          if (state.flippedNodes.has(pendingFlipNode)) state.flippedNodes.delete(pendingFlipNode);
+          else state.flippedNodes.add(pendingFlipNode);
           renderTree();
         } else if (!moved && pendingBranch) {
           lastPointerSelection = Date.now();
@@ -932,17 +964,31 @@
         pendingBranch = null;
         pendingEvent = null;
         pendingExpandNode = null;
+        pendingCollapseNode = null;
+        pendingFlipNode = null;
       };
       viewport.addEventListener("pointerup", finishPan);
       viewport.addEventListener("pointercancel", finishPan);
       viewport.addEventListener("click", event => {
         if (Date.now() - lastPointerSelection < 250) return;
+        const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
+        const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
+        const flipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode;
+        if (expandNode) { state.manuallyCollapsed.delete(expandNode); state.expandedGroups.add(`${state.collapseRank}:${expandNode}`); renderTree(); return; }
+        if (collapseNode) { state.manuallyCollapsed.has(collapseNode) ? state.manuallyCollapsed.delete(collapseNode) : state.manuallyCollapsed.add(collapseNode); renderTree(); return; }
+        if (flipNode) { state.flippedNodes.has(flipNode) ? state.flippedNodes.delete(flipNode) : state.flippedNodes.add(flipNode); renderTree(); return; }
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
         const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
         if (branch) selectBranch(branch, eventKind);
       });
       viewport.addEventListener("keydown", event => {
         if (event.key !== "Enter" && event.key !== " ") return;
+        const expandNode = event.target.closest("[data-expand-node]")?.dataset.expandNode;
+        const collapseNode = event.target.closest("[data-collapse-node]")?.dataset.collapseNode;
+        const flipNode = event.target.closest("[data-flip-node]")?.dataset.flipNode;
+        if (expandNode) { event.preventDefault(); state.manuallyCollapsed.delete(expandNode); state.expandedGroups.add(`${state.collapseRank}:${expandNode}`); renderTree(); return; }
+        if (collapseNode) { event.preventDefault(); state.manuallyCollapsed.has(collapseNode) ? state.manuallyCollapsed.delete(collapseNode) : state.manuallyCollapsed.add(collapseNode); renderTree(); return; }
+        if (flipNode) { event.preventDefault(); state.flippedNodes.has(flipNode) ? state.flippedNodes.delete(flipNode) : state.flippedNodes.add(flipNode); renderTree(); return; }
         const branch = event.target.closest("[data-branch]")?.dataset.branch;
         const eventKind = event.target.closest("[data-event]")?.dataset.event || null;
         if (branch) { event.preventDefault(); selectBranch(branch, eventKind); }

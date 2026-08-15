@@ -182,6 +182,9 @@ Numeric internal-node support labels in the selected Newick tree are shown below
 their branches on a 0–1 scale. Values supplied as percentages (for example, `95`)
 are normalized to `0.950`; branches without support labels remain unlabelled.
 The Zoom slider scales the complete tree while preserving the current viewport center.
+Click a horizontal internal branch to collapse its descendant clade, and click the
+collapsed marker to expand it again. Clicking a vertical connector flips the display
+order of its child clades without changing the topology or inferred events.
 
 Example with gains penalized relative to losses:
 
