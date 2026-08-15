@@ -10,6 +10,7 @@
 - Give the detail panel a subtly distinct background in every color theme.
 - Add compact orthogroup member lists and a back button to return to the originating branch or candidate list.
 - Remove the redundant inferred-event branch list from individual orthogroup views.
+- Label orthogroup member groups as assemblies instead of species and remove the redundant member-list heading.
 
 ## 0.3.1 — 2026-08-15
 

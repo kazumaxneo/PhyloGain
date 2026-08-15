@@ -159,6 +159,8 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("Back to ${returnContext.branchId}", html)
             self.assertIn("font-size: 9px", html)
             self.assertNotIn('textContent = "Inferred events"', html)
+            self.assertNotIn('textContent = "Genes by species"', html)
+            self.assertIn('assemblyNode.textContent = `Assembly, ${assembly}`', html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:
