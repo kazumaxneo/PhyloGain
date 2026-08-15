@@ -124,6 +124,9 @@ class ProjectTests(unittest.TestCase):
             self.assertIn("Gained-family enrichment", html)
             self.assertIn("/api/enrichment?branch=", html)
             self.assertIn("Functional annotation", html)
+            self.assertIn("bar length = −log10(FDR)", html)
+            self.assertIn("width: min(760px", html)
+            self.assertIn('className = `chart-bar ${eventType}`', html)
 
     def test_build_project_runs_optional_eggnog_annotation(self):
         with tempfile.TemporaryDirectory() as directory:

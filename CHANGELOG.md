@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.1 — 2026-08-15
+
+- Widen the branch-detail panel for enrichment results.
+- Add ranked horizontal FDR charts above the exact enrichment tables.
+- Expand enrichment tables with source, hit count, fold enrichment, and FDR columns.
+
 ## 0.3.0 — 2026-08-15
 
 - Add optional eggNOG-mapper annotation with `--annotate eggnog`.

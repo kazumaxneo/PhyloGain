@@ -127,7 +127,7 @@
       top: 14px;
       right: 20px;
       bottom: 20px;
-      width: min(420px, calc(100% - 40px));
+      width: min(760px, calc(100% - 40px));
       overflow: auto;
       opacity: 0;
       pointer-events: none;
@@ -141,14 +141,29 @@
     .detail-close { position: absolute; top: 12px; right: 12px; width: 30px; height: 30px; padding: 0; border: 0; background: transparent; font-size: 22px; line-height: 1; }
     .detail-head h2 { margin: 0; font: 650 18px/1.2 Georgia, serif; }
     .detail-head p { margin: 5px 0 0; color: var(--muted); font-size: 12px; word-break: break-all; }
-    .detail-body { padding: 15px 18px 24px; }
+    .detail-body { padding: 18px 22px 28px; }
     .empty { color: var(--muted); padding: 24px 4px; }
     .counts { display: flex; gap: 22px; margin-bottom: 14px; color: var(--muted); font-size: 12px; }
     .count { padding: 0; }
     .count strong { margin-left: 5px; color: var(--ink); font-size: 12px; font-weight: 600; }
     .section-title { margin: 18px 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
-    .enrichment-table td:first-child { width: 100%; }
-    .term-source { display: block; margin-top: 2px; color: var(--muted); font-size: 10px; }
+    .enrichment-section { margin-bottom: 26px; }
+    .enrichment-chart { display: grid; gap: 7px; margin: 8px 0 14px; }
+    .chart-caption { color: var(--muted); font-size: 10px; margin-bottom: 2px; }
+    .chart-row { display: grid; grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr) 48px; align-items: center; gap: 9px; min-height: 22px; }
+    .chart-term { overflow: hidden; color: var(--ink); font-size: 11px; line-height: 1.2; text-overflow: ellipsis; white-space: nowrap; }
+    .chart-track { height: 12px; background: var(--control); border-left: 1px solid var(--muted); }
+    .chart-bar { height: 100%; min-width: 2px; }
+    .chart-bar.gain { background: var(--gain); }
+    .chart-bar.loss { background: var(--loss); }
+    .chart-score { color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
+    .enrichment-table { table-layout: fixed; }
+    .enrichment-table th:nth-child(1) { width: 40%; }
+    .enrichment-table th:nth-child(2) { width: 19%; }
+    .enrichment-table th:nth-child(3), .enrichment-table th:nth-child(4), .enrichment-table th:nth-child(5) { width: 13.6%; text-align: right; }
+    .enrichment-table td { vertical-align: top; overflow-wrap: anywhere; }
+    .enrichment-table td:first-child { font-weight: 550; }
+    .term-id { display: block; margin-top: 2px; color: var(--muted); font: 10px ui-monospace, SFMono-Regular, Consolas, monospace; }
     .number-cell { white-space: nowrap; text-align: right; font-variant-numeric: tabular-nums; }
     .event-list { display: grid; gap: 5px; }
     .family-button { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; width: 100%; text-align: left; }
@@ -357,8 +372,8 @@
       const result = responses[0];
       loading.remove();
       if (annotated) {
-        appendEnrichment(body, responses[1], "Gained-family enrichment");
-        appendEnrichment(body, responses[2], "Lost-family enrichment");
+        appendEnrichment(body, responses[1], "Gained-family enrichment", "gain");
+        appendEnrichment(body, responses[2], "Lost-family enrichment", "loss");
       }
       const title = document.createElement("div"); title.className = "section-title"; title.textContent = `Gene-family events (${number(result.total)})`; body.append(title);
       const list = document.createElement("div"); list.className = "event-list";
@@ -376,23 +391,40 @@
         const note = document.createElement("div"); note.className = "empty"; note.textContent = `Showing the first ${number(result.events.length)} events. Complete results are in gene_gain_loss.tsv.`; body.append(note);
       }
     }
-    function appendEnrichment(body, enrichment, heading) {
-      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; body.append(title);
-      if (!enrichment.foreground) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No gene-family events on this branch."; body.append(empty); return; }
+    function appendEnrichment(body, enrichment, heading, eventType) {
+      const section = document.createElement("section"); section.className = "enrichment-section";
+      const title = document.createElement("div"); title.className = "section-title"; title.textContent = heading; section.append(title);
+      if (!enrichment.foreground) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No gene-family events on this branch."; section.append(empty); body.append(section); return; }
       const significant = enrichment.results.filter(row => row.q_value <= 0.05);
-      if (!significant.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No enriched terms at FDR ≤ 0.05."; body.append(empty); return; }
+      if (!significant.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No enriched terms at FDR ≤ 0.05."; section.append(empty); body.append(section); return; }
+      const plotted = significant.slice(0, 10);
+      const scores = plotted.map(row => -Math.log10(Math.max(Number(row.q_value), 1e-300)));
+      const maximumScore = Math.max(...scores, 1);
+      const chart = document.createElement("div"); chart.className = "enrichment-chart"; chart.setAttribute("role", "img"); chart.setAttribute("aria-label", `${heading}, ranked by negative log10 FDR`);
+      const caption = document.createElement("div"); caption.className = "chart-caption"; caption.textContent = "Top significant terms · bar length = −log10(FDR)"; chart.append(caption);
+      plotted.forEach((row, index) => {
+        const chartRow = document.createElement("div"); chartRow.className = "chart-row";
+        const term = document.createElement("div"); term.className = "chart-term"; term.textContent = row.term_name || row.term_id; term.title = `${row.source}: ${row.term_id}`;
+        const track = document.createElement("div"); track.className = "chart-track";
+        const bar = document.createElement("div"); bar.className = `chart-bar ${eventType}`; bar.style.width = `${Math.max(2, scores[index] / maximumScore * 100)}%`; track.append(bar);
+        const score = document.createElement("div"); score.className = "chart-score"; score.textContent = scores[index].toFixed(1);
+        chartRow.append(term, track, score); chart.append(chartRow);
+      });
+      section.append(chart);
       const table = document.createElement("table"); table.className = "enrichment-table";
-      table.innerHTML = "<thead><tr><th>Term</th><th>Hits</th><th>FDR</th></tr></thead>";
+      table.innerHTML = "<thead><tr><th>Term</th><th>Source</th><th>Hits</th><th>Fold</th><th>FDR</th></tr></thead>";
       const tbody = document.createElement("tbody");
       for (const row of significant) {
         const tr = document.createElement("tr");
         const term = document.createElement("td"); term.textContent = row.term_name || row.term_id;
-        const source = document.createElement("span"); source.className = "term-source"; source.textContent = `${row.source} · ${row.term_id} · ${formatFold(row.fold_enrichment)}×`; term.append(source);
+        if ((row.term_name || row.term_id) !== row.term_id) { const id = document.createElement("span"); id.className = "term-id"; id.textContent = row.term_id; term.append(id); }
+        const source = document.createElement("td"); source.textContent = row.source;
         const hits = document.createElement("td"); hits.className = "number-cell"; hits.textContent = `${row.overlap}/${row.foreground}`;
+        const fold = document.createElement("td"); fold.className = "number-cell"; fold.textContent = `${formatFold(row.fold_enrichment)}×`;
         const fdr = document.createElement("td"); fdr.className = "number-cell"; fdr.textContent = formatProbability(row.q_value);
-        tr.append(term, hits, fdr); tbody.append(tr);
+        tr.append(term, source, hits, fold, fdr); tbody.append(tr);
       }
-      table.append(tbody); body.append(table);
+      table.append(tbody); section.append(table); body.append(section);
     }
     function formatProbability(value) { return value < 0.001 ? Number(value).toExponential(1) : Number(value).toFixed(3); }
     function formatFold(value) { return value >= 10 ? Number(value).toFixed(0) : Number(value).toFixed(1); }
