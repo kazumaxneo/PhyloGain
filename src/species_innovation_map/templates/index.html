@@ -110,17 +110,18 @@
     button { cursor: pointer; }
     button:hover { border-color: var(--accent); color: var(--accent); }
     .tree-control-window {
-      --cp-bg: rgba(23, 18, 57, .88); --cp-surface: rgba(110, 74, 196, .13); --cp-ink: #f7f4ff; --cp-muted: #c8c0df;
+      --cp-bg: rgba(23, 18, 57, .50); --cp-surface: rgba(67, 42, 132, .72); --cp-ink: #f7f4ff; --cp-muted: #c8c0df;
       --cp-accent: #a66cff; --cp-line: rgba(177, 145, 255, .24); --cp-active: rgba(126, 72, 223, .48);
       position: absolute; z-index: 6; top: 12px; left: 12px; width: min(700px, calc(100% - 24px)); overflow: hidden;
       border: 1px solid var(--cp-line); border-radius: 7px; color: var(--cp-ink); background: var(--cp-bg);
-      box-shadow: 0 12px 36px rgba(5, 8, 24, .26), inset 0 1px rgba(255,255,255,.04); backdrop-filter: blur(13px) saturate(125%);
+      box-shadow: 0 12px 36px rgba(5, 8, 24, .26), inset 0 1px rgba(255,255,255,.04); backdrop-filter: blur(2px) saturate(105%);
     }
-    .tree-control-window[data-control-theme="blue"] { --cp-bg: rgba(9, 31, 57, .88); --cp-surface: rgba(44, 125, 210, .13); --cp-ink: #f3f9ff; --cp-muted: #b9cce0; --cp-accent: #32a4ff; --cp-line: rgba(75, 160, 235, .25); --cp-active: rgba(27, 104, 190, .5); }
-    .tree-control-window[data-control-theme="green"] { --cp-bg: rgba(14, 48, 42, .88); --cp-surface: rgba(52, 166, 122, .12); --cp-ink: #f1fff9; --cp-muted: #b9d7ca; --cp-accent: #41d49a; --cp-line: rgba(91, 207, 163, .25); --cp-active: rgba(28, 137, 98, .48); }
-    .tree-control-window[data-control-theme="light"] { --cp-bg: rgba(248, 251, 255, .9); --cp-surface: rgba(54, 105, 180, .055); --cp-ink: #1a2a3b; --cp-muted: #63758a; --cp-accent: #286de0; --cp-line: rgba(55, 91, 135, .18); --cp-active: rgba(49, 111, 222, .18); box-shadow: 0 12px 34px rgba(27, 45, 68, .18); }
-    .tree-control-window.minimized { width: 160px; }
-    .tree-control-window-head { display: flex; align-items: center; min-height: 34px; padding: 5px 12px; color: var(--cp-ink); cursor: move; touch-action: none; user-select: none; border-bottom: 1px solid var(--cp-line); }
+    .tree-control-window[data-control-theme="blue"] { --cp-bg: rgba(9, 31, 57, .50); --cp-surface: rgba(15, 66, 119, .72); --cp-ink: #f3f9ff; --cp-muted: #b9cce0; --cp-accent: #32a4ff; --cp-line: rgba(75, 160, 235, .25); --cp-active: rgba(27, 104, 190, .5); }
+    .tree-control-window[data-control-theme="green"] { --cp-bg: rgba(14, 48, 42, .50); --cp-surface: rgba(18, 91, 66, .72); --cp-ink: #f1fff9; --cp-muted: #b9d7ca; --cp-accent: #41d49a; --cp-line: rgba(91, 207, 163, .25); --cp-active: rgba(28, 137, 98, .48); }
+    .tree-control-window[data-control-theme="black"] { --cp-bg: rgba(4, 5, 8, .50); --cp-surface: rgba(20, 22, 27, .82); --cp-ink: #ffffff; --cp-muted: #e2e5e9; --cp-accent: #ffffff; --cp-line: rgba(255,255,255,.22); --cp-active: rgba(255,255,255,.16); }
+    .tree-control-window[data-control-theme="light"] { --cp-bg: rgba(248, 251, 255, .7); --cp-surface: rgba(231, 239, 250, .88); --cp-ink: #1a2a3b; --cp-muted: #63758a; --cp-accent: #286de0; --cp-line: rgba(55, 91, 135, .18); --cp-active: rgba(49, 111, 222, .18); box-shadow: 0 12px 34px rgba(27, 45, 68, .18); }
+    .tree-control-window.minimized { width: min(700px, calc(100% - 24px)); }
+    .tree-control-window-head { display: flex; align-items: center; min-height: 34px; padding: 5px 12px; color: var(--cp-ink); cursor: move; touch-action: none; user-select: none; border-bottom: 1px solid var(--cp-line); background: transparent; }
     .tree-control-window-title { display: inline-flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 680; letter-spacing: .02em; }
     .tree-control-window-title::before { content: "◇"; color: var(--cp-accent); font-size: 15px; line-height: 1; }
     .tree-control-window-actions { display: flex; align-items: center; gap: 9px; margin-left: auto; }
@@ -130,23 +131,30 @@
     .control-panel-themes button[data-control-theme="purple"] { --cp-swatch: #8d56e8; }
     .control-panel-themes button[data-control-theme="blue"] { --cp-swatch: #2389dc; }
     .control-panel-themes button[data-control-theme="green"] { --cp-swatch: #28a879; }
+    .control-panel-themes button[data-control-theme="black"] { --cp-swatch: #07080b; }
     .control-panel-themes button[data-control-theme="light"] { --cp-swatch: #eef4fa; border-color: #91a0b1; }
     .tree-control-window-toggle { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--cp-muted); font-size: 10px; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
     .tree-control-window-body { display: grid; grid-template-columns: 90px minmax(0, 1fr); max-height: calc(100vh - 72px); overflow: hidden; }
     .tree-control-window.minimized .tree-control-window-body { display: none; }
-    .control-tabs { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 2px; min-height: 100%; padding: 8px 5px; background: color-mix(in srgb, var(--cp-surface) 64%, transparent); border-right: 1px solid var(--cp-line); }
-    .control-tab { min-height: 32px; border: 0; border-radius: 2px; padding: 7px 9px; background: transparent; color: var(--cp-muted); font-size: 11px; text-align: left; }
-    .control-tab:hover { color: var(--cp-ink); background: var(--cp-surface); }
-    .control-tab[aria-selected="true"] { background: linear-gradient(90deg, var(--cp-active), color-mix(in srgb, var(--cp-active) 55%, transparent)); color: var(--cp-ink); font-weight: 700; box-shadow: inset 3px 0 var(--cp-accent), 0 0 14px color-mix(in srgb, var(--cp-accent) 17%, transparent); }
+    .control-tabs { grid-column: 1; grid-row: 1; display: flex; flex-direction: column; gap: 2px; min-height: 100%; padding: 8px 5px; background: transparent; border-right: 1px solid var(--cp-line); }
+    .control-tab { min-height: 32px; border: 0; border-radius: 2px; padding: 7px 9px; background: var(--cp-surface); color: var(--cp-muted); font-size: 11px; text-align: left; }
+    .control-tab:hover { color: var(--cp-ink); background: color-mix(in srgb, var(--cp-surface) 86%, var(--cp-active)); }
+    .control-tab[aria-selected="true"] { background: linear-gradient(90deg, var(--cp-active), color-mix(in srgb, var(--cp-active) 55%, transparent)), var(--cp-surface); color: var(--cp-ink); font-weight: 700; box-shadow: inset 3px 0 var(--cp-accent), 0 0 14px color-mix(in srgb, var(--cp-accent) 17%, transparent); }
     .control-tab:focus-visible { outline: 1px solid var(--cp-accent); outline-offset: -2px; }
     .control-tab-panel { grid-column: 2; grid-row: 1; max-height: calc(100vh - 106px); overflow: auto; padding-bottom: 10px; scrollbar-width: thin; scrollbar-color: var(--cp-line) transparent; }
     .control-tab-panel[hidden] { display: none; }
-    .tree-control-window .control-section-title { padding: 7px 12px 4px; color: var(--cp-accent); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--cp-line); }
+    .tree-control-window .control-section-title {
+      padding: 7px 12px 5px; color: var(--cp-ink); font-size: 9px; font-weight: 750; letter-spacing: .08em;
+      text-transform: uppercase; border-bottom: 1px solid var(--cp-line);
+      background: linear-gradient(180deg, color-mix(in srgb, var(--cp-accent) 24%, transparent) 0%, color-mix(in srgb, var(--cp-surface) 45%, transparent) 55%, transparent 100%);
+      box-shadow: inset 0 1px color-mix(in srgb, white 22%, transparent), inset 0 -1px color-mix(in srgb, var(--cp-accent) 18%, transparent);
+      text-shadow: 0 0 8px color-mix(in srgb, var(--cp-accent) 35%, transparent);
+    }
     #controlTabBasic:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #controlTabBasic > .header-controls, #controlTabBasic > .control-section-title, #controlTabBasic > .tree-tools, #controlTabBasic > .legend-controls, #controlTabBasic > .reset-all-row { grid-column: 1 / -1; }
     .tree-control-window .header-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 0; border-bottom: 0; white-space: normal; }
     .tree-control-window .header-controls > .control-section-title { grid-column: 1 / -1; }
-    .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 7px; min-height: 32px; padding: 4px 12px; border-bottom: 1px solid var(--cp-line); }
+    .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 7px; min-height: 32px; padding: 4px 12px; border-bottom: 1px solid var(--cp-line); background: transparent; }
     .tree-control-window .header-controls > .control-row:nth-of-type(odd), #controlTabBasic > .control-row:nth-of-type(odd), .tree-control-window .tree-tools > :nth-child(odd), .tree-control-window .legend-controls > :nth-child(odd), .tree-control-window .filter-actions > :nth-child(odd) { border-right: 1px solid var(--cp-line); }
     .tree-control-window [hidden] { display: none !important; }
     .tree-control-window .control-row > label, .tree-control-window .header-field > label, .tree-control-window .control-row-label { display: block; color: var(--cp-muted); font-size: 10px; opacity: 1; }
@@ -157,18 +165,18 @@
     .tree-control-window .branch-filters { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 0; min-height: 0; padding: 0; overflow: visible; border-bottom: 0; background: transparent; }
     .tree-control-window .tree-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-column: 1; grid-row: auto; gap: 0; width: 100%; }
     .tree-control-window .legend-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; width: 100%; }
-    .tree-control-window .tree-scale-control { display: grid; grid-template-columns: 78px minmax(0, 1fr) 40px; grid-template-rows: auto; align-items: center; gap: 7px; width: 100%; min-height: 32px; padding: 4px 12px; border-bottom: 1px solid var(--cp-line); }
+    .tree-control-window .tree-scale-control { display: grid; grid-template-columns: 78px minmax(0, 1fr) 40px; grid-template-rows: auto; align-items: center; gap: 7px; width: 100%; min-height: 32px; padding: 4px 12px; border-bottom: 1px solid var(--cp-line); background: transparent; }
     .tree-control-window .tree-scale-control label { grid-column: 1; grid-row: 1; display: block; color: var(--cp-muted); font-size: 10px; opacity: 1; }
     .tree-control-window .tree-scale-control input { grid-column: 2; grid-row: 1; width: 100%; }
     .tree-control-window .tree-scale-control output { grid-column: 3; grid-row: 1; width: 40px; color: var(--cp-ink); }
     .tree-control-window .legend-controls .tree-scale-control { grid-template-columns: 104px minmax(0, 1fr) 40px; }
     .tree-control-window input[type="range"] { accent-color: var(--cp-accent); }
-    .tree-control-window .range-filter { display: grid; grid-template-columns: 88px minmax(0, 1fr) 72px; grid-template-rows: auto; grid-column: 1; grid-row: auto; gap: 9px; width: 100%; min-width: 0; min-height: 38px; padding: 5px 12px; border-bottom: 1px solid var(--cp-line); }
+    .tree-control-window .range-filter { display: grid; grid-template-columns: 88px minmax(0, 1fr) 72px; grid-template-rows: auto; grid-column: 1; grid-row: auto; gap: 9px; width: 100%; min-width: 0; min-height: 38px; padding: 5px 12px; border-bottom: 1px solid var(--cp-line); background: transparent; }
     .tree-control-window .range-filter-name { grid-column: 1; grid-row: 1; color: var(--cp-muted); font-size: 10px; opacity: 1; }
     .tree-control-window .range-filter .dual-range { grid-column: 2; grid-row: 1; }
     .tree-control-window .range-filter output { grid-column: 3; grid-row: 1; }
     .tree-control-window .filter-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-column: 1; grid-row: auto; gap: 0; }
-    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: flex-end; justify-self: stretch; padding: 7px 12px 9px; color: var(--cp-muted); }
+    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: flex-end; justify-self: stretch; padding: 7px 12px 9px; color: var(--cp-muted); background: transparent; }
     .tree-control-window .taxonomy-color-shuffle { margin: 0; }
     .tree-control-window select, .tree-control-window button, .tree-control-window label, .tree-control-window .control-row-label, .tree-control-window .range-filter-name, .tree-control-window output { font-size: 11px; }
     @media (max-width: 700px) {
@@ -211,6 +219,12 @@
     #treeViewport.dragging { cursor: grabbing; }
     .tree-label-editor { position: absolute; z-index: 8; width: min(280px, calc(100% - 24px)); border: 1px solid var(--accent); border-radius: 3px; padding: 4px 6px; background: var(--panel); color: var(--ink); font: 12px var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); box-shadow: 0 3px 10px rgba(15, 23, 30, .16); transform: translateY(-50%); }
     .tree-action-hint { position: absolute; z-index: 4; color: var(--ink); font-size: 15px; font-weight: 500; line-height: 1; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px var(--panel); }
+    .tree-context-menu { position: fixed; z-index: 30; min-width: 210px; padding: 7px 10px 8px; border: 1px solid var(--line); border-radius: 3px; background: color-mix(in srgb, var(--panel) 94%, transparent); color: var(--ink); box-shadow: 0 8px 24px rgba(0,0,0,.22); backdrop-filter: blur(2px); }
+    .tree-context-menu[hidden] { display: none; }
+    .tree-context-title { padding: 1px 2px 6px; color: var(--muted); font-size: 10px; font-weight: 750; letter-spacing: .09em; text-transform: uppercase; }
+    .tree-context-menu button { display: block; width: 100%; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 7px 2px; background: transparent; color: var(--ink); font-size: 12px; text-align: left; }
+    .tree-context-menu button:hover { color: var(--accent); }
+    .tree-context-note { max-width: 245px; padding: 4px 2px 0; color: var(--muted); font-size: 9px; line-height: 1.35; }
     #treeSvg { display: block; background: linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px); background-size: 110px 100%; will-change: transform; }
     .branch-hit { fill: transparent; cursor: pointer; }
     .radial-branch-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
@@ -426,6 +440,10 @@
         <label for="cladeLabelSelect">GTDB labels</label>
         <select id="cladeLabelSelect" title="Show GTDB clade labels" aria-label="Show GTDB clade labels"><option value="">Off</option></select>
       </span>
+      <span class="header-field control-row" id="taxonomyPrefixControl" hidden>
+        <label for="taxonomyPrefixSelect">GTDB prefixes</label>
+        <select id="taxonomyPrefixSelect" title="Show GTDB rank prefixes" aria-label="Show GTDB rank prefixes"><option value="show">Show</option><option value="hide">Hide</option></select>
+      </span>
       <span class="header-field control-row">
         <label for="treeOrderSelect">Order</label>
         <select id="treeOrderSelect" title="Order child clades" aria-label="Order child clades">
@@ -482,6 +500,7 @@
               <button type="button" data-control-theme="purple" aria-label="Purple control panel" title="Purple"></button>
               <button type="button" data-control-theme="blue" aria-label="Blue control panel" title="Blue"></button>
               <button type="button" data-control-theme="green" aria-label="Green control panel" title="Green"></button>
+              <button type="button" data-control-theme="black" aria-label="Black control panel" title="Black"></button>
               <button type="button" data-control-theme="light" aria-label="Light control panel" title="Light"></button>
             </div>
             <button class="tree-control-window-toggle" id="treeControlWindowToggle" type="button" aria-controls="treeControlWindowBody" aria-expanded="true">Minimize</button>
@@ -611,6 +630,7 @@
         </div>
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><input class="tree-label-editor" id="treeLabelEditor" type="text" aria-label="Edit tree label" hidden><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
+      <div class="tree-context-menu" id="treeContextMenu" role="menu" hidden><div class="tree-context-title">Reroot</div><button id="rerootHere" type="button" role="menuitem">Root view from this branch</button><button id="restoreOriginalRoot" type="button" role="menuitem" hidden>Restore original root</button><div class="tree-context-note">Display-only rerooting. Gain/Loss inference remains referenced to the original root.</div></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
       <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
@@ -628,7 +648,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -654,6 +674,8 @@
         $("viewerTitle").textContent = `Gene Gain/Loss Viewer · ${inputName}`;
         document.title = `Gene Gain/Loss Viewer · ${inputName}`;
         state.branches = new Map(branches.map(branch => [branch.branch_id, branch]));
+        const storedRerootBranch = localStorage.getItem("species-map-reroot-branch");
+        state.rerootBranchId = storedRerootBranch && state.branches.has(storedRerootBranch) ? storedRerootBranch : null;
         initializeBranchFilters(branches);
         state.annotationSources = annotationSources;
         state.enrichmentSource = annotationSources.some(item => item.source === "KEGG pathway") ? "KEGG pathway" : (annotationSources[0]?.source || "");
@@ -724,6 +746,9 @@
           $("cladeLabelSelect").value = storedCladeLabels;
         }
         $("cladeLabelControl").hidden = cladeRanks.length === 0;
+        $("taxonomyPrefixControl").hidden = ranks.length === 0;
+        state.taxonomyPrefixes = localStorage.getItem("species-map-taxonomy-prefixes") !== "hide";
+        $("taxonomyPrefixSelect").value = state.taxonomyPrefixes ? "show" : "hide";
         $("taxonomyColorShuffleRow").hidden = cladeRanks.length === 0;
         $("taxonomyLegendScaleControl").hidden = cladeRanks.length === 0;
         const storedTaxonomyColorSeed = Number(localStorage.getItem("species-map-taxonomy-color-seed"));
@@ -903,6 +928,47 @@
     function applyGenomeSizeFontSize() {
       $("treeSvg").style.setProperty("--genome-size-font-size", `${state.genomeSizeFontSize}px`);
     }
+    function nodesForCurrentRoot() {
+      const source = new Map(state.project.nodes.map(node => [node.id, {...node, children: [...node.children]}]));
+      if (!state.rerootBranchId) {
+        return {nodes: source, root: [...source.values()].find(node => !node.parent_id)};
+      }
+      const target = [...source.values()].find(node => node.branch_id === state.rerootBranchId);
+      if (!target?.parent_id || !source.has(target.parent_id)) {
+        state.rerootBranchId = null;
+        localStorage.removeItem("species-map-reroot-branch");
+        return {nodes: source, root: [...source.values()].find(node => !node.parent_id)};
+      }
+      const adjacency = new Map([...source.keys()].map(id => [id, []]));
+      const link = (left, right, edge) => {
+        adjacency.get(left).push({id: right, ...edge});
+        adjacency.get(right).push({id: left, ...edge});
+      };
+      for (const node of source.values()) {
+        if (!node.parent_id || node.id === target.id) continue;
+        link(node.parent_id, node.id, {branchId: node.branch_id, length: Number(node.length) || 0, support: node.support});
+      }
+      const syntheticRootId = "__REROOT_VIEW__";
+      const halfLength = Math.max(0, Number(target.length) || 0) / 2;
+      adjacency.set(syntheticRootId, []);
+      link(syntheticRootId, target.id, {branchId: target.branch_id, length: halfLength, support: target.support});
+      link(syntheticRootId, target.parent_id, {branchId: null, length: halfLength, support: null});
+      const oriented = new Map();
+      function orient(nodeId, parentId = null, incoming = null, depth = 0) {
+        const original = source.get(nodeId);
+        const node = original
+          ? {...original, parent_id: parentId, branch_id: incoming?.branchId || null, length: incoming?.length || 0, support: incoming?.support ?? null, depth, children: []}
+          : {id: syntheticRootId, label: "Rerooted view", parent_id: null, branch_id: null, length: 0, support: null, is_leaf: false, depth: 0, children: []};
+        oriented.set(nodeId, node);
+        for (const edge of adjacency.get(nodeId) || []) {
+          if (edge.id === parentId) continue;
+          node.children.push(edge.id);
+          orient(edge.id, nodeId, edge, depth + 1);
+        }
+      }
+      orient(syntheticRootId);
+      return {nodes: oriented, root: oriented.get(syntheticRootId)};
+    }
     function renderTree() {
       const svg = $("treeSvg"); svg.replaceChildren(); svg.removeAttribute("viewBox"); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily(); applyGenomeSizeFontSize();
       const hasGenomeSizes = Object.keys(state.project.metadata?.genome_size_bp || {}).length > 0;
@@ -1002,8 +1068,9 @@
         if (state.selectedBranch === branchId) group.append(svgEl("circle", {cx: x, cy, r: radius + 2, class: "event-pie-selected"}));
         canvas.append(group);
       }
-      const nodes = new Map(state.project.nodes.map(node => [node.id, {...node}]));
-      const root = [...nodes.values()].find(node => !node.parent_id);
+      const rootedTree = nodesForCurrentRoot();
+      const nodes = rootedTree.nodes;
+      const root = rootedTree.root;
       const taxonomy = state.project.taxonomy?.species || {};
       const rank = state.collapseRank;
       const taxonomyDisplayColorIndex = new Map();
@@ -1063,11 +1130,12 @@
           return [{rank: taxonomyRank, value}];
         });
       }
-      const taxonomyRankTitle = taxonomyRank => ({family: "Family", genus: "Genus", species: "Species"})[taxonomyRank] || taxonomyRank;
+      const taxonomyRankPrefix = taxonomyRank => ({domain: "d__", phylum: "p__", class: "c__", order: "o__", family: "f__", genus: "g__", species: "s__"})[taxonomyRank] || `${taxonomyRank}__`;
+      const formatTaxonomyLabel = (taxonomyRank, value) => state.taxonomyPrefixes ? `${taxonomyRankPrefix(taxonomyRank)}${value}` : value;
       const taxonomyLabelKey = (node, taxonomyRank) => `${taxonomyRank}:${node.id}`;
       const taxonomyLabelText = (node, item) => {
         const key = taxonomyLabelKey(node, item.rank);
-        return state.taxonomyLabelOverrides.get(key) || `${taxonomyRankTitle(item.rank)}: ${item.value}`;
+        return state.taxonomyLabelOverrides.get(key) || formatTaxonomyLabel(item.rank, item.value);
       };
       function appendCladeTaxonomyLabel(node, circular = false) {
         const labels = cladeTaxonomyLabels(node);
@@ -1121,7 +1189,7 @@
         const height = 14 * scale;
         const left = anchor === "end" ? x - width : x;
         const offset = state.taxonomyLabelOffsets.get(key) || {x: 0, y: 0};
-        const group = svgEl("g", {class: "taxonomy-label-badge", "data-taxonomy-label-key": key, "data-taxonomy-label-default": `${taxonomyRankTitle(taxonomyRank)}: ${value}`, transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
+        const group = svgEl("g", {class: "taxonomy-label-badge", "data-taxonomy-label-key": key, "data-taxonomy-label-default": formatTaxonomyLabel(taxonomyRank, value), transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
         addSvgTooltip(group, "Drag to move · Double-click to rename");
         const rotated = svgEl("g", transform ? {transform} : {});
         rotated.append(svgEl("rect", {x: left - 4 * scale, y: y - 10 * scale, width, height, rx: 2 * scale, class: "clade-taxonomy-label-bg", style: `fill:${taxonomyLabelColor(taxonomyRank, value, key)}`}));
@@ -1142,7 +1210,7 @@
         const rowHeight = 17;
         let row = 0;
         for (const [key, item] of taxonomyDisplayLegend) {
-          const defaultText = `${taxonomyRankTitle(item.rank)}: ${item.value}`;
+          const defaultText = formatTaxonomyLabel(item.rank, item.value);
           const text = state.taxonomyLabelOverrides.get(key) || defaultText;
           row += 1;
           const itemY = y + row * rowHeight;
@@ -1280,7 +1348,7 @@
           const parent = nodes.get(node.parent_id);
           const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
           const pathData = radialPath(parent, node);
-          const hitAttributes = {d: pathData, class: "radial-branch-hit"};
+          const hitAttributes = {d: pathData, class: "radial-branch-hit", "data-context-branch": node.branch_id || ""};
           if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
           const hitPath = svgEl("path", hitAttributes);
           if (!node.is_leaf) addSvgTooltip(hitPath, node.collapsed ? "Expand clade" : "Collapse clade");
@@ -1288,7 +1356,7 @@
           canvas.append(svgEl("path", {d: pathData, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id, fill: "none"}));
           const middleX = (parent.x + node.x) / 2;
           const middleY = (parent.y + node.y) / 2;
-          appendBranchEventDisplay(branch, node.branch_id, middleX, middleY, 9);
+          if (node.branch_id) appendBranchEventDisplay(branch, node.branch_id, middleX, middleY, 9);
           const support = normalizedBranchSupport(node);
           if (!node.is_leaf && support != null) {
             const supportOffset = state.branchEventDisplay === "pie" ? eventPieRadius(branch) + 10 : 11;
@@ -1314,12 +1382,12 @@
             const labelX = node.x + ux * 23;
             const labelY = node.y + uy * 23;
             const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: "collapsed-label", "data-expand-node": node.id});
-            tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+            tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
             addSvgTooltip(marker, "Expand clade");
             addSvgTooltip(tip, "Expand clade");
             canvas.append(marker, tip);
           } else if (node.is_leaf) {
-            const defaultTipLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+            const defaultTipLabel = rank && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (1)` : node.label;
             const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultTipLabel;
             const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
             const labelX = node.x + ux * 10;
@@ -1352,8 +1420,8 @@
       }
       position(root);
       function terminalDisplayLabel(node) {
-        if (node.collapsed) return node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
-        const defaultLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+        if (node.collapsed) return node.taxonomyCollapsed && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+        const defaultLabel = rank && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (1)` : node.label;
         return state.tipLabelOverrides.get(node.id) || defaultLabel;
       }
       function descendantGenomeSizes(node) {
@@ -1417,14 +1485,14 @@
         if (!node.parent_id) continue;
         const parent = nodes.get(node.parent_id);
         const branch = state.branches.get(node.branch_id) || {gain_count: 0, loss_count: 0};
-        const hitAttributes = {x: parent.x, y: node.y - 7, width: Math.max(14, node.x - parent.x), height: 14, class: "branch-hit"};
+        const hitAttributes = {x: parent.x, y: node.y - 7, width: Math.max(14, node.x - parent.x), height: 14, class: "branch-hit", "data-context-branch": node.branch_id || ""};
         if (!node.is_leaf) Object.assign(hitAttributes, {"data-collapse-node": node.id, role: "button", tabindex: "0", "aria-label": `${node.collapsed ? "Expand" : "Collapse"} clade at branch ${node.branch_id}`});
         const hitLine = svgEl("rect", hitAttributes);
         if (!node.is_leaf) addSvgTooltip(hitLine, node.collapsed ? "Expand clade" : "Collapse clade");
         canvas.append(hitLine);
         const line = svgEl("line", {x1: parent.x, y1: node.y, x2: node.x, y2: node.y, class: `branch${state.selectedBranch === node.branch_id ? " selected" : ""}`, "data-branch": node.branch_id});
         canvas.append(line);
-        appendBranchEventDisplay(branch, node.branch_id, (parent.x + node.x) / 2, node.y);
+        if (node.branch_id) appendBranchEventDisplay(branch, node.branch_id, (parent.x + node.x) / 2, node.y);
         const support = normalizedBranchSupport(node);
         if (!node.is_leaf && support != null) {
           const supportOffset = state.branchEventDisplay === "pie" ? eventPieRadius(branch) + 10 : 11;
@@ -1438,12 +1506,12 @@
         if (node.collapsed) {
           const marker = svgEl("polygon", {points: `${node.x + 3},${node.y - 6} ${node.x + 15},${node.y} ${node.x + 3},${node.y + 6}`, class: "collapsed-marker", "data-expand-node": node.id});
           const tip = svgEl("text", {x: node.x + 20, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: "collapsed-label", "data-expand-node": node.id});
-          tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${node.rankValue} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
+          tip.textContent = node.taxonomyCollapsed && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
           addSvgTooltip(marker, "Expand clade");
           addSvgTooltip(tip, "Expand clade");
           canvas.append(marker, tip);
         } else if (node.is_leaf) {
-          const defaultTipLabel = rank && node.rankValue ? `${node.rankValue} (1)` : node.label;
+          const defaultTipLabel = rank && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (1)` : node.label;
           const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultTipLabel;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
           const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultTipLabel}); tip.textContent = taxonomyLabel; addSvgTooltip(tip, "Double-click to rename"); canvas.append(tip);
@@ -2120,6 +2188,11 @@
       localStorage.setItem("species-map-clade-labels", state.cladeLabelMode);
       renderTree();
     });
+    $("taxonomyPrefixSelect").addEventListener("change", event => {
+      state.taxonomyPrefixes = event.target.value !== "hide";
+      localStorage.setItem("species-map-taxonomy-prefixes", state.taxonomyPrefixes ? "show" : "hide");
+      renderTree();
+    });
     $("branchEventDisplaySelect").addEventListener("change", event => {
       state.branchEventDisplay = event.target.value === "pie" ? "pie" : "numbers";
       localStorage.setItem("species-map-branch-event-display", state.branchEventDisplay);
@@ -2257,6 +2330,50 @@
       let lastPhenotypeLegendClickTime = 0;
       let lastTipClickKey = null;
       let lastTipClickTime = 0;
+      const contextMenu = $("treeContextMenu");
+      const closeTreeContextMenu = () => { contextMenu.hidden = true; contextMenu.removeAttribute("data-branch"); };
+      viewport.addEventListener("contextmenu", event => {
+        const target = event.target.closest("[data-context-branch], [data-branch]");
+        const branchId = target?.dataset.contextBranch || target?.dataset.branch || "";
+        if (!branchId || !state.branches.has(branchId)) { closeTreeContextMenu(); return; }
+        event.preventDefault();
+        event.stopPropagation();
+        contextMenu.dataset.branch = branchId;
+        contextMenu.querySelector(".tree-context-title").textContent = `Reroot · ${branchId}`;
+        $("rerootHere").textContent = state.rerootBranchId === branchId ? "Rooted here" : "Root view from this branch";
+        $("rerootHere").disabled = state.rerootBranchId === branchId;
+        $("restoreOriginalRoot").hidden = !state.rerootBranchId;
+        contextMenu.hidden = false;
+        const width = contextMenu.offsetWidth;
+        const height = contextMenu.offsetHeight;
+        contextMenu.style.left = `${Math.max(8, Math.min(event.clientX, window.innerWidth - width - 8))}px`;
+        contextMenu.style.top = `${Math.max(8, Math.min(event.clientY, window.innerHeight - height - 8))}px`;
+      });
+      $("rerootHere").addEventListener("click", () => {
+        const branchId = contextMenu.dataset.branch;
+        if (!branchId || !state.branches.has(branchId)) return;
+        state.rerootBranchId = branchId;
+        localStorage.setItem("species-map-reroot-branch", branchId);
+        state.expandedGroups.clear();
+        state.manuallyCollapsed.clear();
+        state.flippedNodes.clear();
+        closeDetailPanel();
+        closeTreeContextMenu();
+        renderTree();
+      });
+      $("restoreOriginalRoot").addEventListener("click", () => {
+        state.rerootBranchId = null;
+        localStorage.removeItem("species-map-reroot-branch");
+        state.expandedGroups.clear();
+        state.manuallyCollapsed.clear();
+        state.flippedNodes.clear();
+        closeDetailPanel();
+        closeTreeContextMenu();
+        renderTree();
+      });
+      contextMenu.addEventListener("pointerdown", event => event.stopPropagation());
+      document.addEventListener("pointerdown", event => { if (!contextMenu.hidden && !contextMenu.contains(event.target)) closeTreeContextMenu(); });
+      document.addEventListener("keydown", event => { if (event.key === "Escape") closeTreeContextMenu(); });
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         if (event.target === labelEditor) return;
@@ -2637,7 +2754,7 @@
       const header = panel.querySelector(".tree-control-window-head");
       const container = panel.parentElement;
       const staging = document.querySelector(".branch-filters");
-      const controlThemes = new Set(["purple", "blue", "green", "light"]);
+      const controlThemes = new Set(["purple", "blue", "green", "black", "light"]);
       const applyControlTheme = value => {
         const selected = controlThemes.has(value) ? value : "purple";
         panel.dataset.controlTheme = selected;

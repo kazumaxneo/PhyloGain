@@ -6,6 +6,14 @@
 - Keep draggable GTDB and phenotype legends in the foreground and automatically expand the SVG canvas when they move beyond its original bounds.
 - Replace partial reset actions with one Basic-tab reset that restores every saved viewer setting, label, legend, and panel position.
 - Anchor linear and log-scaled genome-size metadata bars at zero, add adjustable genome-label sizing, and omit repeated Mb units from individual bar labels.
+- Use one continuous control-panel background at 50% opacity to avoid patchy cut-outs, while keeping interactive controls visibly darker.
+- Reduce the control-panel backdrop blur so the underlying tree remains legible.
+- Give control-panel section headings a restrained glossy accent for clearer visual grouping.
+- Add a black control-panel theme with high-contrast white text.
+- Display GTDB taxonomy labels with standard rank prefixes (`d__`, `p__`, `c__`, `o__`, `f__`, `g__`, and `s__`).
+- Add a branch right-click menu for display-only rerooting, with an explicit return to the original root and a warning that Gain/Loss inference is unchanged.
+- Add a GTDB-prefix display switch so labels can alternate between forms such as `g__Leptolyngbya` and `Leptolyngbya`.
+- Keep the full control-panel header width when minimized so its title, theme controls, and reopen action remain easy to find.
 
 ## 0.4.0 — 2026-08-15
 
