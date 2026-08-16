@@ -205,8 +205,14 @@ class ProjectTests(unittest.TestCase):
             )
             html = (output / "index.html").read_text(encoding="utf-8")
             self.assertIn('id="genomeSizeDisplaySelect"', html)
+            self.assertIn('id="genomeSizeScaleSelect"', html)
+            self.assertIn('<option value="log10">Log10</option>', html)
             self.assertIn("Genome size (Mb)", html)
             self.assertIn('class: "genome-size-bar"', html)
+            self.assertIn('data-genome-size-track', html)
+            self.assertIn('translate(${nextX} 0)', html)
+            self.assertIn('species-map-genome-size-offset-x', html)
+            self.assertIn('Math.log10(bp / minimumBp)', html)
 
     def test_build_project_with_existing_eggnog_annotations(self):
         with tempfile.TemporaryDirectory() as directory:

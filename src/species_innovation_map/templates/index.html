@@ -187,12 +187,14 @@
     .connector-hit:hover + .connector { stroke: var(--accent); stroke-width: calc(var(--connector-width, 1.2px) + 1.8px); stroke-opacity: 1; }
     .branch-label { font: 650 11px var(--tree-label-font, ui-monospace, SFMono-Regular, Consolas, monospace); cursor: pointer; }
     .support-label { fill: var(--muted); font: 9px var(--tree-label-font, ui-monospace, SFMono-Regular, Consolas, monospace); pointer-events: none; }
+    .genome-size-track, .genome-size-track-hit { cursor: ew-resize; }
+    .genome-size-track-hit { fill: transparent; pointer-events: all; }
     .genome-size-grid { stroke: var(--tree-grid); stroke-width: 1; pointer-events: none; }
     .genome-size-axis-label, .genome-size-title, .genome-size-value { fill: var(--ink); font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
     .genome-size-axis-label { font-size: 8px; fill: var(--muted); }
     .genome-size-title { font-size: 10px; font-weight: 650; }
     .genome-size-value { font-size: 8px; }
-    .genome-size-bar { fill: var(--accent); fill-opacity: .72; cursor: help; }
+    .genome-size-bar { fill: var(--accent); fill-opacity: .72; cursor: ew-resize; }
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
     .event-pie-slice { cursor: pointer; stroke: var(--panel); stroke-width: .8px; }
@@ -468,6 +470,13 @@
             <option value="bar">Bar graph</option>
           </select>
         </div>
+        <div class="control-row" id="genomeSizeScaleControl">
+          <label for="genomeSizeScaleSelect">Genome scale</label>
+          <select id="genomeSizeScaleSelect" title="Genome-size bar scale" aria-label="Genome size bar scale">
+            <option value="linear">Linear</option>
+            <option value="log10">Log10</option>
+          </select>
+        </div>
         <div class="tree-tools">
           <div class="tree-scale-control">
             <label for="treeZoom">Zoom</label>
@@ -557,7 +566,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", genomeSizeDisplay: "off", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -597,7 +606,12 @@
         const storedGenomeSizeDisplay = localStorage.getItem("species-map-genome-size-display");
         if (hasGenomeSizes && (storedGenomeSizeDisplay === "off" || storedGenomeSizeDisplay === "bar")) state.genomeSizeDisplay = storedGenomeSizeDisplay;
         if (!hasGenomeSizes) state.genomeSizeDisplay = "off";
+        const storedGenomeSizeOffsetX = Number(localStorage.getItem("species-map-genome-size-offset-x"));
+        if (Number.isFinite(storedGenomeSizeOffsetX)) state.genomeSizeOffsetX = storedGenomeSizeOffsetX;
+        const storedGenomeSizeScale = localStorage.getItem("species-map-genome-size-scale");
+        if (storedGenomeSizeScale === "linear" || storedGenomeSizeScale === "log10") state.genomeSizeScale = storedGenomeSizeScale;
         $("genomeSizeDisplaySelect").value = state.genomeSizeDisplay;
+        $("genomeSizeScaleSelect").value = state.genomeSizeScale;
         $("speciesCount").textContent = number(project.species_count);
         $("familyCount").textContent = number(project.family_count);
         $("branchCount").textContent = number(branches.length);
@@ -810,6 +824,7 @@
       const hasGenomeSizes = Object.keys(state.project.metadata?.genome_size_bp || {}).length > 0;
       $("genomeSizeDisplaySelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular";
       $("genomeSizeDisplaySelect").title = !hasGenomeSizes ? "Rebuild with --genome-metadata to enable this track" : state.treeLayout === "rectangular" ? "Show genome size beside the tree" : "Genome-size bars are available in the rectangular layout";
+      $("genomeSizeScaleSelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular" || state.genomeSizeDisplay !== "bar";
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -1199,7 +1214,7 @@
       }));
       const metadataOrigin = showGenomeSizes ? Math.max(...visibleTerminals.map(node => node.x + 24 + terminalDisplayLabel(node).length * state.tipFontSize * .62), 0) + 26 : 0;
       const metadataWidth = 170;
-      const baseWidth = Math.max(900, depthSpacing * maximumDepth + 440, showGenomeSizes ? metadataOrigin + metadataWidth + 64 : 0);
+      const baseWidth = Math.max(900, depthSpacing * maximumDepth + 440, showGenomeSizes ? metadataOrigin + metadataWidth + 64 + Math.max(0, state.genomeSizeOffsetX) : 0);
       const baseHeight = Math.max(500, leafIndex * spacing + (showGenomeSizes ? 66 : 40));
       svg.setAttribute("width", baseWidth * zoom);
       svg.setAttribute("height", baseHeight * zoom);
@@ -1271,29 +1286,38 @@
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
       if (showGenomeSizes) {
         const available = [...genomeSummaries.values()].filter(Boolean);
+        const minimumBp = Math.min(...available.map(item => item.bp));
         const maximumBp = Math.max(...available.map(item => item.bp), 1);
+        const useLogScale = state.genomeSizeScale === "log10" && maximumBp > minimumBp && minimumBp > 0;
+        const scaledFraction = bp => useLogScale ? Math.log10(bp / minimumBp) / Math.log10(maximumBp / minimumBp) : bp / maximumBp;
+        const axisValue = fraction => useLogScale ? minimumBp * Math.pow(maximumBp / minimumBp, fraction) : maximumBp * fraction;
+        const genomeTrack = svgEl("g", {class: "genome-size-track", "data-genome-size-track": "", "data-genome-size-scale": useLogScale ? "log10" : "linear", transform: `translate(${state.genomeSizeOffsetX} 0)`});
+        const trackHit = svgEl("rect", {x: metadataOrigin - 8, y: 0, width: metadataWidth + 118, height: baseHeight - 18, class: "genome-size-track-hit"});
+        addSvgTooltip(trackHit, "Drag horizontally to reposition genome-size track");
+        genomeTrack.append(trackHit);
         const title = svgEl("text", {x: metadataOrigin, y: 14, class: "genome-size-title"});
-        title.textContent = "Genome size (Mb)";
-        canvas.append(title);
+        title.textContent = useLogScale ? "Genome size (Mb, log10)" : "Genome size (Mb)";
+        genomeTrack.append(title);
         for (const fraction of [0, .5, 1]) {
           const x = metadataOrigin + metadataWidth * fraction;
-          canvas.append(svgEl("line", {x1: x, y1: 22, x2: x, y2: baseHeight - 24, class: "genome-size-grid"}));
+          genomeTrack.append(svgEl("line", {x1: x, y1: 22, x2: x, y2: baseHeight - 24, class: "genome-size-grid"}));
           const tick = svgEl("text", {x, y: 32, "text-anchor": fraction === 0 ? "start" : fraction === 1 ? "end" : "middle", class: "genome-size-axis-label"});
-          tick.textContent = (maximumBp * fraction / 1_000_000).toFixed(fraction === 0 ? 0 : 2);
-          canvas.append(tick);
+          tick.textContent = (axisValue(fraction) / 1_000_000).toFixed(useLogScale || fraction > 0 ? 2 : 0);
+          genomeTrack.append(tick);
         }
         for (const node of visibleTerminals) {
           const summary = genomeSummaries.get(node.id);
           if (!summary) continue;
-          const width = Math.max(1, summary.bp / maximumBp * metadataWidth);
+          const width = Math.max(1, scaledFraction(summary.bp) * metadataWidth);
           const bar = svgEl("rect", {x: metadataOrigin, y: node.y - Math.min(5, spacing * .28), width, height: Math.min(10, spacing * .56), rx: 1, class: "genome-size-bar"});
           const megabases = summary.bp / 1_000_000;
           addSvgTooltip(bar, summary.collapsed ? `Mean genome size: ${megabases.toFixed(2)} Mb (${summary.count} genomes with values)` : `Genome size: ${megabases.toFixed(2)} Mb`);
-          canvas.append(bar);
+          genomeTrack.append(bar);
           const value = svgEl("text", {x: metadataOrigin + width + 5, y: node.y + 3, class: "genome-size-value"});
           value.textContent = `${megabases.toFixed(2)} Mb${summary.collapsed ? " mean" : ""}`;
-          canvas.append(value);
+          genomeTrack.append(value);
         }
+        canvas.append(genomeTrack);
       }
       const taxonomyLegendHeight = appendTaxonomyLegend(18, baseHeight - 18);
       if (taxonomyLegendHeight > 17) svg.setAttribute("height", (baseHeight + taxonomyLegendHeight - 17 + 12) * zoom);
@@ -1891,6 +1915,11 @@
       localStorage.setItem("species-map-genome-size-display", state.genomeSizeDisplay);
       renderTree();
     });
+    $("genomeSizeScaleSelect").addEventListener("change", event => {
+      state.genomeSizeScale = event.target.value === "log10" ? "log10" : "linear";
+      localStorage.setItem("species-map-genome-size-scale", state.genomeSizeScale);
+      renderTree();
+    });
     $("shuffleTaxonomyColors").addEventListener("click", () => {
       const randomValue = new Uint32Array(1);
       crypto.getRandomValues(randomValue);
@@ -1903,11 +1932,13 @@
     $("restoreLabelDefaults").addEventListener("click", () => {
       state.taxonomyLabelOffsets.clear();
       state.taxonomyLegendOffset = {x: 0, y: 0};
+      state.genomeSizeOffsetX = 0;
       state.taxonomyLabelOverrides.clear();
       state.tipLabelOverrides.clear();
       localStorage.removeItem("species-map-taxonomy-label-offsets");
       localStorage.removeItem("species-map-taxonomy-legend-offset");
       localStorage.removeItem("species-map-taxonomy-legend-offsets");
+      localStorage.removeItem("species-map-genome-size-offset-x");
       localStorage.removeItem("species-map-taxonomy-label-overrides");
       localStorage.removeItem("species-map-tip-label-overrides");
       renderTree();
@@ -2006,6 +2037,7 @@
       let pendingCollapseNode = null;
       let pendingFlipNode = null;
       let pendingTipLabel = null;
+      let draggedGenomeSizeTrack = null;
       let draggedTaxonomyLegend = null;
       let draggedTaxonomyLabel = null;
       let lastPointerSelection = 0;
@@ -2019,6 +2051,11 @@
         if (event.button !== 0) return;
         if (event.target === labelEditor) return;
         actionHint.hidden = true;
+        const genomeSizeTrack = event.target.closest("[data-genome-size-track]");
+        if (genomeSizeTrack) {
+          draggedGenomeSizeTrack = {group: genomeSizeTrack, pointerId: event.pointerId, startX: event.clientX, x: state.genomeSizeOffsetX, moved: false};
+          return;
+        }
         const taxonomyLegend = event.target.closest("[data-taxonomy-legend-block]");
         if (taxonomyLegend) {
           const item = event.target.closest("[data-taxonomy-legend-key]");
@@ -2049,6 +2086,19 @@
         viewport.classList.add("dragging");
       });
       viewport.addEventListener("pointermove", event => {
+        if (draggedGenomeSizeTrack) {
+          const dx = (event.clientX - draggedGenomeSizeTrack.startX) / state.treeZoom;
+          if (!draggedGenomeSizeTrack.moved && Math.abs(dx) < 4) return;
+          if (!draggedGenomeSizeTrack.moved) {
+            draggedGenomeSizeTrack.moved = true;
+            viewport.setPointerCapture(event.pointerId);
+          }
+          const nextX = Math.round((draggedGenomeSizeTrack.x + dx) * 10) / 10;
+          state.genomeSizeOffsetX = nextX;
+          draggedGenomeSizeTrack.group.setAttribute("transform", `translate(${nextX} 0)`);
+          event.preventDefault();
+          return;
+        }
         if (draggedTaxonomyLegend) {
           const dx = (event.clientX - draggedTaxonomyLegend.startX) / state.treeZoom;
           const dy = (event.clientY - draggedTaxonomyLegend.startY) / state.treeZoom;
@@ -2093,7 +2143,7 @@
         event.preventDefault();
       });
       viewport.addEventListener("pointermove", event => {
-        if ((active && moved) || draggedTaxonomyLegend?.moved || draggedTaxonomyLabel?.moved) { actionHint.hidden = true; return; }
+        if ((active && moved) || draggedGenomeSizeTrack?.moved || draggedTaxonomyLegend?.moved || draggedTaxonomyLabel?.moved) { actionHint.hidden = true; return; }
         const action = event.target.closest("[data-action-hint]");
         if (!action) { actionHint.hidden = true; return; }
         const bounds = viewport.getBoundingClientRect();
@@ -2104,6 +2154,16 @@
       });
       viewport.addEventListener("pointerleave", () => { actionHint.hidden = true; });
       const finishPan = event => {
+        if (draggedGenomeSizeTrack) {
+          const interaction = draggedGenomeSizeTrack;
+          if (interaction.moved) {
+            localStorage.setItem("species-map-genome-size-offset-x", String(state.genomeSizeOffsetX));
+            renderTree();
+          }
+          draggedGenomeSizeTrack = null;
+          if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+          return;
+        }
         if (draggedTaxonomyLegend) {
           const interaction = draggedTaxonomyLegend;
           if (interaction.moved) {
@@ -2300,7 +2360,7 @@
       const container = panel.parentElement;
       const staging = document.querySelector(".branch-filters");
       const sectionTitles = [...staging.children].filter(child => child.classList.contains("control-section-title"));
-      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("genomeSizeControl"), staging.querySelector(".tree-tools"));
+      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("genomeSizeControl"), $("genomeSizeScaleControl"), staging.querySelector(".tree-tools"));
       $("controlTabFilters").append(sectionTitles[1], staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
       $("controlTabOutput").append(staging.querySelector(".filter-actions"));
       staging.remove();
