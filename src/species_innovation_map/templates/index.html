@@ -1294,6 +1294,7 @@
       const metadataOrigin = showGenomeSizes ? Math.max(...visibleTerminals.map(node => node.x + 24 + terminalDisplayLabel(node).length * state.tipFontSize * .62), 0) + 26 : 0;
       const metadataWidth = 170;
       const treeBaseWidth = Math.max(900, depthSpacing * maximumDepth + 440);
+      const taxonomyBandRight = showGenomeSizes ? metadataOrigin - 12 : treeBaseWidth;
       const baseHeight = Math.max(500, leafIndex * spacing + (showGenomeSizes ? 66 : 40));
       const updateGenomeSizeCanvasBounds = offsetX => {
         const trackLeft = showGenomeSizes ? metadataOrigin - 20 + offsetX : 0;
@@ -1304,13 +1305,8 @@
         svg.setAttribute("width", canvasWidth * zoom);
         svg.setAttribute("height", baseHeight * zoom);
         svg.setAttribute("viewBox", `${canvasLeft * zoom} 0 ${canvasWidth * zoom} ${baseHeight * zoom}`);
-        svg.querySelectorAll(".clade-taxonomy-band").forEach(band => {
-          const x = Number(band.getAttribute("x")) || 0;
-          band.setAttribute("width", Math.max(24, canvasRight - x - 12));
-        });
-        return canvasRight;
       };
-      const canvasRight = updateGenomeSizeCanvasBounds(state.genomeSizeOffsetX);
+      updateGenomeSizeCanvasBounds(state.genomeSizeOffsetX);
       svg.style.backgroundSize = useBranchLengths ? "auto" : `${depthSpacing * zoom}px 100%`;
       function visibleTerminalYs(node) {
         const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
@@ -1324,7 +1320,7 @@
           const top = Math.min(...terminalYs) - spacing * .44; const bottom = Math.max(...terminalYs) + spacing * .44;
           labels.forEach(item => canvas.append(svgEl("rect", {
             x: Math.max(0, node.x - 4), y: top,
-            width: Math.max(24, canvasRight - node.x - 12), height: Math.max(12, bottom - top),
+            width: Math.max(24, taxonomyBandRight - node.x), height: Math.max(12, bottom - top),
             class: `clade-taxonomy-band ${item.rank}`, style: `fill:${taxonomyColor(item.rank, item.value, `${item.rank}:${node.id}`)}`
           })));
         }
