@@ -872,7 +872,7 @@
       $("treeSvg").style.setProperty("--tree-label-font", treeFontFamilies[state.treeFontFamily] || treeFontFamilies.system);
     }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily();
+      const svg = $("treeSvg"); svg.replaceChildren(); svg.removeAttribute("viewBox"); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily();
       const hasGenomeSizes = Object.keys(state.project.metadata?.genome_size_bp || {}).length > 0;
       $("genomeSizeDisplaySelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular";
       $("genomeSizeDisplaySelect").title = !hasGenomeSizes ? "Rebuild with --genome-metadata to enable this track" : state.treeLayout === "rectangular" ? "Show genome size beside the tree" : "Genome-size bars are available in the rectangular layout";
@@ -1298,10 +1298,24 @@
       }));
       const metadataOrigin = showGenomeSizes ? Math.max(...visibleTerminals.map(node => node.x + 24 + terminalDisplayLabel(node).length * state.tipFontSize * .62), 0) + 26 : 0;
       const metadataWidth = 170;
-      const baseWidth = Math.max(900, depthSpacing * maximumDepth + 440, showGenomeSizes ? metadataOrigin + metadataWidth + 64 + Math.max(0, state.genomeSizeOffsetX) : 0);
+      const treeBaseWidth = Math.max(900, depthSpacing * maximumDepth + 440);
       const baseHeight = Math.max(500, leafIndex * spacing + (showGenomeSizes ? 66 : 40));
-      svg.setAttribute("width", baseWidth * zoom);
-      svg.setAttribute("height", baseHeight * zoom);
+      const updateGenomeSizeCanvasBounds = offsetX => {
+        const trackLeft = showGenomeSizes ? metadataOrigin - 20 + offsetX : 0;
+        const trackRight = showGenomeSizes ? metadataOrigin + metadataWidth + 138 + offsetX : treeBaseWidth;
+        const canvasLeft = Math.min(0, trackLeft);
+        const canvasRight = Math.max(treeBaseWidth, trackRight);
+        const canvasWidth = canvasRight - canvasLeft;
+        svg.setAttribute("width", canvasWidth * zoom);
+        svg.setAttribute("height", baseHeight * zoom);
+        svg.setAttribute("viewBox", `${canvasLeft * zoom} 0 ${canvasWidth * zoom} ${baseHeight * zoom}`);
+        svg.querySelectorAll(".clade-taxonomy-band").forEach(band => {
+          const x = Number(band.getAttribute("x")) || 0;
+          band.setAttribute("width", Math.max(24, canvasRight - x - 12));
+        });
+        return canvasRight;
+      };
+      const canvasRight = updateGenomeSizeCanvasBounds(state.genomeSizeOffsetX);
       svg.style.backgroundSize = useBranchLengths ? "auto" : `${depthSpacing * zoom}px 100%`;
       function visibleTerminalYs(node) {
         const children = node.collapsed ? [] : childNodes(node).filter(child => visibleIds.has(child.id));
@@ -1315,7 +1329,7 @@
           const top = Math.min(...terminalYs) - spacing * .44; const bottom = Math.max(...terminalYs) + spacing * .44;
           labels.forEach(item => canvas.append(svgEl("rect", {
             x: Math.max(0, node.x - 4), y: top,
-            width: Math.max(24, baseWidth - node.x - 12), height: Math.max(12, bottom - top),
+            width: Math.max(24, canvasRight - node.x - 12), height: Math.max(12, bottom - top),
             class: `clade-taxonomy-band ${item.rank}`, style: `fill:${taxonomyColor(item.rank, item.value, `${item.rank}:${node.id}`)}`
           })));
         }
@@ -1376,6 +1390,7 @@
         const scaledFraction = bp => useLogScale ? Math.log10(bp / minimumBp) / Math.log10(maximumBp / minimumBp) : bp / maximumBp;
         const axisValue = fraction => useLogScale ? minimumBp * Math.pow(maximumBp / minimumBp, fraction) : maximumBp * fraction;
         const genomeTrack = svgEl("g", {class: "genome-size-track", "data-genome-size-track": "", "data-genome-size-scale": useLogScale ? "log10" : "linear", transform: `translate(${state.genomeSizeOffsetX} 0)`});
+        genomeTrack.updateCanvasBounds = updateGenomeSizeCanvasBounds;
         const trackHit = svgEl("rect", {x: metadataOrigin - 8, y: 0, width: metadataWidth + 118, height: baseHeight - 18, class: "genome-size-track-hit"});
         addSvgTooltip(trackHit, "Drag horizontally to reposition genome-size track");
         genomeTrack.append(trackHit);
@@ -2224,6 +2239,7 @@
           const nextX = Math.round((draggedGenomeSizeTrack.x + dx) * 10) / 10;
           state.genomeSizeOffsetX = nextX;
           draggedGenomeSizeTrack.group.setAttribute("transform", `translate(${nextX} 0)`);
+          draggedGenomeSizeTrack.group.updateCanvasBounds?.(nextX);
           event.preventDefault();
           return;
         }

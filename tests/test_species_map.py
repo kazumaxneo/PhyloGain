@@ -211,6 +211,9 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('class: "genome-size-bar"', html)
             self.assertIn('data-genome-size-track', html)
             self.assertIn('translate(${nextX} 0)', html)
+            self.assertIn('const updateGenomeSizeCanvasBounds = offsetX =>', html)
+            self.assertIn('svg.setAttribute("viewBox", `${canvasLeft * zoom} 0 ${canvasWidth * zoom} ${baseHeight * zoom}`)', html)
+            self.assertIn('draggedGenomeSizeTrack.group.updateCanvasBounds?.(nextX)', html)
             self.assertIn('species-map-genome-size-offset-x', html)
             self.assertIn('Math.log10(bp / minimumBp)', html)
 
