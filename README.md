@@ -36,7 +36,7 @@ PhyloGain accepts either OrthoFinder or PIRATE output. The two standard workflow
 - **OrthoFinder -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
 - **PIRATE -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
 
-### 1A. Run OrthoFinder
+### Step1a. Run OrthoFinder
 
 Place the protein FASTA files in one directory and run OrthoFinder.
 
@@ -46,9 +46,11 @@ orthofinder -f proteomes -t 16 -a 16
 
 The directory created under `proteomes/OrthoFinder/` is used as the PhyloGain input.
 
-### 1B. Run PIRATE
+Alternatively,
 
-Alternatively, place one GFF3 file per genome in a directory and run PIRATE.
+### Step1b. Run PIRATE instead of OrthoFinder
+
+Place one GFF3 file per genome in a directory and run PIRATE.
 
 ```bash
 PIRATE -i gff_files -o pirate_output -t 16
@@ -56,7 +58,7 @@ PIRATE -i gff_files -o pirate_output -t 16
 
 The `pirate_output/` directory is used as the PhyloGain input. It must contain `PIRATE.gene_families.tsv`; PhyloGain can also use `binary_presence_absence.nwk` and `representative_sequences.faa` from this directory.
 
-### 2. Run eggNOG-mapper
+### Step2. Run eggNOG-mapper
 
 #### OrthoFinder workflow
 
@@ -77,7 +79,7 @@ emapper.py -i pirate_output/representative_sequences.faa --itype proteins --outp
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
 ```
 
-### 3. Run GTDB-Tk
+### Step3. Run GTDB-Tk
 
 Run GTDB-Tk on the corresponding genome assemblies.
 
@@ -87,7 +89,7 @@ gtdbtk classify_wf --genome_dir genomes --out_dir gtdbtk_output --extension fna 
 
 For bacterial genomes, use `gtdbtk_output/gtdbtk.bac120.summary.tsv` in the next step.
 
-### 4. Run PhyloGain
+### Step4. Run PhyloGain
 
 #### OrthoFinder input
 
