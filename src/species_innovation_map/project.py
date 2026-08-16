@@ -34,7 +34,7 @@ from .annotation import (
 )
 from .tree import as_project_nodes, leaf_labels, parse_newick, preorder
 from .taxonomy import read_gtdb_taxonomy
-from .metadata import read_genome_sizes
+from .metadata import read_genome_sizes, read_tip_labels
 
 
 class InputError(ValueError):
@@ -49,6 +49,7 @@ def validate_inputs(
     gtdb_taxonomy_path: str | Path | None = None,
     pirate: str | Path | None = None,
     genome_metadata_path: str | Path | None = None,
+    tip_metadata_path: str | Path | None = None,
 ) -> dict[str, object]:
     input_format, found = _resolve_input_files(orthofinder, pirate)
     errors: list[str] = []
@@ -169,6 +170,30 @@ def validate_inputs(
                         f"Genome metadata TSV has {genome_metadata_report[key]} {label} rows"
                     )
 
+    tip_metadata_report: dict[str, object] | None = None
+    if tip_metadata_path:
+        tip_metadata_file = Path(tip_metadata_path)
+        if not tip_metadata_file.is_file():
+            errors.append(f"Tip metadata TSV was not found: {tip_metadata_file}")
+        else:
+            _, tip_metadata_report = read_tip_labels(tip_metadata_file, tips)
+            if tip_metadata_report["mapped_species"] == 0:
+                errors.append("Tip metadata TSV did not match any species-tree tips")
+            elif tip_metadata_report["unmapped_species"]:
+                warnings.append(
+                    "Tip metadata TSV omits or cannot match "
+                    f"{tip_metadata_report['unmapped_species']} tree species"
+                )
+            for key, label in (
+                ("ambiguous_rows", "ambiguous ID"),
+                ("invalid_rows", "invalid label"),
+                ("duplicate_rows", "duplicate species"),
+            ):
+                if tip_metadata_report[key]:
+                    warnings.append(
+                        f"Tip metadata TSV has {tip_metadata_report[key]} {label} rows"
+                    )
+
     return {
         "ok": not errors,
         "errors": errors,
@@ -182,6 +207,7 @@ def validate_inputs(
         "members": str(found["members"]) if found["members"] else None,
         "taxonomy": taxonomy_report,
         "genome_metadata": genome_metadata_report,
+        "tip_metadata": tip_metadata_report,
         "input_format": input_format,
     }
 
@@ -220,6 +246,7 @@ def build_project(
     progress=None,
     pirate: str | Path | None = None,
     genome_metadata_path: str | Path | None = None,
+    tip_metadata_path: str | Path | None = None,
 ) -> dict[str, object]:
     progress = progress or (lambda message: None)
     report = validate_inputs(
@@ -230,6 +257,7 @@ def build_project(
         gtdb_taxonomy_path,
         pirate,
         genome_metadata_path,
+        tip_metadata_path,
     )
     if not report["ok"]:
         raise InputError("; ".join(report["errors"]))
@@ -279,6 +307,10 @@ def build_project(
         _write_genome_metadata(
             output_path / "genome_metadata.tsv", species, genome_sizes
         )
+    tip_labels: dict[str, str] = {}
+    if tip_metadata_path:
+        tip_labels, _ = read_tip_labels(tip_metadata_path, species)
+        _write_tip_metadata(output_path / "tip_metadata.tsv", species, tip_labels)
 
     database_path = output_path / "species_map.sqlite"
     connection = sqlite3.connect(database_path)
@@ -491,6 +523,10 @@ def build_project(
             if genome_metadata_path
             else None,
             "genome_size_bp": genome_sizes,
+            "tip_label_source": str(Path(tip_metadata_path).resolve())
+            if tip_metadata_path
+            else None,
+            "tip_labels": tip_labels,
         },
         "settings": {
             "gain_cost": gain_cost,
@@ -522,6 +558,9 @@ def build_project(
         "genome_metadata_file": str(Path(genome_metadata_path).resolve())
         if genome_metadata_path
         else None,
+        "tip_metadata_file": str(Path(tip_metadata_path).resolve())
+        if tip_metadata_path
+        else None,
         "annotation_file": str(imported_annotation) if imported_annotation else None,
         "go_ontology_file": str(Path(go_obo_path).resolve()) if go_obo_path else None,
         "kegg_names_source": "KEGG REST API" if fetch_kegg_names else None,
@@ -541,6 +580,7 @@ def build_project(
         "phenotypes": phenotype_names,
         "taxonomy_species": len(taxonomy_data),
         "genome_metadata_species": len(genome_sizes),
+        "tip_metadata_species": len(tip_labels),
         "annotated_families": annotation_report["annotated_families"] if annotation_report else 0,
         "warnings": report["warnings"],
     }
@@ -557,6 +597,17 @@ def _write_genome_metadata(
                 continue
             size_bp = genome_sizes[species_id]
             writer.writerow([species_id, size_bp, f"{size_bp / 1_000_000:.6f}"])
+
+
+def _write_tip_metadata(
+    path: Path, species: list[str], tip_labels: dict[str, str]
+) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(["species_id", "strain_name"])
+        for species_id in species:
+            if species_id in tip_labels:
+                writer.writerow([species_id, tip_labels[species_id]])
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:

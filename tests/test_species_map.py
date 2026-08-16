@@ -18,7 +18,7 @@ from species_innovation_map.annotation import (
     write_representative_fasta,
 )
 from species_innovation_map.project import build_project, validate_inputs
-from species_innovation_map.metadata import read_genome_sizes
+from species_innovation_map.metadata import read_genome_sizes, read_tip_labels
 from species_innovation_map.tree import as_project_nodes, leaf_labels, parse_newick
 from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxonomy
 
@@ -29,6 +29,7 @@ PIRATE_FIXTURE = HERE / "fixtures" / "pirate"
 PHENOTYPES = HERE / "fixtures" / "phenotypes.tsv"
 GTDB_TAXONOMY = HERE / "fixtures" / "gtdb_taxonomy.tsv"
 GENOME_METADATA = HERE / "fixtures" / "genome_metadata.tsv"
+TIP_METADATA = HERE / "fixtures" / "tip_metadata.tsv"
 EGGNOG_ANNOTATIONS = HERE / "fixtures" / "eggnog.emapper.annotations"
 PROTEOMES = HERE / "fixtures" / "proteomes"
 
@@ -214,6 +215,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('id="genomeSizeDisplaySelect"', html)
             self.assertIn('id="genomeSizeScaleSelect"', html)
             self.assertIn('id="genomeSizeFontSize" type="range" min="6" max="18"', html)
+            self.assertIn('<option value="log2">Log2</option>', html)
             self.assertIn('<option value="log10">Log10</option>', html)
             self.assertIn("Genome size (Mb)", html)
             self.assertIn('class: "genome-size-bar"', html)
@@ -228,9 +230,42 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('species-map-genome-size-offset-x', html)
             self.assertIn('species-map-genome-size-font-size', html)
             self.assertIn('Math.log10(1 + Math.max(0, bp) / 1_000_000)', html)
-            self.assertIn('const axisValue = fraction => useLogScale ? (Math.pow(10, fraction * logMaximum) - 1) * 1_000_000 : maximumBp * fraction', html)
+            self.assertIn('Math.log2(1 + Math.max(0, bp) / 1_000_000)', html)
+            self.assertIn('Math.pow(2, fraction * logMaximum)', html)
+            self.assertIn('Math.pow(10, fraction * logMaximum)', html)
             self.assertIn('value.textContent = formatMegabases(summary.bp)', html)
             self.assertNotIn('value.textContent = `${megabases.toFixed(2)} Mb', html)
+
+    def test_build_project_with_tip_metadata(self):
+        labels, report = read_tip_labels(
+            TIP_METADATA, ["species_A", "species_B", "species_C", "species_D"]
+        )
+        self.assertEqual(labels["species_C"], "Leptolyngbya strain C")
+        self.assertEqual(report["mapped_species"], 4)
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            result = build_project(
+                FIXTURE, output, tip_metadata_path=TIP_METADATA
+            )
+            self.assertEqual(result["tip_metadata_species"], 4)
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                project["metadata"]["tip_labels"]["species_A"],
+                "Nostoc strain A",
+            )
+            self.assertTrue((output / "tip_metadata.tsv").is_file())
+            metadata = json.loads(
+                (output / "run_metadata.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                Path(metadata["tip_metadata_file"]), TIP_METADATA.resolve()
+            )
+            html = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('id="tipLabelModeSelect"', html)
+            self.assertIn('<option value="assembly">Assembly ID</option>', html)
+            self.assertIn('<option value="strain">Strain name</option>', html)
+            self.assertIn('species-map-tip-label-mode', html)
+            self.assertIn('state.project.metadata?.tip_labels?.[node.label]', html)
 
     def test_build_project_with_existing_eggnog_annotations(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -470,7 +505,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('id="resetAllSettings"', html)
             self.assertIn('Reset all settings', html)
             self.assertIn('id="treeContextMenu"', html)
-            self.assertIn('Root view from this branch', html)
+            self.assertIn('Reroot from this branch', html)
             self.assertIn('Display-only rerooting.', html)
             self.assertIn('function nodesForCurrentRoot()', html)
             self.assertIn('species-map-reroot-branch', html)
@@ -493,6 +528,10 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('function cladeTaxonomyLabels(node)', html)
             self.assertIn('class: `clade-taxonomy-band ${item.rank}`', html)
             self.assertIn('function taxonomyHsl(', html)
+            self.assertIn('const rankDepth = {domain: 0, phylum: 1, class: 2, order: 3, family: 4, genus: 5, species: 6}', html)
+            self.assertIn('.clade-taxonomy-band.family { fill-opacity: .10; }', html)
+            self.assertIn('.clade-taxonomy-band.genus { fill-opacity: .17; }', html)
+            self.assertIn('.clade-taxonomy-band.species { fill-opacity: .23; }', html)
             self.assertIn('goldenAngle = 137.507764', html)
             self.assertIn('function appendTaxonomyBadge(', html)
             self.assertIn('data-taxonomy-label-key', html)

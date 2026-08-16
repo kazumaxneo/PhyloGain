@@ -1,8 +1,6 @@
 # PhyloGain
 
-**PhyloGain** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) or [PIRATE](https://github.com/SionBayliss/PIRATE) result directory into an interactive Gene Gain/Loss Viewer. OrthoFinder is the recommended and primary input.
-
-Each branch shows `+gains / −losses`. The viewer can switch these numbers to gain/loss pie charts: slice proportions show the relative gain/loss composition, while circle size follows the total event count with a capped threefold diameter range. Click a branch event to inspect its orthogroups, then click an orthogroup to see member gene IDs. An optional phenotype table marks inferred phenotype transitions and ranks gene families gained on the same branches.
+PhyloGain is a visualization tool that uses **OrthoFinder results to infer and display gene family gains and losses across a phylogenetic tree**. It counts gain and loss events along each branch, making it easy to identify lineages with major changes in gene content. Users can also inspect the orthogroups associated with each gain or loss event and view their member gene IDs.
 
 > Alpha software. The current release uses weighted Sankoff parsimony on orthogroup presence/absence. Treat inferred events as hypotheses, especially for incomplete or contaminated genomes.
 
@@ -24,28 +22,62 @@ pip install -e .
 
 The primary command is `phylogain`. The previous `species-map` command remains available as a compatibility alias.
 
-## Quick start
+## Recommended workflow
 
-Build a map directly from an OrthoFinder results directory:
+PhyloGain is most informative when GTDB taxonomy and functional annotations are prepared before the viewer is built. A bare OrthoFinder result can be displayed, but it has no GTDB clade context and cannot provide meaningful functional-enrichment results.
+
+### 1. Assign taxonomy with GTDB-Tk
+
+Run GTDB-Tk on the genome assemblies used for OrthoFinder. Genome identifiers in the GTDB-Tk summary must match the OrthoFinder species-tree tips.
 
 ```bash
-species-map build \
+gtdbtk classify_wf \
+  --genome_dir genomes \
+  --out_dir gtdbtk_output \
+  --extension fna \
+  --cpus 16
+```
+
+For bacterial genomes, the required result is normally `gtdbtk_output/gtdbtk.bac120.summary.tsv`; use the corresponding `ar53` summary for archaea.
+
+### 2. Annotate proteins with eggNOG-mapper
+
+Run eggNOG-mapper on the protein sequences used by OrthoFinder. Query identifiers must remain identical to the gene identifiers in `Orthogroups.tsv` so PhyloGain can aggregate annotations by orthogroup.
+
+```bash
+cat proteomes/*.faa > all_proteins.faa
+
+emapper.py \
+  -i all_proteins.faa \
+  --itype proteins \
+  --output eggnog \
+  --cpu 16
+```
+
+This produces `eggnog.emapper.annotations`. Supplying the official `go-basic.obo` file and using `--fetch-kegg-names` during the PhyloGain build adds readable official names for GO and KEGG terms.
+
+### 3. Build and open the annotated map
+
+```bash
+phylogain build \
   --orthofinder Results_Jul02 \
-  --output species_innovation_map
+  --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv \
+  --annotations eggnog.emapper.annotations \
+  --go-obo /path/to/go-basic.obo \
+  --fetch-kegg-names \
+  --output phylogain_output
+
+phylogain serve phylogain_output
 ```
 
-Open it:
-
-```bash
-species-map serve species_innovation_map
-```
+The GTDB-Tk and eggNOG-mapper commands are intentionally shown first: their outputs provide the taxonomic clade labels, functional descriptions, and branch-specific enrichment results that make the map biologically interpretable.
 
 The input options are mutually exclusive: specify exactly one of `--orthofinder` or `--pirate`.
 
 For PIRATE, provide the PIRATE output directory and preferably a rooted external species tree. The tree tips must match the genome columns in `PIRATE.gene_families.tsv`.
 
 ```bash
-species-map build \
+phylogain build \
   --pirate pyrites_ANI95_PIRATE_output \
   --species-tree rooted_core_gene_tree.nwk \
   --output pirate_gain_loss_map
@@ -72,15 +104,36 @@ species_B	5000000
 ```
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
   --genome-metadata genome_metadata.tsv \
   --output map_with_genome_sizes
 ```
 
-The Basic tab then provides `Genome size: Off / Bar graph`. The optional horizontal bars are aligned with tips in the rectangular layout and are included in the downloaded tree SVG. A collapsed clade shows the mean of its descendant genomes with available values. The normalized values are also written to `genome_metadata.tsv` in the output directory.
+The Basic tab then provides `Genome size: Off / Bar graph` and `Linear / Log2 / Log10` scale choices. The optional horizontal bars are aligned with tips in the rectangular layout and are included in the downloaded tree SVG. A collapsed clade shows the mean of its descendant genomes with available values. The normalized values are also written to `genome_metadata.tsv` in the output directory.
 
-## Add phenotypes
+## Switch tree tips from assembly IDs to strain names
+
+Supply a tab-separated annotation table with a tree-tip identifier and a readable strain or organism name. Accepted identifier columns are `species_id`, `user_genome`, `genome_id`, and `assembly`. Accepted label columns include `strain_name`, `strain`, `organism_name`, `organism`, `display_name`, `tip_label`, and `name`.
+
+```tsv
+species_id	strain_name
+GCF_000317125_1	Chroococcidiopsis thermalis PCC 7203
+GCA_013698215_1	Leptolyngbya sp. strain A
+```
+
+```bash
+phylogain build \
+  --orthofinder Results_Jul02 \
+  --tip-metadata assembly_annotations.tsv \
+  --output map_with_strain_names
+```
+
+The Basic tab then provides `Tip names: Assembly ID / Strain name`. The selection applies to rectangular and circular trees and to downloaded SVG files. Assembly IDs remain the internal identifiers, so switching names does not change the topology, Gain/Loss inference, enrichment results, or gene-family membership. Missing strain names fall back to the original assembly ID. Double-click editing remains available after either naming mode is selected. The normalized mapping is written to `tip_metadata.tsv` in the output directory.
+
+## Advanced: Add phenotype data
+
+After completing the GTDB-Tk and eggNOG-mapper workflow above, an optional phenotype table can be added to search for gene families gained on the same branches as a phenotype transition.
 
 Create a tab-separated file with `species_id` followed by one or more phenotype columns. Species IDs must match the OrthoFinder tree tips.
 
@@ -95,13 +148,17 @@ species_D	-	-
 Accepted states are `+`, `-`, `?`, `1`, `0`, `present`, `absent`, and `unknown`.
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
+  --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv \
+  --annotations eggnog.emapper.annotations \
+  --go-obo /path/to/go-basic.obo \
+  --fetch-kegg-names \
   --phenotypes phenotypes.tsv \
   --phenotype nitrogen_fixation \
   --output nitrogen_fixation_map
 
-species-map serve nitrogen_fixation_map
+phylogain serve nitrogen_fixation_map
 ```
 
 This additionally creates:
@@ -111,12 +168,12 @@ This additionally creates:
 
 Repeat `--phenotype` to select several columns. Omit it to analyze all phenotype columns.
 
-## Add functional enrichment with eggNOG-mapper
+## Functional-enrichment details
 
-Functional annotation is optional. Supply the protein FASTA directory used by OrthoFinder and request eggNOG-mapper during the build:
+Functional annotation is technically optional but strongly recommended. If eggNOG-mapper has not already been run, supply the protein FASTA directory used by OrthoFinder and request it during the build:
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
   --annotate eggnog \
   --proteomes proteomes \
@@ -126,15 +183,15 @@ species-map build \
   --annotation-cpu 16 \
   --output annotated_map
 
-species-map serve annotated_map
+phylogain serve annotated_map
 ```
 
-The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. Gene Gain/Loss Viewer selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. `--fetch-kegg-names` retrieves official KO, pathway, module, and reaction names from the KEGG REST API once during the build and stores them in SQLite and `annotations/kegg_term_names.tsv`; viewing the map then requires no KEGG API calls. The KEGG REST API is limited to academic use by academic users.
+The executable defaults to `emapper.py`. Use `--eggnog-emapper /path/to/emapper.py` when it is not on `PATH`. When annotation is requested during a build, PhyloGain selects the first listed protein from each orthogroup as its representative, runs eggNOG-mapper once, and stores GO, KEGG, COG category, and Pfam assignments. Pass the official Gene Ontology `go-basic.obo` file with `--go-obo` to display GO names alongside GO identifiers. `--fetch-kegg-names` retrieves official KO, pathway, module, and reaction names from the KEGG REST API once during the build and stores them in SQLite and `annotations/kegg_term_names.tsv`; viewing the map then requires no KEGG API calls. The KEGG REST API is limited to academic use by academic users.
 
 With PIRATE input, `--annotate eggnog` uses PIRATE's own `representative_sequences.faa`; `--proteomes` is not needed. Because PIRATE may retain several alleles for one family, all returned terms are merged into the corresponding PIRATE `gene_family`.
 
 ```bash
-species-map build \
+phylogain build \
   --pirate pyrites_ANI95_PIRATE_output \
   --species-tree rooted_core_gene_tree.nwk \
   --annotate eggnog \
@@ -147,7 +204,7 @@ species-map build \
 If eggNOG-mapper was run separately, import its standard output without repeating the search:
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
   --annotations eggnog.emapper.annotations \
   --output annotated_map
@@ -167,7 +224,7 @@ species_A	d__Bacteria;p__Cyanobacteriota;c__Cyanobacteriia;o__Cyanobacteriales;f
 ```
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
   --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
   --output gtdb_collapsible_map
@@ -180,7 +237,7 @@ The `GTDB labels` control can independently show family labels, genus labels, or
 To use a different rooted topology, including a pruned and relabeled GTDB tree whose tips exactly match the OrthoFinder species IDs:
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
   --species-tree gtdb_pruned_rooted.nwk \
   --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
@@ -204,7 +261,7 @@ Results_xxx/
 Run input checks before a long analysis:
 
 ```bash
-species-map validate \
+phylogain validate \
   --orthofinder Results_Jul02 \
   --phenotypes phenotypes.tsv
 ```
@@ -222,6 +279,7 @@ species-map validate \
 --species-tree FILE        Rooted Newick tree replacing the input tool's default tree
 --gtdb-taxonomy FILE       GTDB/GTDB-Tk taxonomy TSV for rank collapsing
 --genome-metadata FILE     Optional TSV with genome size in bp or Mb
+--tip-metadata FILE        Optional TSV mapping tree-tip IDs to strain/organism names
 --annotate eggnog          Run eggNOG-mapper for orthogroup representatives
 --annotations FILE         Import an existing .emapper.annotations file
 --proteomes DIR            Protein FASTA directory used by OrthoFinder
@@ -265,7 +323,7 @@ complete tree visible.
 Example with gains penalized relative to losses:
 
 ```bash
-species-map build \
+phylogain build \
   --orthofinder Results_Jul02 \
   --gain-cost 2 \
   --loss-cost 1 \

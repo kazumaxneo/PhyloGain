@@ -86,6 +86,13 @@ def _input_arguments(command: argparse.ArgumentParser) -> None:
             "or genome_size_mb for the tree-side bar graph"
         ),
     )
+    command.add_argument(
+        "--tip-metadata",
+        help=(
+            "Optional TSV containing a species ID column and strain_name, "
+            "organism_name, display_name, or another supported tip-label column"
+        ),
+    )
     command.add_argument("--phenotypes", help="Optional wide TSV with species_id in the first column")
     command.add_argument(
         "--phenotype",
@@ -106,6 +113,7 @@ def main(argv: list[str] | None = None) -> None:
                 args.gtdb_taxonomy,
                 args.pirate,
                 args.genome_metadata,
+                args.tip_metadata,
             )
             if args.json:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -137,6 +145,7 @@ def main(argv: list[str] | None = None) -> None:
                 progress=lambda message: print(message, flush=True),
                 pirate=args.pirate,
                 genome_metadata_path=args.genome_metadata,
+                tip_metadata_path=args.tip_metadata,
             )
             print(
                 f"Built {result['output']} ({result['species']} species, "
@@ -169,6 +178,12 @@ def _print_validation(report: dict[str, object]) -> None:
         print(
             "Genome sizes:       "
             f"{genome_metadata['mapped_species']} species mapped"
+        )
+    tip_metadata = report.get("tip_metadata") or {}
+    if tip_metadata:
+        print(
+            "Tip labels:         "
+            f"{tip_metadata['mapped_species']} species mapped"
         )
     for warning in report["warnings"]:
         print(f"WARNING: {warning}")

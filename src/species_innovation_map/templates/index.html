@@ -252,8 +252,14 @@
     .event-pie-selected { fill: none; stroke: var(--accent); stroke-width: 2px; pointer-events: none; }
     .tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; fill: var(--ink); cursor: text; }
     .taxonomy-tip-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); cursor: text; }
-    .clade-taxonomy-band { fill-opacity: .16; pointer-events: none; }
-    .clade-taxonomy-band.species { fill-opacity: .20; }
+    .clade-taxonomy-band { fill-opacity: .10; pointer-events: none; }
+    .clade-taxonomy-band.domain { fill-opacity: .05; }
+    .clade-taxonomy-band.phylum { fill-opacity: .06; }
+    .clade-taxonomy-band.class { fill-opacity: .07; }
+    .clade-taxonomy-band.order { fill-opacity: .08; }
+    .clade-taxonomy-band.family { fill-opacity: .10; }
+    .clade-taxonomy-band.genus { fill-opacity: .17; }
+    .clade-taxonomy-band.species { fill-opacity: .23; }
     .taxonomy-label-badge { cursor: move; }
     .clade-taxonomy-label-bg { fill-opacity: .82; pointer-events: all; cursor: move; }
     .clade-taxonomy-label-accent { pointer-events: none; }
@@ -542,7 +548,15 @@
           <label for="genomeSizeScaleSelect">Genome scale</label>
           <select id="genomeSizeScaleSelect" title="Genome-size bar scale" aria-label="Genome size bar scale">
             <option value="linear">Linear</option>
+            <option value="log2">Log2</option>
             <option value="log10">Log10</option>
+          </select>
+        </div>
+        <div class="control-row" id="tipLabelModeControl">
+          <label for="tipLabelModeSelect">Tip names</label>
+          <select id="tipLabelModeSelect" title="Tree-tip naming source" aria-label="Tree tip naming source">
+            <option value="assembly">Assembly ID</option>
+            <option value="strain">Strain name</option>
           </select>
         </div>
         <div class="tree-scale-control" id="genomeSizeFontSizeControl">
@@ -630,7 +644,7 @@
         </div>
       </div>
       <div id="treeViewport"><div id="status">Loading map…</div><svg id="treeSvg" aria-label="Species tree"></svg><input class="tree-label-editor" id="treeLabelEditor" type="text" aria-label="Edit tree label" hidden><span class="tree-action-hint" id="treeActionHint" hidden></span></div>
-      <div class="tree-context-menu" id="treeContextMenu" role="menu" hidden><div class="tree-context-title">Reroot</div><button id="rerootHere" type="button" role="menuitem">Root view from this branch</button><button id="restoreOriginalRoot" type="button" role="menuitem" hidden>Restore original root</button><div class="tree-context-note">Display-only rerooting. Gain/Loss inference remains referenced to the original root.</div></div>
+      <div class="tree-context-menu" id="treeContextMenu" role="menu" hidden><div class="tree-context-title">Reroot</div><button id="rerootHere" type="button" role="menuitem">Reroot from this branch</button><button id="restoreOriginalRoot" type="button" role="menuitem" hidden>Restore original root</button><div class="tree-context-note">Display-only rerooting. Gain/Loss inference remains referenced to the original root.</div></div>
     </section>
     <aside class="detail-panel" aria-hidden="true">
       <div class="detail-resize-handle" id="detailResizeHandle" role="separator" aria-label="Resize detail panel" aria-orientation="vertical" tabindex="0"></div>
@@ -648,7 +662,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, tipLabelMode: "assembly", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -704,9 +718,17 @@
         const storedGenomeSizeOffsetX = Number(localStorage.getItem("species-map-genome-size-offset-x"));
         if (Number.isFinite(storedGenomeSizeOffsetX)) state.genomeSizeOffsetX = storedGenomeSizeOffsetX;
         const storedGenomeSizeScale = localStorage.getItem("species-map-genome-size-scale");
-        if (storedGenomeSizeScale === "linear" || storedGenomeSizeScale === "log10") state.genomeSizeScale = storedGenomeSizeScale;
+        if (["linear", "log2", "log10"].includes(storedGenomeSizeScale)) state.genomeSizeScale = storedGenomeSizeScale;
         $("genomeSizeDisplaySelect").value = state.genomeSizeDisplay;
         $("genomeSizeScaleSelect").value = state.genomeSizeScale;
+        const tipLabels = project.metadata?.tip_labels || {};
+        const hasTipLabels = Object.keys(tipLabels).length > 0;
+        const storedTipLabelMode = localStorage.getItem("species-map-tip-label-mode");
+        if (hasTipLabels && (storedTipLabelMode === "assembly" || storedTipLabelMode === "strain")) state.tipLabelMode = storedTipLabelMode;
+        if (!hasTipLabels) state.tipLabelMode = "assembly";
+        $("tipLabelModeSelect").value = state.tipLabelMode;
+        $("tipLabelModeSelect").disabled = !hasTipLabels;
+        $("tipLabelModeSelect").options[1].textContent = hasTipLabels ? "Strain name" : "Strain name unavailable";
         $("speciesCount").textContent = number(project.species_count);
         $("familyCount").textContent = number(project.family_count);
         $("branchCount").textContent = number(branches.length);
@@ -1132,6 +1154,11 @@
       }
       const taxonomyRankPrefix = taxonomyRank => ({domain: "d__", phylum: "p__", class: "c__", order: "o__", family: "f__", genus: "g__", species: "s__"})[taxonomyRank] || `${taxonomyRank}__`;
       const formatTaxonomyLabel = (taxonomyRank, value) => state.taxonomyPrefixes ? `${taxonomyRankPrefix(taxonomyRank)}${value}` : value;
+      const defaultTipLabel = node => {
+        if (rank && node.rankValue) return `${formatTaxonomyLabel(rank, node.rankValue)} (1)`;
+        const strainLabel = state.project.metadata?.tip_labels?.[node.label];
+        return state.tipLabelMode === "strain" && strainLabel ? strainLabel : node.label;
+      };
       const taxonomyLabelKey = (node, taxonomyRank) => `${taxonomyRank}:${node.id}`;
       const taxonomyLabelText = (node, item) => {
         const key = taxonomyLabelKey(node, item.rank);
@@ -1171,14 +1198,15 @@
       function taxonomyHsl(taxonomyRank, value, occurrenceKey = "", dark = false) {
         const index = taxonomyColorIndex(taxonomyRank, value, occurrenceKey);
         const goldenAngle = 137.507764;
-        const rankOffset = {family: 7, genus: 53, species: 101}[taxonomyRank] || 0;
+        const rankDepth = {domain: 0, phylum: 1, class: 2, order: 3, family: 4, genus: 5, species: 6}[taxonomyRank] ?? 4;
+        const rankOffset = {domain: 0, phylum: 17, class: 31, order: 43, family: 61, genus: 83, species: 109}[taxonomyRank] || 0;
         const seed = state.taxonomyColorSeed >>> 0;
         const direction = seed === 0 || seed % 2 ? 1 : -1;
         const phase = seed === 0 ? 0 : (seed % 3600) / 10;
         const hue = Math.round(((direction * index * goldenAngle + rankOffset + phase) % 360 + 360) % 360);
         const variation = seed === 0 ? index : index + seed % 29;
-        const saturation = dark ? 72 + variation % 4 * 5 : 68 + variation % 5 * 6;
-        const lightness = dark ? 18 + variation % 4 * 3 : 39 + variation % 5 * 5;
+        const saturation = dark ? 68 + rankDepth * 3 + variation % 3 * 2 : 40 + rankDepth * 7 + variation % 3 * 2;
+        const lightness = dark ? 34 - rankDepth * 2 + variation % 3 : 76 - rankDepth * 5 + variation % 3 * 2;
         return `hsl(${hue} ${Math.min(94, saturation)}% ${lightness}%)`;
       }
       const taxonomyColor = (rankName, value, key = "") => taxonomyHsl(rankName, value, key, false);
@@ -1387,12 +1415,12 @@
             addSvgTooltip(tip, "Expand clade");
             canvas.append(marker, tip);
           } else if (node.is_leaf) {
-            const defaultTipLabel = rank && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (1)` : node.label;
-            const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultTipLabel;
+            const defaultLabel = defaultTipLabel(node);
+            const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultLabel;
             const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
             const labelX = node.x + ux * 10;
             const labelY = node.y + uy * 10;
-            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultTipLabel});
+            const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultLabel});
             tip.textContent = taxonomyLabel;
             addSvgTooltip(tip, "Double-click to rename");
             canvas.append(tip);
@@ -1421,8 +1449,8 @@
       position(root);
       function terminalDisplayLabel(node) {
         if (node.collapsed) return node.taxonomyCollapsed && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (${number(node.leafCount)})` : `Collapsed clade (${number(node.leafCount)} tips)`;
-        const defaultLabel = rank && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (1)` : node.label;
-        return state.tipLabelOverrides.get(node.id) || defaultLabel;
+        const label = defaultTipLabel(node);
+        return state.tipLabelOverrides.get(node.id) || label;
       }
       function descendantGenomeSizes(node) {
         if (!node.children.length) {
@@ -1511,29 +1539,35 @@
           addSvgTooltip(tip, "Expand clade");
           canvas.append(marker, tip);
         } else if (node.is_leaf) {
-          const defaultTipLabel = rank && node.rankValue ? `${formatTaxonomyLabel(rank, node.rankValue)} (1)` : node.label;
-          const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultTipLabel;
+          const defaultLabel = defaultTipLabel(node);
+          const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultLabel;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultTipLabel}); tip.textContent = taxonomyLabel; addSvgTooltip(tip, "Double-click to rename"); canvas.append(tip);
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultLabel}); tip.textContent = taxonomyLabel; addSvgTooltip(tip, "Double-click to rename"); canvas.append(tip);
         }
       }
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
       if (showGenomeSizes) {
         const available = [...genomeSummaries.values()].filter(Boolean);
         const maximumBp = Math.max(...available.map(item => item.bp), 1);
-        const useLogScale = state.genomeSizeScale === "log10" && maximumBp > 0;
+        const scaleMode = ["log2", "log10"].includes(state.genomeSizeScale) && maximumBp > 0 ? state.genomeSizeScale : "linear";
+        const useLogScale = scaleMode !== "linear";
+        const useLog2Scale = scaleMode === "log2";
         const maximumMegabases = maximumBp / 1_000_000;
-        const logMaximum = Math.log10(1 + maximumMegabases);
-        const scaledFraction = bp => useLogScale ? Math.log10(1 + Math.max(0, bp) / 1_000_000) / logMaximum : Math.max(0, bp) / maximumBp;
-        const axisValue = fraction => useLogScale ? (Math.pow(10, fraction * logMaximum) - 1) * 1_000_000 : maximumBp * fraction;
+        const logMaximum = useLog2Scale ? Math.log2(1 + maximumMegabases) : Math.log10(1 + maximumMegabases);
+        const scaledFraction = bp => useLogScale
+          ? (useLog2Scale ? Math.log2(1 + Math.max(0, bp) / 1_000_000) : Math.log10(1 + Math.max(0, bp) / 1_000_000)) / logMaximum
+          : Math.max(0, bp) / maximumBp;
+        const axisValue = fraction => useLogScale
+          ? ((useLog2Scale ? Math.pow(2, fraction * logMaximum) : Math.pow(10, fraction * logMaximum)) - 1) * 1_000_000
+          : maximumBp * fraction;
         const formatMegabases = bp => (bp / 1_000_000).toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
-        const genomeTrack = svgEl("g", {class: "genome-size-track", "data-genome-size-track": "", "data-genome-size-scale": useLogScale ? "log10" : "linear", transform: `translate(${state.genomeSizeOffsetX} 0)`});
+        const genomeTrack = svgEl("g", {class: "genome-size-track", "data-genome-size-track": "", "data-genome-size-scale": scaleMode, transform: `translate(${state.genomeSizeOffsetX} 0)`});
         genomeTrack.updateCanvasBounds = updateGenomeSizeCanvasBounds;
         const trackHit = svgEl("rect", {x: metadataOrigin - 8, y: 0, width: metadataWidth + 118, height: baseHeight - 18, class: "genome-size-track-hit"});
         addSvgTooltip(trackHit, "Drag horizontally to reposition genome-size track");
         genomeTrack.append(trackHit);
         const title = svgEl("text", {x: metadataOrigin, y: 14, class: "genome-size-title"});
-        title.textContent = useLogScale ? "Genome size (Mb, log10)" : "Genome size (Mb)";
+        title.textContent = useLogScale ? `Genome size (Mb, ${scaleMode})` : "Genome size (Mb)";
         genomeTrack.append(title);
         for (const fraction of [0, .5, 1]) {
           const x = metadataOrigin + metadataWidth * fraction;
@@ -1760,8 +1794,14 @@
         .event-pie-selected { fill: none; stroke: ${color("--accent")}; stroke-width: 2px; }
         .tip-label { font: ${state.tipFontSize}px ${treeLabelFont}; fill: ${color("--ink")}; }
         .taxonomy-tip-label, .collapsed-label { font: 650 ${state.tipFontSize}px ${treeLabelFont}; fill: ${color("--accent")}; }
-        .clade-taxonomy-band { fill-opacity: .16; }
-        .clade-taxonomy-band.species { fill-opacity: .20; }
+        .clade-taxonomy-band { fill-opacity: .10; }
+        .clade-taxonomy-band.domain { fill-opacity: .05; }
+        .clade-taxonomy-band.phylum { fill-opacity: .06; }
+        .clade-taxonomy-band.class { fill-opacity: .07; }
+        .clade-taxonomy-band.order { fill-opacity: .08; }
+        .clade-taxonomy-band.family { fill-opacity: .10; }
+        .clade-taxonomy-band.genus { fill-opacity: .17; }
+        .clade-taxonomy-band.species { fill-opacity: .23; }
         .clade-taxonomy-label-bg { fill-opacity: .82; }
         .clade-taxonomy-label { fill: #fff; font: 600 ${state.taxonomyLabelFontSize}px ${treeLabelFont}; }
         .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
@@ -2204,8 +2244,13 @@
       renderTree();
     });
     $("genomeSizeScaleSelect").addEventListener("change", event => {
-      state.genomeSizeScale = event.target.value === "log10" ? "log10" : "linear";
+      state.genomeSizeScale = ["log2", "log10"].includes(event.target.value) ? event.target.value : "linear";
       localStorage.setItem("species-map-genome-size-scale", state.genomeSizeScale);
+      renderTree();
+    });
+    $("tipLabelModeSelect").addEventListener("change", event => {
+      state.tipLabelMode = event.target.value === "strain" ? "strain" : "assembly";
+      localStorage.setItem("species-map-tip-label-mode", state.tipLabelMode);
       renderTree();
     });
     $("shuffleTaxonomyColors").addEventListener("click", () => {
@@ -2340,7 +2385,7 @@
         event.stopPropagation();
         contextMenu.dataset.branch = branchId;
         contextMenu.querySelector(".tree-context-title").textContent = `Reroot · ${branchId}`;
-        $("rerootHere").textContent = state.rerootBranchId === branchId ? "Rooted here" : "Root view from this branch";
+        $("rerootHere").textContent = state.rerootBranchId === branchId ? "Rooted here" : "Reroot from this branch";
         $("rerootHere").disabled = state.rerootBranchId === branchId;
         $("restoreOriginalRoot").hidden = !state.rerootBranchId;
         contextMenu.hidden = false;
@@ -2773,7 +2818,7 @@
       const legendControls = document.createElement("div");
       legendControls.className = "legend-controls";
       legendControls.append($("taxonomyLegendScaleControl"), $("phenotypeLegendScaleControl"));
-      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), $("genomeSizeFontSizeControl"), appearanceTitle, staging.querySelector(".tree-tools"), legendsTitle, legendControls, $("resetAllSettingsRow"));
+      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), $("genomeSizeFontSizeControl"), $("tipLabelModeControl"), appearanceTitle, staging.querySelector(".tree-tools"), legendsTitle, legendControls, $("resetAllSettingsRow"));
       $("controlTabFilters").append(sectionTitles[1], $("supportCollapseSelect").closest(".control-row"), staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
       $("controlTabOutput").append(staging.querySelector(".filter-actions"));
       staging.remove();
