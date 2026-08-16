@@ -176,7 +176,9 @@
     .tree-control-window .range-filter .dual-range { grid-column: 2; grid-row: 1; }
     .tree-control-window .range-filter output { grid-column: 3; grid-row: 1; }
     .tree-control-window .filter-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-column: 1; grid-row: auto; gap: 0; }
+    .tree-control-window .output-download-control { display: grid; grid-template-columns: minmax(72px, .8fr) minmax(72px, 1fr); align-items: center; gap: 7px; min-width: 0; }
     .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: flex-end; justify-self: stretch; padding: 7px 12px 9px; color: var(--cp-muted); background: transparent; }
+    .tree-control-window .filter-match-count { display: inline; color: var(--cp-muted); }
     .tree-control-window .taxonomy-color-shuffle { margin: 0; }
     .tree-control-window select, .tree-control-window button, .tree-control-window label, .tree-control-window .control-row-label, .tree-control-window .range-filter-name, .tree-control-window output { font-size: 11px; }
     @media (max-width: 700px) {
@@ -447,8 +449,8 @@
         <select id="cladeLabelSelect" title="Show GTDB clade labels" aria-label="Show GTDB clade labels"><option value="">Off</option></select>
       </span>
       <span class="header-field control-row" id="taxonomyPrefixControl" hidden>
-        <label for="taxonomyPrefixSelect">GTDB prefixes</label>
-        <select id="taxonomyPrefixSelect" title="Show GTDB rank prefixes" aria-label="Show GTDB rank prefixes"><option value="show">Show</option><option value="hide">Hide</option></select>
+        <span class="control-row-label">GTDB prefixes</span>
+        <button id="taxonomyPrefixToggle" type="button" title="Remove or restore GTDB rank prefixes" aria-label="Hide GTDB rank prefixes">Hide f__/g__</button>
       </span>
       <span class="header-field control-row">
         <label for="treeOrderSelect">Order</label>
@@ -615,6 +617,37 @@
           </div>
         </div>
         <div class="control-section-title">Filters</div>
+        <div class="control-row" id="branchScopeControl">
+          <label for="branchScopeSelect">Branch type</label>
+          <select id="branchScopeSelect" aria-label="Branch type filter">
+            <option value="all">All branches</option>
+            <option value="internal">Internal branches</option>
+            <option value="terminal">Terminal branches</option>
+          </select>
+        </div>
+        <div class="control-row" id="netChangeControl">
+          <label for="netChangeSelect">Net change</label>
+          <select id="netChangeSelect" aria-label="Net gene family change filter">
+            <option value="all">All directions</option>
+            <option value="gain">Net gain</option>
+            <option value="equal">Gain = Loss</option>
+            <option value="loss">Net loss</option>
+          </select>
+        </div>
+        <div class="control-row" id="phenotypeBranchControl">
+          <label for="phenotypeBranchSelect">Phenotype</label>
+          <select id="phenotypeBranchSelect" aria-label="Phenotype transition branch filter" disabled>
+            <option value="all">All branches</option>
+            <option value="transition">Any transition</option>
+            <option value="gain">Phenotype gain</option>
+            <option value="loss">Phenotype loss</option>
+          </select>
+        </div>
+        <div class="range-filter total-filter">
+          <span class="range-filter-name">Filter (total)</span>
+          <div class="dual-range" id="totalRange"><input id="totalMin" type="range" aria-label="Minimum total event count"><input id="totalMax" type="range" aria-label="Maximum total event count"></div>
+          <output id="totalRangeValue"></output>
+        </div>
         <div class="range-filter gain-filter">
           <span class="range-filter-name">Filter (gain)</span>
           <div class="dual-range" id="gainRange"><input id="gainMin" type="range" aria-label="Minimum gain count"><input id="gainMax" type="range" aria-label="Maximum gain count"></div>
@@ -637,7 +670,17 @@
             <output id="phenotypeLegendScaleValue" for="phenotypeLegendScale">100%</output>
           </div>
           <div class="control-row reset-all-row" id="resetAllSettingsRow"><span class="control-row-label">Reset</span><button class="filter-reset" id="resetAllSettings" type="button" title="Restore every viewer setting, label, legend, and panel position">Reset all settings</button></div>
-          <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
+          <div class="control-row">
+            <label for="treeDownloadFormat">Tree image</label>
+            <span class="output-download-control">
+              <select id="treeDownloadFormat" aria-label="Tree image format">
+                <option value="svg">SVG</option>
+                <option value="png">PNG</option>
+              </select>
+              <button class="svg-download" id="downloadTree" type="button">Download</button>
+            </span>
+          </div>
+          <div class="control-row"><span class="control-row-label">Tree file</span><button class="svg-download" id="downloadNewick" type="button">Download Newick</button></div>
         </div>
         <div class="filter-status">
           <span class="filter-match-count" id="filterMatchCount"></span>
@@ -662,7 +705,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, tipLabelMode: "assembly", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), branchNodes: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, tipLabelMode: "assembly", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0, totalMin: 0, totalMax: 0, scope: "all", netChange: "all", phenotypeEvent: "all"} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -688,6 +731,7 @@
         $("viewerTitle").textContent = `Gene Gain/Loss Viewer · ${inputName}`;
         document.title = `Gene Gain/Loss Viewer · ${inputName}`;
         state.branches = new Map(branches.map(branch => [branch.branch_id, branch]));
+        state.branchNodes = new Map(project.nodes.filter(node => node.branch_id).map(node => [node.branch_id, node]));
         const storedRerootBranch = localStorage.getItem("species-map-reroot-branch");
         state.rerootBranchId = storedRerootBranch && state.branches.has(storedRerootBranch) ? storedRerootBranch : null;
         initializeBranchFilters(branches);
@@ -770,7 +814,7 @@
         $("cladeLabelControl").hidden = cladeRanks.length === 0;
         $("taxonomyPrefixControl").hidden = ranks.length === 0;
         state.taxonomyPrefixes = localStorage.getItem("species-map-taxonomy-prefixes") !== "hide";
-        $("taxonomyPrefixSelect").value = state.taxonomyPrefixes ? "show" : "hide";
+        syncTaxonomyPrefixToggle();
         $("taxonomyColorShuffleRow").hidden = cladeRanks.length === 0;
         $("taxonomyLegendScaleControl").hidden = cladeRanks.length === 0;
         const storedTaxonomyColorSeed = Number(localStorage.getItem("species-map-taxonomy-color-seed"));
@@ -818,9 +862,10 @@
     function initializeBranchFilters(branches) {
       const maxima = {
         gain: Math.max(0, ...branches.map(branch => Number(branch.gain_count || 0))),
-        loss: Math.max(0, ...branches.map(branch => Number(branch.loss_count || 0)))
+        loss: Math.max(0, ...branches.map(branch => Number(branch.loss_count || 0))),
+        total: Math.max(0, ...branches.map(branch => Number(branch.gain_count || 0) + Number(branch.loss_count || 0)))
       };
-      for (const kind of ["gain", "loss"]) {
+      for (const kind of ["gain", "loss", "total"]) {
         const minimum = $(`${kind}Min`); const maximum = $(`${kind}Max`);
         minimum.min = 0; minimum.max = maxima[kind]; minimum.step = 1; minimum.value = 0;
         maximum.min = 0; maximum.max = maxima[kind]; maximum.step = 1; maximum.value = maxima[kind];
@@ -828,6 +873,9 @@
         maximum.addEventListener("input", () => syncBranchFilters(kind, "maximum"));
         enableDualRangeTrack($(`${kind}Range`), minimum, maximum);
       }
+      $("branchScopeSelect").addEventListener("change", event => { state.branchFilter.scope = event.target.value; syncBranchFilters(); });
+      $("netChangeSelect").addEventListener("change", event => { state.branchFilter.netChange = event.target.value; syncBranchFilters(); });
+      $("phenotypeBranchSelect").addEventListener("change", event => { state.branchFilter.phenotypeEvent = event.target.value; syncBranchFilters(); });
       syncBranchFilters(null, null, false);
     }
     function rangeValueAtPointer(input, clientX, track = input) {
@@ -891,7 +939,7 @@
       track.addEventListener("pointercancel", finish);
     }
     function syncBranchFilters(changedKind = null, changedHandle = null, rerender = true) {
-      for (const kind of ["gain", "loss"]) {
+      for (const kind of ["gain", "loss", "total"]) {
         const minimum = $(`${kind}Min`); const maximum = $(`${kind}Max`);
         if (Number(minimum.value) > Number(maximum.value)) {
           if (kind === changedKind && changedHandle === "minimum") maximum.value = minimum.value;
@@ -908,11 +956,29 @@
       if (rerender && state.project) renderTree();
     }
     function branchMatchesFilter(branch) {
-      return branchValueMatchesFilter(branch, "gain") && branchValueMatchesFilter(branch, "loss");
+      return branchContextMatchesFilter(branch) && branchValueMatchesFilter(branch, "gain") && branchValueMatchesFilter(branch, "loss");
     }
     function branchValueMatchesFilter(branch, kind) {
       const value = Number(branch[`${kind}_count`] || 0);
       return value >= state.branchFilter[`${kind}Min`] && value <= state.branchFilter[`${kind}Max`];
+    }
+    function branchContextMatchesFilter(branch) {
+      const gain = Number(branch.gain_count || 0);
+      const loss = Number(branch.loss_count || 0);
+      const total = gain + loss;
+      if (total < state.branchFilter.totalMin || total > state.branchFilter.totalMax) return false;
+      const node = state.branchNodes.get(branch.branch_id);
+      if (state.branchFilter.scope === "terminal" && !node?.is_leaf) return false;
+      if (state.branchFilter.scope === "internal" && node?.is_leaf) return false;
+      if (state.branchFilter.netChange === "gain" && gain <= loss) return false;
+      if (state.branchFilter.netChange === "equal" && gain !== loss) return false;
+      if (state.branchFilter.netChange === "loss" && gain >= loss) return false;
+      if (state.branchFilter.phenotypeEvent !== "all") {
+        const event = state.phenotypeEvents.get(branch.branch_id) || "";
+        if (state.branchFilter.phenotypeEvent === "transition" && !event) return false;
+        if (["gain", "loss"].includes(state.branchFilter.phenotypeEvent) && event !== state.branchFilter.phenotypeEvent) return false;
+      }
+      return true;
     }
     function normalizedBranchSupport(node) {
       let value = node.support;
@@ -1060,8 +1126,9 @@
           const attrs = {x, y: branchY - 5, "text-anchor": "middle", class: "branch-label", "data-branch": branchId, role: "button", tabindex: "0", "aria-label": `Branch ${branchId}`};
           if (fontSize) attrs.style = `font-size: ${fontSize}px`;
           const label = svgEl("text", attrs);
-          const gainClass = branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
-          const lossClass = branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
+          const contextMatches = branchContextMatchesFilter(branch);
+          const gainClass = contextMatches && branchValueMatchesFilter(branch, "gain") ? "gain-value" : "gain-value filtered-branch-label";
+          const lossClass = contextMatches && branchValueMatchesFilter(branch, "loss") ? "loss-value" : "loss-value filtered-branch-label";
           const gain = svgEl("tspan", {class: gainClass, "data-branch": branchId, "data-event": "gain", role: "button", tabindex: "0", "aria-label": `Gained gene families on branch ${branchId}`}); gain.textContent = `+${gainCount}`;
           const loss = svgEl("tspan", {class: lossClass, "data-branch": branchId, "data-event": "loss", role: "button", tabindex: "0", "aria-label": `Lost gene families on branch ${branchId}`, dx: "5"}); loss.textContent = `−${lossCount}`;
           label.append(gain, loss); canvas.append(label);
@@ -1078,7 +1145,7 @@
           let startAngle = -Math.PI / 2;
           for (const part of parts) {
             const endAngle = startAngle + part.count / total * Math.PI * 2;
-            const common = {class: `event-pie-slice ${part.kind}${branchValueMatchesFilter(branch, part.kind) ? "" : " filtered-branch-label"}`, "data-branch": branchId, "data-event": part.kind, role: "button", tabindex: "0", "aria-label": `${part.count} ${part.kind === "gain" ? "gained" : "lost"} gene families on branch ${branchId}`};
+            const common = {class: `event-pie-slice ${part.kind}${branchContextMatchesFilter(branch) && branchValueMatchesFilter(branch, part.kind) ? "" : " filtered-branch-label"}`, "data-branch": branchId, "data-event": part.kind, role: "button", tabindex: "0", "aria-label": `${part.count} ${part.kind === "gain" ? "gained" : "lost"} gene families on branch ${branchId}`};
             let slice;
             if (parts.length === 1) slice = svgEl("circle", {cx: x, cy, r: radius, ...common});
             else slice = svgEl("path", {d: eventPieSlicePath(x, cy, radius, startAngle, endAngle), ...common});
@@ -1094,6 +1161,14 @@
       const nodes = rootedTree.nodes;
       const root = rootedTree.root;
       const taxonomy = state.project.taxonomy?.species || {};
+      const taxonomyTipCounts = new Map();
+      for (const ranks of Object.values(taxonomy)) {
+        for (const [taxonomyRank, value] of Object.entries(ranks || {})) {
+          if (!value) continue;
+          const key = `${taxonomyRank}:${value}`;
+          taxonomyTipCounts.set(key, (taxonomyTipCounts.get(key) || 0) + 1);
+        }
+      }
       const rank = state.collapseRank;
       const taxonomyDisplayColorIndex = new Map();
       const taxonomyDisplayLegend = new Map();
@@ -1154,6 +1229,11 @@
       }
       const taxonomyRankPrefix = taxonomyRank => ({domain: "d__", phylum: "p__", class: "c__", order: "o__", family: "f__", genus: "g__", species: "s__"})[taxonomyRank] || `${taxonomyRank}__`;
       const formatTaxonomyLabel = (taxonomyRank, value) => state.taxonomyPrefixes ? `${taxonomyRankPrefix(taxonomyRank)}${value}` : value;
+      const applyTaxonomyPrefixPreference = (taxonomyRank, text) => {
+        const value = String(text || "");
+        const prefix = taxonomyRankPrefix(taxonomyRank);
+        return !state.taxonomyPrefixes && value.startsWith(prefix) ? value.slice(prefix.length) : value;
+      };
       const defaultTipLabel = node => {
         if (rank && node.rankValue) return `${formatTaxonomyLabel(rank, node.rankValue)} (1)`;
         const strainLabel = state.project.metadata?.tip_labels?.[node.label];
@@ -1162,7 +1242,8 @@
       const taxonomyLabelKey = (node, taxonomyRank) => `${taxonomyRank}:${node.id}`;
       const taxonomyLabelText = (node, item) => {
         const key = taxonomyLabelKey(node, item.rank);
-        return state.taxonomyLabelOverrides.get(key) || formatTaxonomyLabel(item.rank, item.value);
+        const text = state.taxonomyLabelOverrides.get(key) || formatTaxonomyLabel(item.rank, item.value);
+        return applyTaxonomyPrefixPreference(item.rank, text);
       };
       function appendCladeTaxonomyLabel(node, circular = false) {
         const labels = cladeTaxonomyLabels(node);
@@ -1236,10 +1317,19 @@
         const title = svgEl("text", {x, y, class: "taxonomy-legend-label taxonomy-legend-title"});
         title.textContent = "GTDB clades"; content.append(title);
         const rowHeight = 17;
+        const legendItems = [...taxonomyDisplayLegend].map(([key, item]) => ({
+          key,
+          item,
+          count: taxonomyTipCounts.get(`${item.rank}:${item.value}`) || 0,
+        })).sort((left, right) =>
+          right.count - left.count ||
+          formatTaxonomyLabel(left.item.rank, left.item.value).localeCompare(formatTaxonomyLabel(right.item.rank, right.item.value))
+        );
         let row = 0;
-        for (const [key, item] of taxonomyDisplayLegend) {
+        for (const {key, item, count} of legendItems) {
           const defaultText = formatTaxonomyLabel(item.rank, item.value);
-          const text = state.taxonomyLabelOverrides.get(key) || defaultText;
+          const baseText = applyTaxonomyPrefixPreference(item.rank, state.taxonomyLabelOverrides.get(key) || defaultText);
+          const text = `${baseText} (${number(count)})`;
           row += 1;
           const itemY = y + row * rowHeight;
           const itemGroup = svgEl("g", {class: "taxonomy-legend-item", "data-taxonomy-legend-key": key, "data-taxonomy-legend-default": defaultText});
@@ -1267,7 +1357,8 @@
         const rowHeight = 17;
         for (const [index, eventKind] of ["gain", "loss"].entries()) {
           const key = `${phenotype}::${eventKind}`;
-          const defaultText = `${phenotype}: ${eventKind}`;
+          const positiveTipCount = Number(state.project.phenotype_tip_counts?.[phenotype] || 0);
+          const defaultText = `${phenotype} (${number(positiveTipCount)}): ${eventKind}`;
           const text = state.phenotypeLegendOverrides.get(key) || defaultText;
           const itemY = y + (index + 1) * rowHeight;
           const itemGroup = svgEl("g", {class: "phenotype-legend-item", "data-phenotype-legend-key": key, "data-phenotype-legend-default": defaultText});
@@ -1757,7 +1848,7 @@
         rerenderKeepingCenter();
       });
     }
-    function downloadCurrentTreeSvg() {
+    function currentTreeSvgExport() {
       if (!state.project) return;
       const source = $("treeSvg");
       const clone = source.cloneNode(true);
@@ -1823,14 +1914,103 @@
       clone.prepend(background);
       clone.prepend(style);
       const markup = `<?xml version="1.0" encoding="UTF-8"?>\n${new XMLSerializer().serializeToString(clone)}`;
-      const blob = new Blob([markup], {type: "image/svg+xml;charset=utf-8"});
+      const viewBox = (clone.getAttribute("viewBox") || "").trim().split(/\s+/).map(Number);
+      const width = Math.max(1, Number(clone.getAttribute("width")) || (viewBox.length === 4 ? viewBox[2] : source.clientWidth) || 1);
+      const height = Math.max(1, Number(clone.getAttribute("height")) || (viewBox.length === 4 ? viewBox[3] : source.clientHeight) || 1);
+      return {markup, width, height, basename: `gene-gain-loss-tree-${state.treeLayout}-${state.branchLengthMode}`};
+    }
+    function downloadBlob(blob, filename) {
       const link = document.createElement("a");
       link.href = URL.createObjectURL(blob);
-      link.download = `gene-gain-loss-tree-${state.treeLayout}-${state.branchLengthMode}.svg`;
+      link.download = filename;
       document.body.append(link);
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    }
+    async function svgExportCanvas(svgExport, maximumDimension = 16000, maximumPixels = 80000000) {
+      const svgBlob = new Blob([svgExport.markup], {type: "image/svg+xml;charset=utf-8"});
+      const url = URL.createObjectURL(svgBlob);
+      try {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error("The tree image could not be rasterized."));
+          image.src = url;
+        });
+        const scale = Math.min(1, maximumDimension / svgExport.width, maximumDimension / svgExport.height, Math.sqrt(maximumPixels / (svgExport.width * svgExport.height)));
+        const width = Math.max(1, Math.round(svgExport.width * scale));
+        const height = Math.max(1, Math.round(svgExport.height * scale));
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas export is unavailable in this browser.");
+        context.drawImage(image, 0, 0, width, height);
+        return canvas;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+    function canvasBlob(canvas, type, quality) {
+      return new Promise((resolve, reject) => canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error(`Could not create ${type} output.`)), type, quality));
+    }
+    async function downloadCurrentTree() {
+      const svgExport = currentTreeSvgExport();
+      if (!svgExport) return;
+      const format = $("treeDownloadFormat").value;
+      const button = $("downloadTree");
+      button.disabled = true;
+      button.textContent = "Preparing…";
+      try {
+        if (format === "svg") {
+          downloadBlob(new Blob([svgExport.markup], {type: "image/svg+xml;charset=utf-8"}), `${svgExport.basename}.svg`);
+        } else if (format === "png") {
+          const canvas = await svgExportCanvas(svgExport);
+          downloadBlob(await canvasBlob(canvas, "image/png"), `${svgExport.basename}.png`);
+        }
+      } catch (error) {
+        window.alert(error.message || "Tree export failed.");
+      } finally {
+        button.disabled = false;
+        button.textContent = "Download";
+      }
+    }
+    function quoteNewickLabel(value) {
+      const text = String(value ?? "");
+      if (!text) return "";
+      return /^[A-Za-z0-9_.-]+$/.test(text) ? text : `'${text.replaceAll("'", "''")}'`;
+    }
+    function currentTreeNewick() {
+      const {nodes, root} = nodesForCurrentRoot();
+      if (!root) return ";\n";
+      const descendantCount = new Map();
+      const count = node => {
+        if (descendantCount.has(node.id)) return descendantCount.get(node.id);
+        const value = node.children.length ? node.children.reduce((sum, id) => sum + count(nodes.get(id)), 0) : 1;
+        descendantCount.set(node.id, value);
+        return value;
+      };
+      count(root);
+      const childrenFor = node => {
+        const children = node.children.map(id => nodes.get(id)).filter(Boolean);
+        if (state.flippedNodes.has(node.id)) children.reverse();
+        if (state.treeOrder === "ascending") children.sort((left, right) => count(left) - count(right) || left.id.localeCompare(right.id));
+        if (state.treeOrder === "descending") children.sort((left, right) => count(right) - count(left) || left.id.localeCompare(right.id));
+        return children;
+      };
+      const serialize = (node, isRoot = false) => {
+        const children = childrenFor(node);
+        const subtree = children.length ? `(${children.map(child => serialize(child)).join(",")})` : "";
+        const label = node.id === "__REROOT_VIEW__" ? "" : quoteNewickLabel(node.label || node.id);
+        const length = isRoot ? "" : `:${Math.max(0, Number(node.length) || 0)}`;
+        return `${subtree}${label}${length}`;
+      };
+      return `${serialize(root, true)};\n`;
+    }
+    function downloadCurrentTreeNewick() {
+      if (!state.project) return;
+      downloadBlob(new Blob([currentTreeNewick()], {type: "text/plain;charset=utf-8"}), `gene-gain-loss-tree-${state.rerootBranchId ? "rerooted" : "original"}.nwk`);
     }
     function openDetailPanel() {
       document.querySelector(".workspace").classList.add("detail-open");
@@ -2184,13 +2364,18 @@
     async function phenotypeChanged() {
       const phenotype = $("phenotypeSelect").value;
       $("phenotypeLegendScale").disabled = !phenotype;
+      $("phenotypeBranchSelect").disabled = !phenotype;
+      if (!phenotype) {
+        $("phenotypeBranchSelect").value = "all";
+        state.branchFilter.phenotypeEvent = "all";
+      }
       state.phenotypeEvents.clear();
       $("phenotypeCount").textContent = phenotype || "None";
       if (phenotype) {
         const events = await api(`/api/phenotype?id=${encodeURIComponent(phenotype)}`);
         events.forEach(event => state.phenotypeEvents.set(event.branch_id, event.event));
       }
-      renderTree();
+      syncBranchFilters();
     }
     async function showCandidates() {
       openDetailPanel();
@@ -2228,9 +2413,16 @@
       localStorage.setItem("species-map-clade-labels", state.cladeLabelMode);
       renderTree();
     });
-    $("taxonomyPrefixSelect").addEventListener("change", event => {
-      state.taxonomyPrefixes = event.target.value !== "hide";
+    function syncTaxonomyPrefixToggle() {
+      const button = $("taxonomyPrefixToggle");
+      button.textContent = state.taxonomyPrefixes ? "Hide f__/g__" : "Show f__/g__";
+      button.setAttribute("aria-label", `${state.taxonomyPrefixes ? "Hide" : "Show"} GTDB rank prefixes`);
+      button.setAttribute("aria-pressed", String(!state.taxonomyPrefixes));
+    }
+    $("taxonomyPrefixToggle").addEventListener("click", () => {
+      state.taxonomyPrefixes = !state.taxonomyPrefixes;
       localStorage.setItem("species-map-taxonomy-prefixes", state.taxonomyPrefixes ? "show" : "hide");
+      syncTaxonomyPrefixToggle();
       renderTree();
     });
     $("branchEventDisplaySelect").addEventListener("change", event => {
@@ -2282,7 +2474,8 @@
       $("treeViewport").scrollTo({top: 0, left: 0});
       renderTree();
     });
-    $("downloadSvg").addEventListener("click", downloadCurrentTreeSvg);
+    $("downloadTree").addEventListener("click", downloadCurrentTree);
+    $("downloadNewick").addEventListener("click", downloadCurrentTreeNewick);
     $("detailClose").addEventListener("click", closeDetailPanel);
     document.addEventListener("keydown", event => { if (event.key === "Escape") closeDetailPanel(); });
     function enableDetailResize() {
@@ -2819,7 +3012,7 @@
       legendControls.className = "legend-controls";
       legendControls.append($("taxonomyLegendScaleControl"), $("phenotypeLegendScaleControl"));
       $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), $("genomeSizeFontSizeControl"), $("tipLabelModeControl"), appearanceTitle, staging.querySelector(".tree-tools"), legendsTitle, legendControls, $("resetAllSettingsRow"));
-      $("controlTabFilters").append(sectionTitles[1], $("supportCollapseSelect").closest(".control-row"), staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
+      $("controlTabFilters").append(sectionTitles[1], $("supportCollapseSelect").closest(".control-row"), $("branchScopeControl"), $("netChangeControl"), $("phenotypeBranchControl"), staging.querySelector(".total-filter"), staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
       $("controlTabOutput").append(staging.querySelector(".filter-actions"));
       staging.remove();
       const clampPosition = position => ({

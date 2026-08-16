@@ -394,11 +394,18 @@ def build_project(
     _write_branches(output_path / "branches.tsv", branch_rows, branch_counts)
 
     phenotype_names: list[str] = []
+    phenotype_tip_counts: dict[str, int] = {}
     if phenotype_path:
         progress("Inferring phenotype transitions")
         phenotype_names, phenotype_data = read_phenotypes(
             phenotype_path, selected_phenotypes
         )
+        phenotype_tip_counts = {
+            phenotype_id: sum(
+                state == 1 for state in phenotype_data[phenotype_id].values()
+            )
+            for phenotype_id in phenotype_names
+        }
         with (output_path / "phenotype_gain_loss.tsv").open(
             "w", encoding="utf-8", newline=""
         ) as handle:
@@ -511,6 +518,7 @@ def build_project(
         "species_count": len(species),
         "family_count": family_count,
         "phenotypes": phenotype_names,
+        "phenotype_tip_counts": phenotype_tip_counts,
         "nodes": as_project_nodes(root),
         "taxonomy": {
             "source": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
