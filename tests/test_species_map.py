@@ -363,7 +363,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('select.options[0].textContent = available ? "All" : "Unavailable";', html)
             self.assertEqual(html.count("if (!node.is_leaf && support != null)"), 2)
             self.assertIn('id="treeZoom"', html)
-            self.assertIn('id="treeZoom" type="range" min="10" max="200"', html)
+            self.assertIn('id="treeZoom" type="range" min="10" max="200" step="1"', html)
             self.assertIn("function enableRangeTrack(input)", html)
             self.assertIn("function enableDualRangeTrack(track, minimum, maximum)", html)
             self.assertIn('enableDualRangeTrack($(`${kind}Range`), minimum, maximum);', html)
