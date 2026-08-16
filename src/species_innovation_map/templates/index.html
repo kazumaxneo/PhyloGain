@@ -459,7 +459,7 @@
             <option value="pie">Pie chart</option>
           </select>
         </div>
-        <div class="control-row" id="genomeSizeControl" hidden>
+        <div class="control-row" id="genomeSizeControl">
           <label for="genomeSizeDisplaySelect">Genome size</label>
           <select id="genomeSizeDisplaySelect" title="Show genome size beside the rectangular tree" aria-label="Genome size metadata display">
             <option value="off">Off</option>
@@ -591,9 +591,10 @@
         $("branchEventDisplaySelect").value = state.branchEventDisplay;
         const genomeSizes = project.metadata?.genome_size_bp || {};
         const hasGenomeSizes = Object.keys(genomeSizes).length > 0;
-        $("genomeSizeControl").hidden = !hasGenomeSizes;
+        $("genomeSizeDisplaySelect").options[0].textContent = hasGenomeSizes ? "Off" : "Unavailable";
         const storedGenomeSizeDisplay = localStorage.getItem("species-map-genome-size-display");
         if (hasGenomeSizes && (storedGenomeSizeDisplay === "off" || storedGenomeSizeDisplay === "bar")) state.genomeSizeDisplay = storedGenomeSizeDisplay;
+        if (!hasGenomeSizes) state.genomeSizeDisplay = "off";
         $("genomeSizeDisplaySelect").value = state.genomeSizeDisplay;
         $("speciesCount").textContent = number(project.species_count);
         $("familyCount").textContent = number(project.family_count);
@@ -804,8 +805,9 @@
     }
     function renderTree() {
       const svg = $("treeSvg"); svg.replaceChildren(); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily();
-      $("genomeSizeDisplaySelect").disabled = state.treeLayout !== "rectangular";
-      $("genomeSizeDisplaySelect").title = state.treeLayout === "rectangular" ? "Show genome size beside the tree" : "Genome-size bars are available in the rectangular layout";
+      const hasGenomeSizes = Object.keys(state.project.metadata?.genome_size_bp || {}).length > 0;
+      $("genomeSizeDisplaySelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular";
+      $("genomeSizeDisplaySelect").title = !hasGenomeSizes ? "Rebuild with --genome-metadata to enable this track" : state.treeLayout === "rectangular" ? "Show genome size beside the tree" : "Genome-size bars are available in the rectangular layout";
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
