@@ -471,7 +471,7 @@ def build_project(
 
     project = {
         "format_version": 1,
-        "tool": "species-innovation-map",
+        "tool": "PhyloGain",
         "tool_version": __version__,
         "title": "Gene Gain/Loss Viewer",
         "input_format": input_format,

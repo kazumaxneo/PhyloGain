@@ -1,6 +1,6 @@
-# Gene Gain/Loss Viewer
+# PhyloGain
 
-**Gene Gain/Loss Viewer** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) or [PIRATE](https://github.com/SionBayliss/PIRATE) result directory into an interactive species tree annotated with gene-family gains and losses. OrthoFinder is the recommended and primary input.
+**PhyloGain** turns an [OrthoFinder](https://github.com/davidemms/OrthoFinder) or [PIRATE](https://github.com/SionBayliss/PIRATE) result directory into an interactive Gene Gain/Loss Viewer. OrthoFinder is the recommended and primary input.
 
 Each branch shows `+gains / −losses`. The viewer can switch these numbers to gain/loss pie charts: slice proportions show the relative gain/loss composition, while circle size follows the total event count with a capped threefold diameter range. Click a branch event to inspect its orthogroups, then click an orthogroup to see member gene IDs. An optional phenotype table marks inferred phenotype transitions and ranks gene families gained on the same branches.
 
@@ -11,16 +11,18 @@ Each branch shows `+gains / −losses`. The viewer can switch these numbers to g
 Python 3.10 or later is required.
 
 ```bash
-pip install git+https://github.com/kazumaxneo/species-innovation-map.git
+pip install git+https://github.com/kazumaxneo/PhyloGain.git
 ```
 
 For development:
 
 ```bash
-git clone https://github.com/kazumaxneo/species-innovation-map.git
-cd species-innovation-map
+git clone https://github.com/kazumaxneo/PhyloGain.git
+cd PhyloGain
 pip install -e .
 ```
+
+The primary command is `phylogain`. The previous `species-map` command remains available as a compatibility alias.
 
 ## Quick start
 

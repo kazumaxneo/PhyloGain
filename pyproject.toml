@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "species-innovation-map"
+name = "PhyloGain"
 version = "0.5.0"
 description = "Interactive branch-level gene family gain/loss maps from OrthoFinder and PIRATE results"
 readme = "README.md"
@@ -23,12 +23,13 @@ classifiers = [
 dependencies = []
 
 [project.scripts]
+phylogain = "species_innovation_map.cli:main"
 species-map = "species_innovation_map.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/kazumaxneo/species-innovation-map"
-Repository = "https://github.com/kazumaxneo/species-innovation-map"
-Issues = "https://github.com/kazumaxneo/species-innovation-map/issues"
+Homepage = "https://github.com/kazumaxneo/PhyloGain"
+Repository = "https://github.com/kazumaxneo/PhyloGain"
+Issues = "https://github.com/kazumaxneo/PhyloGain/issues"
 
 [tool.setuptools.package-data]
 species_innovation_map = ["templates/*.html"]

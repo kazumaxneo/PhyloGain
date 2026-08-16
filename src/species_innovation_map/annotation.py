@@ -277,7 +277,7 @@ def fetch_official_kegg_names(
     for index, (source, database) in enumerate(KEGG_LIST_DATABASES.items()):
         request = Request(
             f"{base_url.rstrip('/')}/list/{database}",
-            headers={"User-Agent": "species-innovation-map"},
+            headers={"User-Agent": "PhyloGain"},
         )
         with urlopen(request, timeout=120) as response:
             text = response.read().decode("utf-8")

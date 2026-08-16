@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Rename the project and GitHub repository to **PhyloGain**, while retaining `species-map` as a compatible command alias.
 - Add a Cladogram/Phylogram switch that optionally scales rectangular and circular trees by Newick branch lengths.
 - Keep draggable GTDB and phenotype legends in the foreground and automatically expand the SVG canvas when they move beyond its original bounds.
 - Replace partial reset actions with one Basic-tab reset that restores every saved viewer setting, label, legend, and panel position.

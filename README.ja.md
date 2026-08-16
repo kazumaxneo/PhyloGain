@@ -1,12 +1,14 @@
-# Gene Gain/Loss Viewer
+# PhyloGain
 
 OrthoFinderの結果から、species treeの各branchにgene-familyの獲得数・欠失数を表示する対話型HTMLを作成します。
 
 ## インストール
 
 ```bash
-pip install git+https://github.com/kazumaxneo/species-innovation-map.git
+pip install git+https://github.com/kazumaxneo/PhyloGain.git
 ```
+
+主要コマンドは `phylogain` です。従来の `species-map` も互換エイリアスとして引き続き利用できます。
 
 ## 基本的な実行方法
 

@@ -11,7 +11,7 @@ from .server import serve_project
 
 def parser() -> argparse.ArgumentParser:
     root = argparse.ArgumentParser(
-        prog="species-map",
+        prog="phylogain",
         description="Build interactive branch-level gene-family gain/loss maps from OrthoFinder or PIRATE results.",
     )
     root.add_argument("--version", action="version", version=__version__)
@@ -142,7 +142,7 @@ def main(argv: list[str] | None = None) -> None:
                 f"Built {result['output']} ({result['species']} species, "
                 f"{result['families']} families, {result['branches']} branches)."
             )
-            print(f"Open it with: species-map serve \"{result['output']}\"")
+            print(f"Open it with: phylogain serve \"{result['output']}\"")
             for warning in result["warnings"]:
                 print(f"WARNING: {warning}", file=sys.stderr)
         elif args.command == "serve":

@@ -1,11 +1,11 @@
 cff-version: 1.2.0
-message: "If you use Gene Gain/Loss Viewer, please cite this software."
-title: "Gene Gain/Loss Viewer"
+message: "If you use PhyloGain, please cite this software."
+title: "PhyloGain"
 type: software
 authors:
   - name: "kazu"
 version: 0.4.0
 date-released: 2026-08-15
-url: "https://github.com/kazumaxneo/species-innovation-map"
-repository-code: "https://github.com/kazumaxneo/species-innovation-map"
+url: "https://github.com/kazumaxneo/PhyloGain"
+repository-code: "https://github.com/kazumaxneo/PhyloGain"
 license: MIT
