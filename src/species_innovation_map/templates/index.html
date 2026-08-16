@@ -125,16 +125,17 @@
     .control-tab-panel[hidden] { display: none; }
     .control-section-title { padding: 7px 14px 4px; color: var(--ink); font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
     #controlTabBasic:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #controlTabBasic > .header-controls, #controlTabBasic > .control-section-title, #controlTabBasic > .tree-tools { grid-column: 1 / -1; }
+    #controlTabBasic > .header-controls, #controlTabBasic > .control-section-title, #controlTabBasic > .tree-tools, #controlTabBasic > .legend-controls { grid-column: 1 / -1; }
     .tree-control-window .header-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 0; border-bottom: 0; white-space: normal; }
     .tree-control-window .header-controls > .control-section-title { grid-column: 1 / -1; }
     .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 82px minmax(0, 1fr); align-items: center; gap: 8px; min-height: 34px; padding: 5px 14px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
-    .tree-control-window .header-controls > .control-row:nth-of-type(odd), #controlTabBasic > .control-row:nth-of-type(odd), .tree-control-window .tree-tools > :nth-child(odd), .tree-control-window .filter-actions > :nth-child(odd) { border-right: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+    .tree-control-window .header-controls > .control-row:nth-of-type(odd), #controlTabBasic > .control-row:nth-of-type(odd), .tree-control-window .tree-tools > :nth-child(odd), .tree-control-window .legend-controls > :nth-child(odd), .tree-control-window .filter-actions > :nth-child(odd) { border-right: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
     .tree-control-window [hidden] { display: none !important; }
     .tree-control-window .control-row > label, .tree-control-window .header-field > label, .control-row-label { display: block; color: var(--ink); font-size: 11px; opacity: .76; }
     .tree-control-window .header-controls select, .tree-control-window .header-controls button, .tree-control-window .control-row select, .tree-control-window .control-row button { width: 100%; min-width: 0; border-color: color-mix(in srgb, var(--ink) 22%, transparent); background: color-mix(in srgb, var(--control) 82%, transparent); color: var(--ink); }
     .tree-control-window .branch-filters { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto; gap: 0; min-height: 0; padding: 0; overflow: visible; border-bottom: 0; background: transparent; }
     .tree-control-window .tree-tools { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-column: 1; grid-row: auto; gap: 0; width: 100%; }
+    .tree-control-window .legend-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; width: 100%; }
     .tree-control-window .tree-scale-control { display: grid; grid-template-columns: 82px minmax(0, 1fr) 42px; grid-template-rows: auto; align-items: center; gap: 8px; width: 100%; min-height: 34px; padding: 5px 14px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
     .tree-control-window .tree-scale-control label { grid-column: 1; grid-row: 1; display: block; color: var(--ink); font-size: 11px; opacity: .76; }
     .tree-control-window .tree-scale-control input { grid-column: 2; grid-row: 1; width: 100%; }
@@ -144,13 +145,13 @@
     .tree-control-window .range-filter .dual-range { grid-column: 2; grid-row: 1; }
     .tree-control-window .range-filter output { grid-column: 3; grid-row: 1; }
     .tree-control-window .filter-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-column: 1; grid-row: auto; gap: 0; }
-    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: space-between; justify-self: stretch; padding: 7px 14px 9px; }
+    .tree-control-window .filter-status { display: flex; grid-column: 1; grid-row: auto; justify-content: flex-end; justify-self: stretch; padding: 7px 14px 9px; }
     .tree-control-window .taxonomy-color-shuffle { margin: 0; }
     .tree-control-window select, .tree-control-window button, .tree-control-window label, .tree-control-window .control-row-label, .tree-control-window .range-filter-name, .tree-control-window output { font-size: 12px; }
     @media (max-width: 700px) {
       .tree-control-window { width: min(540px, calc(100% - 16px)); }
-      #controlTabBasic:not([hidden]), .tree-control-window .header-controls, .tree-control-window .tree-tools, .tree-control-window .filter-actions { grid-template-columns: minmax(0, 1fr); }
-      .tree-control-window .header-controls > .control-row, #controlTabBasic > .control-row, .tree-control-window .tree-tools > *, .tree-control-window .filter-actions > * { border-right: 0; }
+      #controlTabBasic:not([hidden]), .tree-control-window .header-controls, .tree-control-window .tree-tools, .tree-control-window .legend-controls, .tree-control-window .filter-actions { grid-template-columns: minmax(0, 1fr); }
+      .tree-control-window .header-controls > .control-row, #controlTabBasic > .control-row, .tree-control-window .tree-tools > *, .tree-control-window .legend-controls > *, .tree-control-window .filter-actions > * { border-right: 0; }
     }
     .tree-tools { grid-column: 3; grid-row: 1; justify-self: start; display: flex; align-items: center; gap: 7px; }
     .tree-scale-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; width: 134px; color: var(--muted); white-space: nowrap; }
@@ -158,14 +159,10 @@
     .tree-scale-control input { grid-column: 1 / 3; grid-row: 2; width: 134px; margin: 0; accent-color: var(--accent); cursor: pointer; touch-action: none; }
     .tree-scale-control output { grid-column: 2; grid-row: 1; width: 32px; color: var(--ink); font: 11px ui-monospace, SFMono-Regular, Consolas, monospace; text-align: right; }
     .taxonomy-color-shuffle { align-self: center; margin: 15px 2px 0 3px; }
-    .legend { display: flex; gap: 13px; color: var(--muted); font-size: 12px; }
     .filter-status { grid-column: 5; grid-row: 1; justify-self: end; display: flex; align-items: center; gap: 14px; }
     .filter-actions { grid-column: 4; grid-row: 1; display: flex; align-items: center; gap: 10px; white-space: nowrap; }
     .svg-download { border: 0; border-radius: 0; padding: 2px 0; background: transparent; color: var(--ink); font-size: 11px; white-space: nowrap; text-decoration: underline; text-underline-offset: 2px; }
     .svg-download:focus-visible { outline: none; color: var(--accent); text-decoration-thickness: 2px; }
-    .dot { display: inline-block; width: 9px; height: 9px; margin-right: 4px; border-radius: 50%; }
-    .dot.gain { background: var(--gain); }
-    .dot.loss { background: var(--loss); }
     .branch-filters { display: grid; grid-template-columns: 280px 280px max-content max-content minmax(max-content, 1fr); grid-template-rows: auto; align-items: center; gap: 10px 12px; min-height: 50px; padding: 7px 14px; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 94%, var(--control)); }
     .range-filter { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: 15px 18px; align-items: center; column-gap: 4px; min-width: 235px; }
     .gain-filter { grid-column: 1; grid-row: 1; }
@@ -230,8 +227,8 @@
     .collapsed-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
     .collapsed-marker { fill: var(--accent); opacity: .75; cursor: pointer; }
     .node-dot { fill: var(--panel); stroke: #7b8993; stroke-width: 1.2; }
-    .phenotype-gain { fill: var(--gain); stroke: white; stroke-width: 2; }
-    .phenotype-loss { fill: var(--loss); stroke: white; stroke-width: 2; }
+    .phenotype-gain { fill: #ff1744; stroke: white; stroke-width: 2; }
+    .phenotype-loss { fill: #9aa1a8; stroke: white; stroke-width: 2; }
     .detail-panel {
       position: absolute;
       z-index: 10;
@@ -364,7 +361,6 @@
     @media (max-width: 1400px) {
       .summary .card:nth-child(3), .summary .card:last-child { display: none; }
       .branch-filters { grid-template-columns: 235px 235px max-content max-content 0; column-gap: 10px; }
-      .filter-status .legend { display: none; }
       .filter-match-count { display: none; }
     }
     @media (max-width: 760px) {
@@ -571,7 +567,6 @@
           <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
         </div>
         <div class="filter-status">
-          <div class="legend"><span><i class="dot gain"></i>gain</span><span><i class="dot loss"></i>loss</span></div>
           <span class="filter-match-count" id="filterMatchCount"></span>
         </div>
       </div>
@@ -1619,8 +1614,8 @@
         .phenotype-legend-title { font-weight: 650; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
         .node-dot { fill: ${color("--panel")}; stroke: #7b8993; stroke-width: 1.2; }
-        .phenotype-gain { fill: ${color("--gain")}; stroke: white; stroke-width: 2; }
-        .phenotype-loss { fill: ${color("--loss")}; stroke: white; stroke-width: 2; }
+        .phenotype-gain { fill: #ff1744; stroke: white; stroke-width: 2; }
+        .phenotype-loss { fill: #9aa1a8; stroke: white; stroke-width: 2; }
       `;
       const background = document.createElementNS(SVG, "rect");
       background.setAttribute("width", "100%");
@@ -2559,8 +2554,14 @@
       const appearanceTitle = document.createElement("div");
       appearanceTitle.className = "control-section-title";
       appearanceTitle.textContent = "Appearance";
-      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), appearanceTitle, staging.querySelector(".tree-tools"));
-      $("controlTabFilters").append(sectionTitles[1], staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
+      const legendsTitle = document.createElement("div");
+      legendsTitle.className = "control-section-title";
+      legendsTitle.textContent = "Legends";
+      const legendControls = document.createElement("div");
+      legendControls.className = "legend-controls";
+      legendControls.append($("taxonomyLegendScaleControl"), $("phenotypeLegendScaleControl"));
+      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), appearanceTitle, staging.querySelector(".tree-tools"), legendsTitle, legendControls);
+      $("controlTabFilters").append(sectionTitles[1], $("supportCollapseSelect").closest(".control-row"), staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
       $("controlTabOutput").append(staging.querySelector(".filter-actions"));
       staging.remove();
       const clampPosition = position => ({
