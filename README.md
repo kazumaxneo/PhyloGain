@@ -192,6 +192,57 @@ conda deactivate
 
 For PIRATE, a rooted species tree can be supplied with `--species-tree rooted_species_tree.nwk`. Without it, PhyloGain uses `binary_presence_absence.nwk` from the PIRATE output directory. The viewer opens in a web browser after `phylogain serve` is run.
 
+### Taxon-level pangenome analysis
+
+Use `--taxon-rank` to aggregate genome-level presence/absence into GTDB species, genus, family, or order occupancy before gain/loss reconstruction. The default remains `genome`, so existing commands retain their previous behavior.
+
+The taxon-level workflow is intentionally simple and auditable:
+
+```text
+OrthoFinder/PIRATE gene-family table
+  -> group genomes by a GTDB rank
+  -> calculate gene-family occupancy within each taxon
+  -> classify occupancy as present, absent, or polymorphic
+  -> confirm that each taxon is monophyletic in the supplied species tree
+  -> collapse each accepted taxon to one tip
+  -> reconstruct ancestral states with Sankoff parsimony
+  -> count absent-to-present changes as gains and present-to-absent changes as losses
+  -> display branch events, gene families, occupancy, and functional enrichment
+```
+
+With the default thresholds, occupancy is classified as `present` when at least 90% of genomes in the taxon contain the family, `absent` when at most 10% contain it, and `polymorphic` otherwise. These branch values therefore describe changes between taxon-level pangenome states; they are not the same as gain/loss counts on the original genome-level tree.
+
+### Advanced
+
+#### Confidence occupancy and bootstrap support
+
+`--state-method confidence` uses a Beta posterior to classify taxon occupancy only when it reaches the requested confidence. `--bootstrap-replicates` resamples genomes within each taxon and writes branch/family event support to `event_bootstrap.tsv`. For small taxa this confidence mode can be very conservative, so the default `threshold` mode remains the recommended primary analysis.
+
+```bash
+phylogain build \
+  --orthofinder proteomes/OrthoFinder/Results_MmmDD \
+  --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv \
+  --taxon-rank genus \
+  --state-method confidence \
+  --state-confidence 0.95 \
+  --bootstrap-replicates 100 \
+  --bootstrap-seed 1 \
+  --output phylogain_genus_confidence_bootstrap
+```
+
+```bash
+phylogain build \
+  --orthofinder proteomes/OrthoFinder/Results_MmmDD \
+  --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv \
+  --taxon-rank genus \
+  --present-threshold 0.90 \
+  --absent-threshold 0.10 \
+  --min-genomes-per-taxon 3 \
+  --output phylogain_genus
+```
+
+Occupancy between the absent and present thresholds is retained as `polymorphic` and passed to Sankoff reconstruction as the ambiguous state `{0,1}`. Only monophyletic taxa are collapsed and analyzed; non-monophyletic taxa are reported and excluded. OrthoFinder is recommended for genus-level and broader comparisons. Taxon-level builds also write `taxon_occupancy.tsv` and `taxon_tree.nwk`.
+
 ## Add phenotype metadata
 
 Phenotypes can be supplied as a tab-separated file. The first column must be `species_id`, and its values must match the tip names in the phylogenetic tree.

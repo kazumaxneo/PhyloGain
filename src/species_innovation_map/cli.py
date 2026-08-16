@@ -29,6 +29,24 @@ def parser() -> argparse.ArgumentParser:
     build.add_argument("--root-state", choices=["auto", "0", "1"], default="auto")
     build.add_argument("--presence-threshold", type=int, default=1)
     build.add_argument(
+        "--present-threshold",
+        type=float,
+        default=0.90,
+        help="Taxon occupancy classified as present (default: 0.90)",
+    )
+    build.add_argument(
+        "--absent-threshold",
+        type=float,
+        default=0.10,
+        help="Taxon occupancy classified as absent (default: 0.10)",
+    )
+    build.add_argument(
+        "--min-genomes-per-taxon",
+        type=int,
+        default=3,
+        help="Minimum genomes required for a taxon-level tip (default: 3)",
+    )
+    build.add_argument(
         "--no-members",
         action="store_true",
         help="Skip indexing gene-family member IDs for a smaller output",
@@ -87,6 +105,36 @@ def _input_arguments(command: argparse.ArgumentParser) -> None:
         ),
     )
     command.add_argument(
+        "--taxon-rank",
+        choices=["genome", "species", "genus", "family", "order"],
+        default="genome",
+        help="Analysis resolution; non-genome levels require --gtdb-taxonomy",
+    )
+    command.add_argument(
+        "--state-method",
+        choices=["threshold", "confidence"],
+        default="threshold",
+        help="Taxon occupancy state rule (default: threshold)",
+    )
+    command.add_argument(
+        "--state-confidence",
+        type=float,
+        default=0.95,
+        help="Posterior probability required by --state-method confidence (default: 0.95)",
+    )
+    command.add_argument(
+        "--bootstrap-replicates",
+        type=int,
+        default=0,
+        help="Optional taxon-member bootstrap replicates for event support (default: 0)",
+    )
+    command.add_argument(
+        "--bootstrap-seed",
+        type=int,
+        default=1,
+        help="Random seed used by --bootstrap-replicates (default: 1)",
+    )
+    command.add_argument(
         "--tip-metadata",
         help=(
             "Optional TSV containing a species ID column and strain_name, "
@@ -114,6 +162,7 @@ def main(argv: list[str] | None = None) -> None:
                 args.pirate,
                 args.genome_metadata,
                 args.tip_metadata,
+                args.taxon_rank,
             )
             if args.json:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -146,9 +195,18 @@ def main(argv: list[str] | None = None) -> None:
                 pirate=args.pirate,
                 genome_metadata_path=args.genome_metadata,
                 tip_metadata_path=args.tip_metadata,
+                taxon_rank=args.taxon_rank,
+                present_threshold=args.present_threshold,
+                absent_threshold=args.absent_threshold,
+                min_genomes_per_taxon=args.min_genomes_per_taxon,
+                state_method=args.state_method,
+                state_confidence=args.state_confidence,
+                bootstrap_replicates=args.bootstrap_replicates,
+                bootstrap_seed=args.bootstrap_seed,
             )
+            unit = "species" if result["taxon_rank"] == "genome" else f"{result['taxon_rank']} taxa"
             print(
-                f"Built {result['output']} ({result['species']} species, "
+                f"Built {result['output']} ({result['species']} {unit}, "
                 f"{result['families']} families, {result['branches']} branches)."
             )
             print(f"Open it with: phylogain serve \"{result['output']}\"")

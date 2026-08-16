@@ -59,12 +59,26 @@ class ProjectHandler(SimpleHTTPRequestHandler):
                 ).fetchone()[0]
                 params.append(limit)
                 annotated = _has_column(connection, "families", "preferred_name")
+                occupancy_columns = (
+                    "e.parent_occupancy,e.child_occupancy,e.child_taxon_id,"
+                    if _has_column(connection, "events", "parent_occupancy")
+                    else "NULL AS parent_occupancy,NULL AS child_occupancy,NULL AS child_taxon_id,"
+                )
+                plain_occupancy_columns = (
+                    "parent_occupancy,child_occupancy,child_taxon_id "
+                    if _has_column(connection, "events", "parent_occupancy")
+                    else "NULL AS parent_occupancy,NULL AS child_occupancy,NULL AS child_taxon_id "
+                )
                 select = (
                     "SELECT e.family_id,e.event,e.parent_state,e.child_state,"
+                    f"{occupancy_columns}"
                     "f.preferred_name,f.description FROM events e "
                     "JOIN families f ON f.family_id=e.family_id WHERE "
                     if annotated
-                    else "SELECT family_id,event,parent_state,child_state FROM events WHERE "
+                    else (
+                        "SELECT family_id,event,parent_state,child_state,"
+                        f"{plain_occupancy_columns}FROM events WHERE "
+                    )
                 )
                 qualified_where = where.replace("branch_id", "e.branch_id").replace("event", "e.event") if annotated else where
                 order_by = "e.event,e.family_id" if annotated else "event,family_id"
@@ -72,6 +86,56 @@ class ProjectHandler(SimpleHTTPRequestHandler):
                     f"{select}{qualified_where} ORDER BY {order_by} LIMIT ?", params
                 ).fetchall()
                 return {"total": total, "events": [dict(row) for row in rows]}
+            if path == "/api/taxon":
+                if not _has_table(connection, "taxon_gene_states"):
+                    raise ValueError("This project has no taxon-level occupancy data")
+                taxon = _required(query, "id")
+                summary_rows = connection.execute(
+                    "SELECT observed_state,COUNT(*) AS family_count FROM taxon_gene_states "
+                    "WHERE taxon_id=? GROUP BY observed_state",
+                    (taxon,),
+                ).fetchall()
+                samples = connection.execute(
+                    "SELECT family_id,present_genomes,total_genomes,occupancy,observed_state,inferred_state "
+                    "FROM taxon_gene_states WHERE taxon_id=? "
+                    "ORDER BY occupancy DESC,family_id LIMIT 250",
+                    (taxon,),
+                ).fetchall()
+                return {
+                    "taxon_id": taxon,
+                    "summary": {row["observed_state"]: row["family_count"] for row in summary_rows},
+                    "gene_families": [dict(row) for row in samples],
+                }
+            if path == "/api/occupancy":
+                if not _has_table(connection, "taxon_gene_states"):
+                    raise ValueError("This project has no taxon-level occupancy data")
+                limit = min(max(int(query.get("limit", ["40"])[0]), 1), 100)
+                family_rows = connection.execute(
+                    "SELECT family_id,SUM(observed_state='polymorphic') AS polymorphic_taxa,"
+                    "MAX(occupancy)-MIN(occupancy) AS spread FROM taxon_gene_states "
+                    "GROUP BY family_id ORDER BY polymorphic_taxa DESC,spread DESC,family_id LIMIT ?",
+                    (limit,),
+                ).fetchall()
+                families = [row["family_id"] for row in family_rows]
+                if not families:
+                    return {"taxa": [], "families": [], "values": []}
+                placeholders = ",".join("?" for _ in families)
+                values = connection.execute(
+                    f"SELECT taxon_id,family_id,occupancy,observed_state FROM taxon_gene_states "
+                    f"WHERE family_id IN ({placeholders}) ORDER BY taxon_id,family_id",
+                    families,
+                ).fetchall()
+                taxa = [
+                    row[0]
+                    for row in connection.execute(
+                        "SELECT DISTINCT taxon_id FROM taxon_gene_states ORDER BY taxon_id"
+                    )
+                ]
+                return {
+                    "taxa": taxa,
+                    "families": families,
+                    "values": [dict(row) for row in values],
+                }
             if path == "/api/enrichment":
                 branch = _required(query, "branch")
                 event = _required(query, "event")
@@ -116,6 +180,17 @@ class ProjectHandler(SimpleHTTPRequestHandler):
                             (family,),
                         ).fetchall()
                     ]
+                taxon_states = []
+                if _has_table(connection, "taxon_gene_states"):
+                    taxon_states = [
+                        dict(item)
+                        for item in connection.execute(
+                            "SELECT taxon_id,present_genomes,total_genomes,occupancy,"
+                            "observed_state,inferred_state FROM taxon_gene_states "
+                            "WHERE family_id=? ORDER BY taxon_id",
+                            (family,),
+                        ).fetchall()
+                    ]
                 return {
                     "family_id": row["family_id"],
                     "preferred_name": row["preferred_name"] if annotated else "",
@@ -123,6 +198,7 @@ class ProjectHandler(SimpleHTTPRequestHandler):
                     "annotations": annotations,
                     "members": members,
                     "events": [dict(item) for item in gains],
+                    "taxon_states": taxon_states,
                 }
             if path == "/api/candidates":
                 phenotype = _required(query, "phenotype")

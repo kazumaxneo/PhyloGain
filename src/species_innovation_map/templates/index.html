@@ -395,6 +395,13 @@
     td { border-bottom: 1px solid var(--line); padding: 7px 5px; }
     td button { border: 0; padding: 0; color: var(--accent); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
     .member-list { display: grid; gap: 0; margin-top: 32px; }
+    .taxon-state-definition { grid-column: 1 / -1; padding: 5px 12px 7px; color: var(--cp-muted); font-size: 11px; border-bottom: 1px solid var(--cp-line); }
+    .taxon-state-table td.numeric, .taxon-state-table th.numeric { text-align: right; font-variant-numeric: tabular-nums; }
+    .occupancy-heatmap-wrap { overflow: auto; margin-top: 12px; }
+    .occupancy-heatmap { width: max-content; min-width: 100%; }
+    .occupancy-heatmap th { max-width: 110px; writing-mode: vertical-rl; transform: rotate(180deg); height: 120px; vertical-align: bottom; }
+    .occupancy-heatmap th:first-child { writing-mode: horizontal-tb; transform: none; height: auto; }
+    .occupancy-cell { min-width: 32px; text-align: center; color: #111; font-size: 9px; font-variant-numeric: tabular-nums; }
     .member-row { padding: 4px 0; border-bottom: 1px solid var(--line); }
     .member-assembly { margin: 0 0 1px; color: var(--ink); font-size: 9px; font-weight: 400; line-height: 1.2; text-decoration: underline; text-underline-offset: 2px; word-break: break-all; }
     .genes { color: var(--muted); font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: 9px; line-height: 1.25; word-break: break-all; }
@@ -431,6 +438,15 @@
     <h1 id="viewerTitle">Gene Gain/Loss Viewer</h1>
     <div class="header-controls" aria-label="Tree controls">
       <div class="control-section-title">Analysis</div>
+      <span class="control-row" id="analysisLevelControl" hidden>
+        <label for="analysisLevelSelect">Analysis level</label>
+        <select id="analysisLevelSelect" aria-label="Analysis resolution" disabled></select>
+      </span>
+      <span class="control-row" id="occupancyHeatmapControl" hidden>
+        <span class="control-row-label">Occupancy</span>
+        <button id="occupancyHeatmapButton" type="button">Open heatmap</button>
+      </span>
+      <div class="taxon-state-definition" id="taxonStateDefinition" hidden></div>
       <span class="control-row">
         <label for="phenotypeSelect">Phenotype</label>
         <select id="phenotypeSelect" title="Phenotype"><option value="">None</option></select>
@@ -492,7 +508,7 @@
       </span>
     </div>
     <div class="summary" aria-label="Dataset summary">
-      <div class="card"><span>Species</span><strong id="speciesCount">—</strong></div>
+      <div class="card"><span id="speciesCountLabel">Species</span><strong id="speciesCount">—</strong></div>
       <div class="card"><span>Gene families</span><strong id="familyCount">—</strong></div>
       <div class="card"><span>Branches</span><strong id="branchCount">—</strong></div>
       <div class="card"><span>Selected phenotype</span><strong id="phenotypeCount">None</strong></div>
@@ -705,7 +721,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), branchNodes: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, tipLabelMode: "assembly", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0, totalMin: 0, totalMax: 0, scope: "all", netChange: "all", phenotypeEvent: "all"} };
+    const state = { project: null, branches: new Map(), branchNodes: new Map(), bootstrapSupports: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, rerootBranchId: null, collapseRank: "", cladeLabelMode: "", taxonomyPrefixes: true, taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, tipLabelMode: "assembly", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0, totalMin: 0, totalMax: 0, scope: "all", netChange: "all", phenotypeEvent: "all"} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -717,6 +733,12 @@
       node.dataset.actionHint = text;
       return node;
     }
+    function tipActionHint(node) {
+      const taxon = state.project?.taxon_analysis?.groups?.[node.taxon_id || node.id];
+      if (!taxon) return "Double-click to rename";
+      const summary = taxon.summary || {};
+      return `${node.taxon_id || node.id} · ${number(taxon.n_genomes)} genomes · present ${number(summary.present)} · polymorphic ${number(summary.polymorphic)} · absent ${number(summary.absent)}`;
+    }
     async function api(path) {
       const response = await fetch(path);
       if (!response.ok) throw new Error((await response.json()).error || response.statusText);
@@ -726,6 +748,30 @@
       try {
         const [project, branches, annotationSources] = await Promise.all([api("/api/project"), api("/api/branches"), api("/api/annotation-sources")]);
         state.project = project;
+        const bootstrapFile = project.bootstrap?.event_support_file;
+        if (bootstrapFile) {
+          try {
+            const text = await (await fetch(bootstrapFile)).text();
+            for (const line of text.trim().split(/\r?\n/).slice(1)) {
+              const [branchId, familyId, event, count, replicates, support] = line.split("\t");
+              if (branchId && familyId && event) state.bootstrapSupports.set(`${branchId}\t${familyId}\t${event}`, {count: Number(count), replicates: Number(replicates), support: Number(support)});
+            }
+          } catch (_) { /* bootstrap support is optional */ }
+        }
+        const taxonAnalysis = project.taxon_analysis || {};
+        if (taxonAnalysis.enabled) {
+          const rank = taxonAnalysis.rank || "taxon";
+          const option = document.createElement("option");
+          option.value = rank; option.textContent = rank[0].toUpperCase() + rank.slice(1);
+          $("analysisLevelSelect").append(option);
+          $("analysisLevelControl").hidden = false;
+          $("occupancyHeatmapControl").hidden = false;
+          $("taxonStateDefinition").hidden = false;
+          $("taxonStateDefinition").textContent = taxonAnalysis.state_method === "confidence"
+            ? `Taxon states: Beta posterior confidence ≥ ${(100 * (taxonAnalysis.state_confidence || .95)).toFixed(0)}% · present ≥ ${(100 * taxonAnalysis.present_threshold).toFixed(0)}% · absent ≤ ${(100 * taxonAnalysis.absent_threshold).toFixed(0)}%`
+            : `Taxon states: present ≥ ${(100 * taxonAnalysis.present_threshold).toFixed(0)}% · absent ≤ ${(100 * taxonAnalysis.absent_threshold).toFixed(0)}% · intermediate = polymorphic`;
+          $("speciesCountLabel").textContent = `${rank[0].toUpperCase() + rank.slice(1)} taxa`;
+        }
         initializeSupportControl(project.nodes);
         const inputName = project.input_format === "pirate" ? "PIRATE" : "OrthoFinder";
         $("viewerTitle").textContent = `Gene Gain/Loss Viewer · ${inputName}`;
@@ -1193,8 +1239,9 @@
         const children = childNodes(node);
         if (!children.length) {
           node.leafCount = 1;
-          node.rankValue = rank ? (taxonomy[node.label]?.[rank] || "") : "";
-          node.taxonomyConsensus = Object.fromEntries(["family", "genus", "species"].map(taxonomyRank => [taxonomyRank, taxonomy[node.label]?.[taxonomyRank] || ""]));
+          const tipTaxonomy = taxonomy[node.id] || taxonomy[node.label] || {};
+          node.rankValue = rank ? (tipTaxonomy[rank] || "") : "";
+          node.taxonomyConsensus = Object.fromEntries(["family", "genus", "species"].map(taxonomyRank => [taxonomyRank, tipTaxonomy[taxonomyRank] || ""]));
           return;
         }
         children.forEach(summarize);
@@ -1513,7 +1560,7 @@
             const labelY = node.y + uy * 10;
             const tip = svgEl("text", {x: labelX, y: labelY, "text-anchor": anchor, "dominant-baseline": "middle", transform: `rotate(${labelAngle} ${labelX} ${labelY})`, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultLabel});
             tip.textContent = taxonomyLabel;
-            addSvgTooltip(tip, "Double-click to rename");
+            addSvgTooltip(tip, tipActionHint(node));
             canvas.append(tip);
           }
         }
@@ -1527,6 +1574,7 @@
       }
       svg.style.backgroundImage = useBranchLengths ? "none" : "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
       const genomeSizes = state.project.metadata?.genome_size_bp || {};
+      const suppliedGenomeSummaries = state.project.metadata?.genome_size_summary || {};
       const showGenomeSizes = state.genomeSizeDisplay === "bar" && Object.keys(genomeSizes).length > 0;
       let leafIndex = 0;
       const spacing = 25 * state.verticalSpacing;
@@ -1552,8 +1600,20 @@
       }
       const visibleTerminals = visibleNodes.filter(node => node.collapsed || node.is_leaf);
       const genomeSummaries = new Map(visibleTerminals.map(node => {
+        const supplied = suppliedGenomeSummaries[node.label] || suppliedGenomeSummaries[node.id];
+        if (supplied && Number.isFinite(Number(supplied.mean_bp))) {
+          return [node.id, {
+            bp: Number(supplied.mean_bp),
+            sd: Math.max(0, Number(supplied.sd_bp) || 0),
+            count: Number(supplied.n) || 1,
+            aggregate: Number(supplied.n) > 1
+          }];
+        }
         const values = descendantGenomeSizes(node);
-        return [node.id, values.length ? {bp: values.reduce((sum, value) => sum + value, 0) / values.length, count: values.length, collapsed: node.collapsed} : null];
+        if (!values.length) return [node.id, null];
+        const mean = values.reduce((sum, value) => sum + value, 0) / values.length;
+        const variance = values.reduce((sum, value) => sum + (value - mean) ** 2, 0) / values.length;
+        return [node.id, {bp: mean, sd: Math.sqrt(variance), count: values.length, aggregate: node.collapsed && values.length > 1}];
       }));
       const metadataOrigin = showGenomeSizes ? Math.max(...visibleTerminals.map(node => node.x + 24 + terminalDisplayLabel(node).length * state.tipFontSize * .62), 0) + 26 : 0;
       const metadataWidth = 170;
@@ -1633,13 +1693,13 @@
           const defaultLabel = defaultTipLabel(node);
           const taxonomyLabel = state.tipLabelOverrides.get(node.id) || defaultLabel;
           const tipClass = rank && node.rankValue ? "taxonomy-tip-label" : "tip-label";
-          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultLabel}); tip.textContent = taxonomyLabel; addSvgTooltip(tip, "Double-click to rename"); canvas.append(tip);
+          const tip = svgEl("text", {x: node.x + 8, y: node.y + 4, style: `font-size: ${state.tipFontSize}px`, class: tipClass, "data-tip-node": node.id, "data-tip-label-default": defaultLabel}); tip.textContent = taxonomyLabel; addSvgTooltip(tip, tipActionHint(node)); canvas.append(tip);
         }
       }
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
       if (showGenomeSizes) {
         const available = [...genomeSummaries.values()].filter(Boolean);
-        const maximumBp = Math.max(...available.map(item => item.bp), 1);
+        const maximumBp = Math.max(...available.map(item => item.bp + item.sd), 1);
         const scaleMode = ["log2", "log10"].includes(state.genomeSizeScale) && maximumBp > 0 ? state.genomeSizeScale : "linear";
         const useLogScale = scaleMode !== "linear";
         const useLog2Scale = scaleMode === "log2";
@@ -1673,10 +1733,17 @@
           const width = Math.max(1, scaledFraction(summary.bp) * metadataWidth);
           const bar = svgEl("rect", {x: metadataOrigin, y: node.y - Math.min(5, spacing * .28), width, height: Math.min(10, spacing * .56), rx: 1, class: "genome-size-bar"});
           const megabases = summary.bp / 1_000_000;
-          addSvgTooltip(bar, summary.collapsed ? `Mean genome size: ${megabases.toFixed(2)} Mb (${summary.count} genomes with values)` : `Genome size: ${megabases.toFixed(2)} Mb`);
+          const sdMegabases = summary.sd / 1_000_000;
+          addSvgTooltip(bar, summary.aggregate ? `Mean genome size: ${megabases.toFixed(2)} ± ${sdMegabases.toFixed(2)} Mb (SD; n=${summary.count})` : `Genome size: ${megabases.toFixed(2)} Mb`);
           genomeTrack.append(bar);
+          if (summary.aggregate && summary.sd > 0) {
+            const errorX = metadataOrigin + scaledFraction(summary.bp + summary.sd) * metadataWidth;
+            const capY = Math.min(5, spacing * .28);
+            genomeTrack.append(svgEl("line", {x1: metadataOrigin + width, y1: node.y, x2: errorX, y2: node.y, class: "genome-size-error"}));
+            genomeTrack.append(svgEl("line", {x1: errorX, y1: node.y - capY, x2: errorX, y2: node.y + capY, class: "genome-size-error"}));
+          }
           const value = svgEl("text", {x: metadataOrigin + width + 5, y: node.y + 3, class: "genome-size-value"});
-          value.textContent = formatMegabases(summary.bp);
+          value.textContent = summary.aggregate ? `${formatMegabases(summary.bp)} ± ${formatMegabases(summary.sd)}` : formatMegabases(summary.bp);
           genomeTrack.append(value);
         }
         canvas.append(genomeTrack);
@@ -1874,6 +1941,7 @@
         .genome-size-axis-label { fill: ${color("--muted")}; font: ${state.genomeSizeFontSize}px ${treeLabelFont}; }
         .genome-size-title { fill: ${color("--ink")}; font: 650 ${state.genomeSizeFontSize + 2}px ${treeLabelFont}; }
         .genome-size-value { fill: ${color("--ink")}; font: ${state.genomeSizeFontSize}px ${treeLabelFont}; }
+        .genome-size-error { stroke: ${color("--ink")}; stroke-width: 1.1; opacity: .8; }
         .genome-size-bar { fill: ${color("--accent")}; fill-opacity: .72; }
         .gain-value { fill: ${color("--gain-text")}; }
         .loss-value { fill: ${color("--loss-text")}; }
@@ -2090,8 +2158,12 @@
         const button = document.createElement("button"); button.className = "family-button";
         const eventLabel = document.createElement("span"); eventLabel.className = "event-kind"; eventLabel.textContent = event.event;
         const familyId = document.createElement("span"); familyId.className = "family-id"; familyId.textContent = event.family_id;
+        const bootstrap = state.bootstrapSupports.get(`${branchId}\t${event.family_id}\t${event.event}`);
+        if (bootstrap) familyId.title = `Bootstrap support: ${bootstrap.count}/${bootstrap.replicates} (${(100 * bootstrap.support).toFixed(1)}%)`;
+        if (bootstrap) familyId.textContent += ` · ${(100 * bootstrap.support).toFixed(1)}%`;
         const annotation = event.preferred_name || event.description;
-        const description = document.createElement("span"); description.className = "family-description"; description.textContent = annotation ? [event.preferred_name, event.description].filter(Boolean).join(" — ") : ""; description.title = description.textContent;
+        const occupancy = event.child_occupancy == null ? "" : `${event.child_taxon_id || "child descendants"}: ${event.parent_occupancy == null ? "" : `${(100 * Number(event.parent_occupancy)).toFixed(1)}% → `}${(100 * Number(event.child_occupancy)).toFixed(1)}% descendant occupancy`;
+        const description = document.createElement("span"); description.className = "family-description"; description.textContent = [[event.preferred_name, event.description].filter(Boolean).join(" — "), occupancy].filter(Boolean).join(" · "); description.title = description.textContent;
         button.append(eventLabel, familyId, description); button.addEventListener("click", () => showFamily(event.family_id, {type: "branch", branchId, eventKind})); list.append(button);
       }
       body.append(list);
@@ -2350,6 +2422,26 @@
           body.append(terms);
         }
       }
+      if (result.taxon_states?.length) {
+        const stateTitle = document.createElement("div"); stateTitle.className = "section-title"; stateTitle.textContent = "Taxon occupancy"; body.append(stateTitle);
+        const table = document.createElement("table"); table.className = "taxon-state-table";
+        table.innerHTML = "<thead><tr><th>Taxon</th><th class='numeric'>Present</th><th class='numeric'>Occupancy</th><th>Observed</th><th>Inferred</th></tr></thead>";
+        const tbody = document.createElement("tbody");
+        for (const item of result.taxon_states) {
+          const row = document.createElement("tr");
+          for (const [text, numeric] of [
+            [item.taxon_id, false],
+            [`${number(item.present_genomes)}/${number(item.total_genomes)}`, true],
+            [`${(100 * Number(item.occupancy)).toFixed(1)}%`, true],
+            [item.observed_state, false],
+            [number(item.inferred_state), false],
+          ]) {
+            const cell = document.createElement("td"); cell.textContent = text; if (numeric) cell.className = "numeric"; row.append(cell);
+          }
+          tbody.append(row);
+        }
+        table.append(tbody); body.append(table);
+      }
       const entries = Object.entries(result.members);
       if (!entries.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "Gene members were not indexed."; body.append(empty); }
       const memberList = document.createElement("div"); memberList.className = "member-list";
@@ -2377,6 +2469,59 @@
       }
       syncBranchFilters();
     }
+    async function showTaxon(taxonId) {
+      const group = state.project?.taxon_analysis?.groups?.[taxonId];
+      if (!group) return;
+      openDetailPanel(); configureDetailBack("", null); resetDetailScroll();
+      $("detailTitle").classList.remove("family-title");
+      $("detailTitle").textContent = taxonId;
+      $("detailSubtitle").hidden = false;
+      $("detailSubtitle").textContent = `${group.rank} · ${number(group.n_genomes)} genomes`;
+      const body = $("detailBody"); body.replaceChildren();
+      const result = await api(`/api/taxon?id=${encodeURIComponent(taxonId)}`);
+      const summary = result.summary || {};
+      const counts = document.createElement("div"); counts.className = "counts";
+      counts.innerHTML = `<div class="count">Persistent <strong>${number(summary.present)}</strong></div><div class="count">Polymorphic <strong>${number(summary.polymorphic)}</strong></div><div class="count">Rare / absent <strong>${number(summary.absent)}</strong></div>`;
+      body.append(counts);
+      const memberTitle = document.createElement("div"); memberTitle.className = "section-title"; memberTitle.textContent = `Member genomes (${number(group.member_genomes.length)})`; body.append(memberTitle);
+      const members = document.createElement("div"); members.className = "genes"; members.textContent = group.member_genomes.join(", "); body.append(members);
+      const familyTitle = document.createElement("div"); familyTitle.className = "section-title"; familyTitle.textContent = "Highest-occupancy gene families"; body.append(familyTitle);
+      const table = document.createElement("table"); table.className = "taxon-state-table"; table.innerHTML = "<thead><tr><th>Family</th><th class='numeric'>Present</th><th class='numeric'>Occupancy</th><th>State</th></tr></thead>";
+      const tbody = document.createElement("tbody");
+      for (const item of result.gene_families || []) {
+        const row = document.createElement("tr");
+        const familyCell = document.createElement("td"); const button = document.createElement("button"); button.textContent = item.family_id; button.addEventListener("click", () => showFamily(item.family_id)); familyCell.append(button);
+        const presentCell = document.createElement("td"); presentCell.className = "numeric"; presentCell.textContent = `${number(item.present_genomes)}/${number(item.total_genomes)}`;
+        const occupancyCell = document.createElement("td"); occupancyCell.className = "numeric"; occupancyCell.textContent = `${(100 * Number(item.occupancy)).toFixed(1)}%`;
+        const stateCell = document.createElement("td"); stateCell.textContent = item.observed_state;
+        row.append(familyCell, presentCell, occupancyCell, stateCell); tbody.append(row);
+      }
+      table.append(tbody); body.append(table);
+    }
+    async function showOccupancyHeatmap() {
+      openDetailPanel(); configureDetailBack("", null); resetDetailScroll();
+      $("detailTitle").classList.remove("family-title"); $("detailTitle").textContent = "Taxon occupancy heatmap";
+      $("detailSubtitle").hidden = false; $("detailSubtitle").textContent = "Continuous gene-family occupancy; variable and polymorphic families are shown first";
+      const body = $("detailBody"); body.replaceChildren();
+      const loading = document.createElement("div"); loading.className = "empty"; loading.textContent = "Loading occupancy matrix…"; body.append(loading);
+      const result = await api("/api/occupancy?limit=40"); loading.remove();
+      if (!result.families.length) { const empty = document.createElement("div"); empty.className = "empty"; empty.textContent = "No taxon occupancy data."; body.append(empty); return; }
+      const lookup = new Map(result.values.map(item => [`${item.family_id}\t${item.taxon_id}`, item]));
+      const wrap = document.createElement("div"); wrap.className = "occupancy-heatmap-wrap";
+      const table = document.createElement("table"); table.className = "occupancy-heatmap";
+      const head = document.createElement("tr"); const corner = document.createElement("th"); corner.textContent = "Gene family"; head.append(corner);
+      for (const taxon of result.taxa) { const th = document.createElement("th"); th.textContent = taxon; head.append(th); }
+      const thead = document.createElement("thead"); thead.append(head); table.append(thead);
+      const tbody = document.createElement("tbody");
+      for (const family of result.families) {
+        const row = document.createElement("tr"); const label = document.createElement("td"); const button = document.createElement("button"); button.textContent = family; button.addEventListener("click", () => showFamily(family)); label.append(button); row.append(label);
+        for (const taxon of result.taxa) {
+          const item = lookup.get(`${family}\t${taxon}`); const occupancy = Number(item?.occupancy || 0); const cell = document.createElement("td"); cell.className = "occupancy-cell"; cell.textContent = occupancy.toFixed(2); cell.title = `${taxon} · ${family} · ${(occupancy * 100).toFixed(1)}% · ${item?.observed_state || "unknown"}`; cell.style.background = `hsl(${210 - occupancy * 185} 75% ${94 - occupancy * 42}%)`; row.append(cell);
+        }
+        tbody.append(row);
+      }
+      table.append(tbody); wrap.append(table); body.append(wrap);
+    }
     async function showCandidates() {
       openDetailPanel();
       configureDetailBack("", null);
@@ -2401,6 +2546,7 @@
     }
     $("phenotypeSelect").addEventListener("change", phenotypeChanged);
     $("candidateButton").addEventListener("click", showCandidates);
+    $("occupancyHeatmapButton").addEventListener("click", showOccupancyHeatmap);
     $("collapseSelect").addEventListener("change", event => {
       state.collapseRank = event.target.value;
       state.expandedGroups.clear();
@@ -2836,6 +2982,16 @@
           } else {
             lastTipClickKey = key;
             lastTipClickTime = now;
+            if (state.project?.taxon_analysis?.groups?.[key]) {
+              const clickTime = now;
+              setTimeout(() => {
+                if (lastTipClickKey === key && lastTipClickTime === clickTime) {
+                  lastTipClickKey = null;
+                  lastTipClickTime = 0;
+                  showTaxon(key);
+                }
+              }, 520);
+            }
           }
         } else if (!moved && pendingExpandNode) {
           lastPointerSelection = Date.now();

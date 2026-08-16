@@ -34,19 +34,27 @@ class Reconstruction:
 
     def infer(
         self,
-        leaf_states: dict[str, int | None],
+        leaf_states: dict[str, int | None | set[int] | frozenset[int]],
         root_state: str | int = "auto",
     ) -> tuple[list[Transition], int, float]:
+        transitions, chosen_root, score, _ = self.infer_states(leaf_states, root_state)
+        return transitions, chosen_root, score
+
+    def infer_states(
+        self,
+        leaf_states: dict[str, int | None | set[int] | frozenset[int]],
+        root_state: str | int = "auto",
+    ) -> tuple[list[Transition], int, float, dict[str, int]]:
         costs = [[0.0, 0.0] for _ in self.nodes]
         for node in self.post_nodes:
             idx = self.index[id(node)]
             if node.is_leaf:
                 state = leaf_states.get(node.label)
-                if state is None:
+                if state is None or state == {0, 1} or state == frozenset({0, 1}):
                     costs[idx] = [0.0, 0.0]
-                elif state == 0:
+                elif state == 0 or state == {0} or state == frozenset({0}):
                     costs[idx] = [0.0, INF]
-                elif state == 1:
+                elif state == 1 or state == {1} or state == frozenset({1}):
                     costs[idx] = [INF, 0.0]
                 else:
                     raise ValueError(f"Invalid state for {node.label!r}: {state!r}")
@@ -68,8 +76,10 @@ class Reconstruction:
             chosen_root = int(root_state)
 
         transitions: list[Transition] = []
+        inferred_states: dict[str, int] = {}
 
         def choose(node: Node, state: int) -> None:
+            inferred_states[node.node_id] = state
             for child in node.children:
                 child_cost = costs[self.index[id(child)]]
                 choices = [
@@ -87,7 +97,7 @@ class Reconstruction:
                 choose(child, child_state)
 
         choose(self.root, chosen_root)
-        return transitions, chosen_root, root_cost[chosen_root]
+        return transitions, chosen_root, root_cost[chosen_root], inferred_states
 
     def _transition_cost(self, parent: int, child: int) -> float:
         if parent == child:

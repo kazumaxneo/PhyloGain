@@ -234,7 +234,7 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('Math.log2(1 + Math.max(0, bp) / 1_000_000)', html)
             self.assertIn('Math.pow(2, fraction * logMaximum)', html)
             self.assertIn('Math.pow(10, fraction * logMaximum)', html)
-            self.assertIn('value.textContent = formatMegabases(summary.bp)', html)
+            self.assertIn('summary.aggregate ? `${formatMegabases(summary.bp)} ± ${formatMegabases(summary.sd)}` : formatMegabases(summary.bp)', html)
             self.assertNotIn('value.textContent = `${megabases.toFixed(2)} Mb', html)
 
     def test_build_project_with_tip_metadata(self):

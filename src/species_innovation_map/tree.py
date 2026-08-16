@@ -14,6 +14,7 @@ class Node:
     node_id: str = ""
     branch_id: str | None = None
     depth: int = 0
+    metadata: dict[str, object] = field(default_factory=dict)
 
     @property
     def is_leaf(self) -> bool:
@@ -177,7 +178,7 @@ def as_project_nodes(root: Node) -> list[dict[str, object]]:
     return [
         {
             "id": node.node_id,
-            "label": node.label or node.node_id,
+            "label": node.metadata.get("display_label", node.label or node.node_id),
             "parent_id": node.parent.node_id if node.parent else None,
             "branch_id": node.branch_id,
             "length": node.length,
@@ -185,6 +186,24 @@ def as_project_nodes(root: Node) -> list[dict[str, object]]:
             "is_leaf": node.is_leaf,
             "depth": node.depth,
             "children": [child.node_id for child in node.children],
+            **node.metadata,
         }
         for node in preorder(root)
     ]
+
+
+def to_newick(root: Node) -> str:
+    def quote(label: str) -> str:
+        if not label:
+            return ""
+        if any(char in label for char in "\t\n ():;,[]'\""):
+            return "'" + label.replace("'", "''") + "'"
+        return label
+
+    def render(node: Node) -> str:
+        children = f"({','.join(render(child) for child in node.children)})" if node.children else ""
+        label = quote(node.label)
+        length = f":{node.length:.12g}" if node.length is not None else ""
+        return f"{children}{label}{length}"
+
+    return render(root) + ";\n"

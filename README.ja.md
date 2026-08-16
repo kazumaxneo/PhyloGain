@@ -46,6 +46,23 @@ species-map serve nitrogen_fixation_map
 
 phenotypeの獲得branchと同じbranchでGainしたgene familyが`candidate_genes.tsv`に出力されます。
 
+## 分類群レベルのpangenome解析
+
+`--taxon-rank`を指定すると、GTDB taxonomyに従ってゲノム単位のpresence/absenceをspecies、genus、family、order単位のoccupancyへ集約してからGain/Lossを推定します。未指定時と`genome`指定時は従来どおりのゲノム単位解析です。
+
+```bash
+phylogain build \
+  --orthofinder Results_Jul02 \
+  --gtdb-taxonomy gtdbtk.bac120.summary.tsv \
+  --taxon-rank genus \
+  --present-threshold 0.90 \
+  --absent-threshold 0.10 \
+  --min-genomes-per-taxon 3 \
+  --output phylogain_genus
+```
+
+absence閾値とpresence閾値の中間は`polymorphic`として保持し、Sankoff解析には曖昧状態`{0,1}`として渡します。入力系統樹上で単系統となる分類群だけをcollapseして解析し、非単系統群は警告とともに除外します。genus以上の広い比較ではOrthoFinderを推奨します。
+
 ## 主な出力
 
 - `index.html`：対話型Gene Gain/Loss Viewer
@@ -54,6 +71,8 @@ phenotypeの獲得branchと同じbranchでGainしたgene familyが`candidate_gen
 - `phenotype_gain_loss.tsv`：phenotypeの推定変化
 - `candidate_genes.tsv`：phenotypeと同時にGainした候補
 - `species_map.sqlite`：HTML表示用データベース
+- `taxon_occupancy.tsv`：分類群×gene familyのoccupancyと観測・推定状態（`--taxon-rank`指定時）
+- `taxon_tree.nwk`：単系統群をcollapseした分類群レベル系統樹（`--taxon-rank`指定時）
 
 ## 注意
 
