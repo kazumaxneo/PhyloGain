@@ -59,6 +59,25 @@ The output directory contains:
 - `species_map.sqlite` — indexed data used by the viewer
 - `project.json` and `run_metadata.json` — tree, settings, and provenance
 
+## Add genome-size metadata
+
+Genome size is not contained in OrthoFinder or PIRATE output, so supply it as an optional tab-separated file. Use a tree-tip identifier column (`species_id`, `genome_id`, `user_genome`, or `assembly`) and either `genome_size_bp` or `genome_size_mb`.
+
+```tsv
+species_id	genome_size_bp
+species_A	4000000
+species_B	5000000
+```
+
+```bash
+species-map build \
+  --orthofinder Results_Jul02 \
+  --genome-metadata genome_metadata.tsv \
+  --output map_with_genome_sizes
+```
+
+The Basic tab then provides `Genome size: Off / Bar graph`. The optional horizontal bars are aligned with tips in the rectangular layout and are included in the downloaded tree SVG. A collapsed clade shows the mean of its descendant genomes with available values. The normalized values are also written to `genome_metadata.tsv` in the output directory.
+
 ## Add phenotypes
 
 Create a tab-separated file with `species_id` followed by one or more phenotype columns. Species IDs must match the OrthoFinder tree tips.
@@ -200,6 +219,7 @@ species-map validate \
 --no-members               Skip gene-family member IDs for a smaller output
 --species-tree FILE        Rooted Newick tree replacing the input tool's default tree
 --gtdb-taxonomy FILE       GTDB/GTDB-Tk taxonomy TSV for rank collapsing
+--genome-metadata FILE     Optional TSV with genome size in bp or Mb
 --annotate eggnog          Run eggNOG-mapper for orthogroup representatives
 --annotations FILE         Import an existing .emapper.annotations file
 --proteomes DIR            Protein FASTA directory used by OrthoFinder

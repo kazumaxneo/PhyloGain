@@ -18,6 +18,7 @@ from species_innovation_map.annotation import (
     write_representative_fasta,
 )
 from species_innovation_map.project import build_project, validate_inputs
+from species_innovation_map.metadata import read_genome_sizes
 from species_innovation_map.tree import as_project_nodes, leaf_labels, parse_newick
 from species_innovation_map.taxonomy import parse_gtdb_taxonomy, read_gtdb_taxonomy
 
@@ -27,6 +28,7 @@ FIXTURE = HERE / "fixtures" / "orthofinder"
 PIRATE_FIXTURE = HERE / "fixtures" / "pirate"
 PHENOTYPES = HERE / "fixtures" / "phenotypes.tsv"
 GTDB_TAXONOMY = HERE / "fixtures" / "gtdb_taxonomy.tsv"
+GENOME_METADATA = HERE / "fixtures" / "genome_metadata.tsv"
 EGGNOG_ANNOTATIONS = HERE / "fixtures" / "eggnog.emapper.annotations"
 PROTEOMES = HERE / "fixtures" / "proteomes"
 
@@ -61,6 +63,13 @@ class TreeTests(unittest.TestCase):
 
 
 class ProjectTests(unittest.TestCase):
+    def test_read_genome_sizes(self):
+        values, report = read_genome_sizes(
+            GENOME_METADATA, ["species_A", "species_B", "species_C", "species_D"]
+        )
+        self.assertEqual(values["species_B"], 5_000_000)
+        self.assertEqual(report["mapped_species"], 4)
+
     def test_validate_requires_exactly_one_input_format(self):
         with self.assertRaisesRegex(ValueError, "exactly one"):
             validate_inputs(None)
@@ -171,6 +180,29 @@ class ProjectTests(unittest.TestCase):
             self.assertIn('`${node.rankValue} (1)`', html)
             self.assertIn(".taxonomy-tip-label", html)
             self.assertIn('tipClass = rank && node.rankValue ? "taxonomy-tip-label"', html)
+
+    def test_build_project_with_genome_metadata(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "map"
+            result = build_project(
+                FIXTURE, output, genome_metadata_path=GENOME_METADATA
+            )
+            self.assertEqual(result["genome_metadata_species"], 4)
+            project = json.loads((output / "project.json").read_text(encoding="utf-8"))
+            self.assertEqual(
+                project["metadata"]["genome_size_bp"]["species_D"], 6_000_000
+            )
+            self.assertTrue((output / "genome_metadata.tsv").is_file())
+            metadata = json.loads(
+                (output / "run_metadata.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(
+                Path(metadata["genome_metadata_file"]), GENOME_METADATA.resolve()
+            )
+            html = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('id="genomeSizeDisplaySelect"', html)
+            self.assertIn("Genome size (Mb)", html)
+            self.assertIn('class: "genome-size-bar"', html)
 
     def test_build_project_with_existing_eggnog_annotations(self):
         with tempfile.TemporaryDirectory() as directory:
