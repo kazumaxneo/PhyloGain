@@ -34,6 +34,7 @@ from .annotation import (
 )
 from .tree import as_project_nodes, leaf_labels, parse_newick, preorder
 from .taxonomy import read_gtdb_taxonomy
+from .metadata import read_genome_sizes
 
 
 class InputError(ValueError):
@@ -47,6 +48,7 @@ def validate_inputs(
     species_tree_path: str | Path | None = None,
     gtdb_taxonomy_path: str | Path | None = None,
     pirate: str | Path | None = None,
+    genome_metadata_path: str | Path | None = None,
 ) -> dict[str, object]:
     input_format, found = _resolve_input_files(orthofinder, pirate)
     errors: list[str] = []
@@ -143,6 +145,30 @@ def validate_inputs(
                     f"GTDB taxonomy TSV has {taxonomy_report['ambiguous_rows']} ambiguous ID rows"
                 )
 
+    genome_metadata_report: dict[str, object] | None = None
+    if genome_metadata_path:
+        genome_metadata_file = Path(genome_metadata_path)
+        if not genome_metadata_file.is_file():
+            errors.append(f"Genome metadata TSV was not found: {genome_metadata_file}")
+        else:
+            _, genome_metadata_report = read_genome_sizes(genome_metadata_file, tips)
+            if genome_metadata_report["mapped_species"] == 0:
+                errors.append("Genome metadata TSV did not match any species-tree tips")
+            elif genome_metadata_report["unmapped_species"]:
+                warnings.append(
+                    "Genome metadata TSV omits or cannot match "
+                    f"{genome_metadata_report['unmapped_species']} tree species"
+                )
+            for key, label in (
+                ("ambiguous_rows", "ambiguous ID"),
+                ("invalid_rows", "invalid genome-size"),
+                ("duplicate_rows", "duplicate species"),
+            ):
+                if genome_metadata_report[key]:
+                    warnings.append(
+                        f"Genome metadata TSV has {genome_metadata_report[key]} {label} rows"
+                    )
+
     return {
         "ok": not errors,
         "errors": errors,
@@ -155,6 +181,7 @@ def validate_inputs(
         "counts": str(found["counts"]),
         "members": str(found["members"]) if found["members"] else None,
         "taxonomy": taxonomy_report,
+        "genome_metadata": genome_metadata_report,
         "input_format": input_format,
     }
 
@@ -192,6 +219,7 @@ def build_project(
     annotation_cpu: int = 1,
     progress=None,
     pirate: str | Path | None = None,
+    genome_metadata_path: str | Path | None = None,
 ) -> dict[str, object]:
     progress = progress or (lambda message: None)
     report = validate_inputs(
@@ -201,6 +229,7 @@ def build_project(
         species_tree_path,
         gtdb_taxonomy_path,
         pirate,
+        genome_metadata_path,
     )
     if not report["ok"]:
         raise InputError("; ".join(report["errors"]))
@@ -244,6 +273,12 @@ def build_project(
     if gtdb_taxonomy_path:
         taxonomy_data, taxonomy_report = read_gtdb_taxonomy(gtdb_taxonomy_path, species)
         _write_taxonomy(output_path / "gtdb_taxonomy.tsv", species, taxonomy_data)
+    genome_sizes: dict[str, int] = {}
+    if genome_metadata_path:
+        genome_sizes, _ = read_genome_sizes(genome_metadata_path, species)
+        _write_genome_metadata(
+            output_path / "genome_metadata.tsv", species, genome_sizes
+        )
 
     database_path = output_path / "species_map.sqlite"
     connection = sqlite3.connect(database_path)
@@ -451,6 +486,12 @@ def build_project(
             "mapped_species": len(taxonomy_data),
             "species": taxonomy_data,
         },
+        "metadata": {
+            "source": str(Path(genome_metadata_path).resolve())
+            if genome_metadata_path
+            else None,
+            "genome_size_bp": genome_sizes,
+        },
         "settings": {
             "gain_cost": gain_cost,
             "loss_cost": loss_cost,
@@ -478,6 +519,9 @@ def build_project(
         "gene_members_file": str(found["members"]) if found["members"] else None,
         "phenotype_file": str(Path(phenotype_path).resolve()) if phenotype_path else None,
         "gtdb_taxonomy_file": str(Path(gtdb_taxonomy_path).resolve()) if gtdb_taxonomy_path else None,
+        "genome_metadata_file": str(Path(genome_metadata_path).resolve())
+        if genome_metadata_path
+        else None,
         "annotation_file": str(imported_annotation) if imported_annotation else None,
         "go_ontology_file": str(Path(go_obo_path).resolve()) if go_obo_path else None,
         "kegg_names_source": "KEGG REST API" if fetch_kegg_names else None,
@@ -496,9 +540,23 @@ def build_project(
         "branches": len(branch_rows),
         "phenotypes": phenotype_names,
         "taxonomy_species": len(taxonomy_data),
+        "genome_metadata_species": len(genome_sizes),
         "annotated_families": annotation_report["annotated_families"] if annotation_report else 0,
         "warnings": report["warnings"],
     }
+
+
+def _write_genome_metadata(
+    path: Path, species: list[str], genome_sizes: dict[str, int]
+) -> None:
+    with path.open("w", encoding="utf-8", newline="") as handle:
+        writer = csv.writer(handle, delimiter="\t", lineterminator="\n")
+        writer.writerow(["species_id", "genome_size_bp", "genome_size_mb"])
+        for species_id in species:
+            if species_id not in genome_sizes:
+                continue
+            size_bp = genome_sizes[species_id]
+            writer.writerow([species_id, size_bp, f"{size_bp / 1_000_000:.6f}"])
 
 
 def _create_schema(connection: sqlite3.Connection) -> None:

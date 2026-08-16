@@ -79,6 +79,13 @@ def _input_arguments(command: argparse.ArgumentParser) -> None:
         "--gtdb-taxonomy",
         help="Optional GTDB or GTDB-Tk taxonomy TSV for rank-based clade collapsing",
     )
+    command.add_argument(
+        "--genome-metadata",
+        help=(
+            "Optional TSV containing a species ID column and genome_size_bp "
+            "or genome_size_mb for the tree-side bar graph"
+        ),
+    )
     command.add_argument("--phenotypes", help="Optional wide TSV with species_id in the first column")
     command.add_argument(
         "--phenotype",
@@ -98,6 +105,7 @@ def main(argv: list[str] | None = None) -> None:
                 args.species_tree,
                 args.gtdb_taxonomy,
                 args.pirate,
+                args.genome_metadata,
             )
             if args.json:
                 print(json.dumps(report, ensure_ascii=False, indent=2))
@@ -128,6 +136,7 @@ def main(argv: list[str] | None = None) -> None:
                 annotation_cpu=args.annotation_cpu,
                 progress=lambda message: print(message, flush=True),
                 pirate=args.pirate,
+                genome_metadata_path=args.genome_metadata,
             )
             print(
                 f"Built {result['output']} ({result['species']} species, "
@@ -155,6 +164,12 @@ def _print_validation(report: dict[str, object]) -> None:
     taxonomy = report.get("taxonomy") or {}
     if taxonomy:
         print(f"GTDB taxonomy:      {taxonomy['mapped_species']} species mapped")
+    genome_metadata = report.get("genome_metadata") or {}
+    if genome_metadata:
+        print(
+            "Genome sizes:       "
+            f"{genome_metadata['mapped_species']} species mapped"
+        )
     for warning in report["warnings"]:
         print(f"WARNING: {warning}")
     for error in report["errors"]:
