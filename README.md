@@ -173,7 +173,7 @@ species-map build \
 
 The viewer collapses each maximal monophyletic clade sharing the selected rank. A repeated taxon label means that taxon is non-monophyletic in the supplied species tree. Click a collapsed label to expand only that group. Gain/Loss values remain the events on the branch entering the collapsed clade; hidden descendant events are not added to that number.
 
-The `GTDB labels` control can independently show family labels, genus labels, or both inside the uncollapsed tree. A label is placed only at the crown node of a monophyletic group with at least two sampled genomes; single-genome taxa remain represented only by their normal tip names. Select `Off` to hide all internal GTDB labels. The GTDB legend lists one colored taxon per line. Double-click GTDB or tip labels to rename them locally; `Restore defaults` in the Output tab clears renamed labels and manually moved GTDB label positions.
+The `GTDB labels` control can independently show family labels, genus labels, or both inside the uncollapsed tree. A label is placed only at the crown node of a monophyletic group with at least two sampled genomes; single-genome taxa remain represented only by their normal tip names. Select `Off` to hide all internal GTDB labels. The GTDB legend lists one colored taxon per line. Double-click tree, legend, or tip labels to rename them locally. Drag tree or legend GTDB labels to reposition them; `Restore defaults` in the Output tab clears renamed labels and manually moved positions.
 
 To use a different rooted topology, including a pruned and relabeled GTDB tree whose tips exactly match the OrthoFinder species IDs:
 

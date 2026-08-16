@@ -207,6 +207,8 @@
     .clade-taxonomy-label-accent { pointer-events: none; }
     .clade-taxonomy-label { fill: #fff; font: 600 var(--taxonomy-label-font-size, 9px)/1 var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
     .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
+    .taxonomy-legend-item { cursor: move; }
+    .taxonomy-legend-hit { fill: transparent; pointer-events: all; }
     .taxonomy-legend-label { fill: var(--ink); font: 10px var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
     .taxonomy-legend-title { font-weight: 650; }
     .collapsed-label { font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); font-size: 11px; font-weight: 650; fill: var(--accent); cursor: pointer; }
@@ -527,7 +529,7 @@
         </div>
         <div class="filter-actions">
           <div class="control-row"><span class="control-row-label">Settings</span><button class="filter-reset" id="filterReset" type="button">Reset</button></div>
-          <div class="control-row"><span class="control-row-label">Label edits</span><button class="filter-reset" id="restoreLabelDefaults" type="button" title="Restore original tip and GTDB labels and GTDB label positions">Restore defaults</button></div>
+          <div class="control-row"><span class="control-row-label">Label edits</span><button class="filter-reset" id="restoreLabelDefaults" type="button" title="Restore original tip and GTDB labels, including tree and legend positions">Restore defaults</button></div>
           <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
         </div>
         <div class="filter-status">
@@ -553,7 +555,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", genomeSizeDisplay: "off", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", genomeSizeDisplay: "off", horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffsets: new Map(), taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -638,6 +640,12 @@
           state.taxonomyLabelOffsets = new Map(Object.entries(storedOffsets));
         } catch (_) {
           state.taxonomyLabelOffsets = new Map();
+        }
+        try {
+          const storedLegendOffsets = JSON.parse(localStorage.getItem("species-map-taxonomy-legend-offsets") || "{}");
+          state.taxonomyLegendOffsets = new Map(Object.entries(storedLegendOffsets));
+        } catch (_) {
+          state.taxonomyLegendOffsets = new Map();
         }
         try {
           state.taxonomyLabelOverrides = new Map(Object.entries(JSON.parse(localStorage.getItem("species-map-taxonomy-label-overrides") || "{}")));
@@ -993,10 +1001,14 @@
           const text = state.taxonomyLabelOverrides.get(key) || defaultText;
           row += 1;
           const itemY = y + row * rowHeight;
-          group.append(svgEl("rect", {x, y: itemY - 10, width: 12, height: 12, rx: 1, style: `fill:${taxonomyColor(item.rank, item.value, key)}`}));
+          const offset = state.taxonomyLegendOffsets.get(key) || {x: 0, y: 0};
+          const itemGroup = svgEl("g", {class: "taxonomy-legend-item", "data-taxonomy-legend-key": key, "data-taxonomy-legend-default": defaultText, transform: `translate(${Number(offset.x) || 0} ${Number(offset.y) || 0})`});
+          addSvgTooltip(itemGroup, "Drag to move · Double-click to rename");
+          itemGroup.append(svgEl("rect", {x: x - 3, y: itemY - 13, width: Math.max(90, text.length * 6 + 24), height: 17, class: "taxonomy-legend-hit"}));
+          itemGroup.append(svgEl("rect", {x, y: itemY - 10, width: 12, height: 12, rx: 1, style: `fill:${taxonomyColor(item.rank, item.value, key)}`}));
           const label = svgEl("text", {x: x + 17, y: itemY, class: "taxonomy-legend-label"});
           label.textContent = text;
-          group.append(label);
+          itemGroup.append(label); group.append(itemGroup);
         }
         canvas.append(group);
         return (taxonomyDisplayLegend.size + 1) * rowHeight;
@@ -1445,6 +1457,7 @@
         .clade-taxonomy-label-bg { fill-opacity: .82; }
         .clade-taxonomy-label { fill: #fff; font: 600 ${state.taxonomyLabelFontSize}px ${treeLabelFont}; }
         .clade-taxonomy-label.genus, .clade-taxonomy-label.species { font-style: italic; }
+        .taxonomy-legend-hit { fill: transparent; }
         .taxonomy-legend-label { fill: ${color("--ink")}; font: 10px ${treeLabelFont}; }
         .taxonomy-legend-title { font-weight: 650; }
         .collapsed-marker { fill: ${color("--accent")}; opacity: .75; }
@@ -1884,9 +1897,11 @@
     });
     $("restoreLabelDefaults").addEventListener("click", () => {
       state.taxonomyLabelOffsets.clear();
+      state.taxonomyLegendOffsets.clear();
       state.taxonomyLabelOverrides.clear();
       state.tipLabelOverrides.clear();
       localStorage.removeItem("species-map-taxonomy-label-offsets");
+      localStorage.removeItem("species-map-taxonomy-legend-offsets");
       localStorage.removeItem("species-map-taxonomy-label-overrides");
       localStorage.removeItem("species-map-tip-label-overrides");
       renderTree();
@@ -1985,16 +2000,26 @@
       let pendingCollapseNode = null;
       let pendingFlipNode = null;
       let pendingTipLabel = null;
+      let draggedTaxonomyLegend = null;
       let draggedTaxonomyLabel = null;
       let lastPointerSelection = 0;
       let lastTaxonomyClickKey = null;
       let lastTaxonomyClickTime = 0;
+      let lastLegendClickKey = null;
+      let lastLegendClickTime = 0;
       let lastTipClickKey = null;
       let lastTipClickTime = 0;
       viewport.addEventListener("pointerdown", event => {
         if (event.button !== 0) return;
         if (event.target === labelEditor) return;
         actionHint.hidden = true;
+        const taxonomyLegend = event.target.closest("[data-taxonomy-legend-key]");
+        if (taxonomyLegend) {
+          const key = taxonomyLegend.dataset.taxonomyLegendKey;
+          const current = state.taxonomyLegendOffsets.get(key) || {x: 0, y: 0};
+          draggedTaxonomyLegend = {key, group: taxonomyLegend, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: Number(current.x) || 0, y: Number(current.y) || 0, moved: false};
+          return;
+        }
         const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
         if (taxonomyLabel) {
           const key = taxonomyLabel.dataset.taxonomyLabelKey;
@@ -2018,6 +2043,20 @@
         viewport.classList.add("dragging");
       });
       viewport.addEventListener("pointermove", event => {
+        if (draggedTaxonomyLegend) {
+          const dx = (event.clientX - draggedTaxonomyLegend.startX) / state.treeZoom;
+          const dy = (event.clientY - draggedTaxonomyLegend.startY) / state.treeZoom;
+          if (!draggedTaxonomyLegend.moved && Math.hypot(dx, dy) < 4) return;
+          if (!draggedTaxonomyLegend.moved) {
+            draggedTaxonomyLegend.moved = true;
+            viewport.setPointerCapture(event.pointerId);
+          }
+          const next = {x: Math.round((draggedTaxonomyLegend.x + dx) * 10) / 10, y: Math.round((draggedTaxonomyLegend.y + dy) * 10) / 10};
+          state.taxonomyLegendOffsets.set(draggedTaxonomyLegend.key, next);
+          draggedTaxonomyLegend.group.setAttribute("transform", `translate(${next.x} ${next.y})`);
+          event.preventDefault();
+          return;
+        }
         if (draggedTaxonomyLabel) {
           const dx = (event.clientX - draggedTaxonomyLabel.startX) / state.treeZoom;
           const dy = (event.clientY - draggedTaxonomyLabel.startY) / state.treeZoom;
@@ -2048,7 +2087,7 @@
         event.preventDefault();
       });
       viewport.addEventListener("pointermove", event => {
-        if (active && moved) { actionHint.hidden = true; return; }
+        if ((active && moved) || draggedTaxonomyLegend?.moved || draggedTaxonomyLabel?.moved) { actionHint.hidden = true; return; }
         const action = event.target.closest("[data-action-hint]");
         if (!action) { actionHint.hidden = true; return; }
         const bounds = viewport.getBoundingClientRect();
@@ -2059,6 +2098,27 @@
       });
       viewport.addEventListener("pointerleave", () => { actionHint.hidden = true; });
       const finishPan = event => {
+        if (draggedTaxonomyLegend) {
+          const interaction = draggedTaxonomyLegend;
+          if (interaction.moved) {
+            localStorage.setItem("species-map-taxonomy-legend-offsets", JSON.stringify(Object.fromEntries(state.taxonomyLegendOffsets)));
+            lastLegendClickKey = null;
+            lastLegendClickTime = 0;
+          } else {
+            const now = Date.now();
+            if (lastLegendClickKey === interaction.key && now - lastLegendClickTime <= 500) {
+              openTaxonomyLegendEditor(interaction.group, event.clientX, event.clientY);
+              lastLegendClickKey = null;
+              lastLegendClickTime = 0;
+            } else {
+              lastLegendClickKey = interaction.key;
+              lastLegendClickTime = now;
+            }
+          }
+          draggedTaxonomyLegend = null;
+          if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+          return;
+        }
         if (draggedTaxonomyLabel) {
           const interaction = draggedTaxonomyLabel;
           if (interaction.moved) {
@@ -2178,6 +2238,12 @@
         const currentLabel = state.taxonomyLabelOverrides.get(key) || defaultLabel;
         openLabelEditor({kind: "taxonomy", key, defaultLabel, currentLabel, clientX, clientY});
       }
+      function openTaxonomyLegendEditor(taxonomyLegend, clientX, clientY) {
+        const key = taxonomyLegend.dataset.taxonomyLegendKey;
+        const defaultLabel = taxonomyLegend.dataset.taxonomyLegendDefault || "";
+        const currentLabel = state.taxonomyLabelOverrides.get(key) || defaultLabel;
+        openLabelEditor({kind: "taxonomy", key, defaultLabel, currentLabel, clientX, clientY});
+      }
       function openTipLabelEditor(tip, clientX, clientY) {
         const nodeId = tip.dataset.tipNode;
         const defaultLabel = tip.dataset.tipLabelDefault || "";
@@ -2185,6 +2251,13 @@
         openLabelEditor({kind: "tip", key: nodeId, defaultLabel, currentLabel, clientX, clientY});
       }
       const editLabelFromEvent = event => {
+        const taxonomyLegend = event.target.closest("[data-taxonomy-legend-key]");
+        if (taxonomyLegend) {
+          openTaxonomyLegendEditor(taxonomyLegend, event.clientX, event.clientY);
+          event.preventDefault();
+          event.stopPropagation();
+          return true;
+        }
         const taxonomyLabel = event.target.closest("[data-taxonomy-label-key]");
         if (taxonomyLabel) {
           openTaxonomyLabelEditor(taxonomyLabel, event.clientX, event.clientY);
