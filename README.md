@@ -33,14 +33,45 @@ mamba activate phylogain
 
 PhyloGain accepts either OrthoFinder or PIRATE output. The two standard workflows are:
 
-- **OrthoFinder -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
-- **PIRATE -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
+- **Bakta -> OrthoFinder -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
+- **Bakta -> PIRATE -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
 
-### Step1a. Run OrthoFinder
+### Step 1. Annotate genomes with Bakta
 
-Place the protein FASTA files in one directory and run OrthoFinder.
+Create and activate a dedicated environment, then download the full Bakta database. The full database gives the most complete annotation; use `--type light` instead if disk space is limited.
 
 ```bash
+mamba create -n bakta -c conda-forge -c bioconda bakta -y
+mamba activate bakta
+
+mkdir -p databases/bakta
+bakta_db download --output databases/bakta --type full
+export BAKTA_DB="$PWD/databases/bakta/db"
+```
+
+Place the bacterial genome assemblies in `genomes/` as `.fna` files. This loop annotates every genome and prepares both the protein FASTA files required by OrthoFinder and the sequence-containing GFF files required by PIRATE.
+
+```bash
+mkdir -p bakta_output proteomes gff_files
+
+for genome in genomes/*.fna; do
+    sample=$(basename "$genome" .fna)
+    bakta --db "$BAKTA_DB" --threads 16 \
+        --output "bakta_output/$sample" \
+        --prefix "$sample" \
+        "$genome"
+    cp "bakta_output/$sample/$sample.faa" "proteomes/$sample.faa"
+    cp "bakta_output/$sample/$sample.gff3" "gff_files/$sample.gff"
+done
+```
+
+### Step 2a. Run OrthoFinder
+
+Create and activate a separate OrthoFinder environment, then analyze the Bakta protein FASTA files.
+
+```bash
+mamba create -n orthofinder -c conda-forge -c bioconda python=3.12 orthofinder -y
+mamba activate orthofinder
 orthofinder -f proteomes -t 16 -a 16
 ```
 
@@ -48,17 +79,26 @@ The directory created under `proteomes/OrthoFinder/` is used as the PhyloGain in
 
 Alternatively,
 
-### Step1b. Run PIRATE instead of OrthoFinder
+### Step 2b. Run PIRATE instead of OrthoFinder
 
-Place one GFF3 file per genome in a directory and run PIRATE.
+Create and activate a separate PIRATE environment, then analyze the Bakta GFF files.
 
 ```bash
+mamba create -n pirate -c conda-forge -c bioconda pirate -y
+mamba activate pirate
 PIRATE -i gff_files -o pirate_output -t 16
 ```
 
 The `pirate_output/` directory is used as the PhyloGain input. It must contain `PIRATE.gene_families.tsv`; PhyloGain can also use `binary_presence_absence.nwk` and `representative_sequences.faa` from this directory.
 
-### Step2. Run eggNOG-mapper
+### Step 3. Run eggNOG-mapper
+
+Create and activate an eggNOG-mapper v2 environment compatible with the database snapshot used below.
+
+```bash
+mamba create -n eggnog-mapper -c conda-forge -c bioconda python=3.9 eggnog-mapper=2.1.13 diamond -y
+mamba activate eggnog-mapper
+```
 
 The official eggNOG-mapper database download script may currently fail. Download the prebuilt [eggNOG-mapper database snapshot](https://zenodo.org/records/18780433) described in [this installation note](https://kazumaxneo.hatenablog.com/entry/2020/02/08/225420), extract it, and set `EGGNOG_DATA_DIR` before running `emapper.py`. The archive is a static, unmodified eggNOG DB v5.0.2 snapshot for eggNOG-mapper v2.1.x (approximately 12 GB to download).
 
@@ -87,7 +127,7 @@ emapper.py -i pirate_output/representative_sequences.faa --itype proteins --outp
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
 ```
 
-### Step3. Run GTDB-Tk
+### Step 4. Run GTDB-Tk
 
 Run GTDB-Tk on the corresponding genome assemblies.
 
@@ -97,7 +137,13 @@ gtdbtk classify_wf --genome_dir genomes --out_dir gtdbtk_output --extension fna 
 
 For bacterial genomes, use `gtdbtk_output/gtdbtk.bac120.summary.tsv` in the next step.
 
-### Step4. Run PhyloGain
+### Step 5. Run PhyloGain
+
+Activate the PhyloGain environment created in the installation section before building the report.
+
+```bash
+mamba activate phylogain
+```
 
 #### OrthoFinder input
 
