@@ -463,6 +463,11 @@
             <option value="pie">Pie chart</option>
           </select>
         </div>
+        <div class="tree-scale-control" id="eventPieScaleControl">
+          <label for="eventPieScale">Pie size</label>
+          <input id="eventPieScale" type="range" min="50" max="200" step="5" value="100" aria-label="Gain and loss pie chart size">
+          <output id="eventPieScaleValue" for="eventPieScale">100%</output>
+        </div>
         <div class="control-row" id="genomeSizeControl">
           <label for="genomeSizeDisplaySelect">Genome size</label>
           <select id="genomeSizeDisplaySelect" title="Show genome size beside the rectangular tree" aria-label="Genome size metadata display">
@@ -566,7 +571,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -600,6 +605,10 @@
         const storedBranchEventDisplay = localStorage.getItem("species-map-branch-event-display");
         if (storedBranchEventDisplay === "numbers" || storedBranchEventDisplay === "pie") state.branchEventDisplay = storedBranchEventDisplay;
         $("branchEventDisplaySelect").value = state.branchEventDisplay;
+        const storedEventPieScale = Number(localStorage.getItem("species-map-event-pie-scale"));
+        if (Number.isFinite(storedEventPieScale) && storedEventPieScale >= 50 && storedEventPieScale <= 200) $("eventPieScale").value = storedEventPieScale;
+        state.eventPieScale = Number($("eventPieScale").value) / 100;
+        $("eventPieScaleValue").textContent = `${$("eventPieScale").value}%`;
         const genomeSizes = project.metadata?.genome_size_bp || {};
         const hasGenomeSizes = Object.keys(genomeSizes).length > 0;
         $("genomeSizeDisplaySelect").options[0].textContent = hasGenomeSizes ? "Off" : "Unavailable";
@@ -825,6 +834,7 @@
       $("genomeSizeDisplaySelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular";
       $("genomeSizeDisplaySelect").title = !hasGenomeSizes ? "Rebuild with --genome-metadata to enable this track" : state.treeLayout === "rectangular" ? "Show genome size beside the tree" : "Genome-size bars are available in the rectangular layout";
       $("genomeSizeScaleSelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular" || state.genomeSizeDisplay !== "bar";
+      $("eventPieScale").disabled = state.branchEventDisplay !== "pie";
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
@@ -833,10 +843,10 @@
       const maximumEventTotal = eventTotals.length ? Math.max(...eventTotals) : 0;
       function eventPieRadius(branch) {
         const total = Number(branch.gain_count || 0) + Number(branch.loss_count || 0);
-        if (!total) return 3.5;
-        if (maximumEventTotal === minimumEventTotal) return 8;
+        if (!total) return 3.5 * state.eventPieScale;
+        if (maximumEventTotal === minimumEventTotal) return 8 * state.eventPieScale;
         const scaled = (Math.sqrt(total) - Math.sqrt(minimumEventTotal)) / (Math.sqrt(maximumEventTotal) - Math.sqrt(minimumEventTotal));
-        return 4 + Math.max(0, Math.min(1, scaled)) * 8;
+        return (4 + Math.max(0, Math.min(1, scaled)) * 8) * state.eventPieScale;
       }
       function eventPieSlicePath(cx, cy, radius, startAngle, endAngle) {
         const x1 = cx + radius * Math.cos(startAngle); const y1 = cy + radius * Math.sin(startAngle);
@@ -1321,6 +1331,17 @@
       }
       const taxonomyLegendHeight = appendTaxonomyLegend(18, baseHeight - 18);
       if (taxonomyLegendHeight > 17) svg.setAttribute("height", (baseHeight + taxonomyLegendHeight - 17 + 12) * zoom);
+    }
+    function enableEventPieScale() {
+      const input = $("eventPieScale");
+      const output = $("eventPieScaleValue");
+      input.addEventListener("input", () => {
+        state.eventPieScale = Number(input.value) / 100;
+        output.textContent = `${input.value}%`;
+        localStorage.setItem("species-map-event-pie-scale", input.value);
+        if (state.project) renderTree();
+      });
+      enableRangeTrack(input);
     }
     function enableTreeZoom() {
       const input = $("treeZoom");
@@ -2360,7 +2381,7 @@
       const container = panel.parentElement;
       const staging = document.querySelector(".branch-filters");
       const sectionTitles = [...staging.children].filter(child => child.classList.contains("control-section-title"));
-      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("genomeSizeControl"), $("genomeSizeScaleControl"), staging.querySelector(".tree-tools"));
+      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), staging.querySelector(".tree-tools"));
       $("controlTabFilters").append(sectionTitles[1], staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
       $("controlTabOutput").append(staging.querySelector(".filter-actions"));
       staging.remove();
@@ -2440,6 +2461,7 @@
     }
     initializeTreeControlWindow();
     enableTreePan();
+    enableEventPieScale();
     enableTreeZoom();
     enableTreeLayoutControls();
     enableDetailResize();
