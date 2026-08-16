@@ -60,13 +60,21 @@ The `pirate_output/` directory is used as the PhyloGain input. It must contain `
 
 ### Step2. Run eggNOG-mapper
 
+The official eggNOG-mapper database download script may currently fail. Download the prebuilt [eggNOG-mapper database snapshot](https://zenodo.org/records/18780433) described in [this installation note](https://kazumaxneo.hatenablog.com/entry/2020/02/08/225420), extract it, and set `EGGNOG_DATA_DIR` before running `emapper.py`. The archive is a static, unmodified eggNOG DB v5.0.2 snapshot for eggNOG-mapper v2.1.x (approximately 12 GB to download).
+
+```bash
+curl -L -C - "https://zenodo.org/records/18780433/files/eggNOG_DB_v2.zip?download=1" -o eggNOG_DB_v2.zip
+unzip eggNOG_DB_v2.zip
+export EGGNOG_DATA_DIR="$PWD/eggNOG_DB_v2"
+```
+
 #### OrthoFinder workflow
 
 Combine the same protein FASTA files used by OrthoFinder, then annotate them with eggNOG-mapper. Gene IDs must remain identical to those in the OrthoFinder results.
 
 ```bash
 cat proteomes/*.faa > all_proteins.faa
-emapper.py -i all_proteins.faa --itype proteins --output eggnog --cpu 16
+emapper.py -i all_proteins.faa --itype proteins --output eggnog --cpu 16 --data_dir "$EGGNOG_DATA_DIR"
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
 ```
 
@@ -75,7 +83,7 @@ curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
 Annotate the representative protein sequences produced by PIRATE.
 
 ```bash
-emapper.py -i pirate_output/representative_sequences.faa --itype proteins --output pirate --cpu 16
+emapper.py -i pirate_output/representative_sequences.faa --itype proteins --output pirate --cpu 16 --data_dir "$EGGNOG_DATA_DIR"
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
 ```
 
