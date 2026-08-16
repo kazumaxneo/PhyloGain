@@ -1,6 +1,12 @@
 # PhyloGain
 
-PhyloGain is a visualization tool that uses **OrthoFinder results to infer and display gene family gains and losses across a phylogenetic tree**. It counts gain and loss events along each branch, making it easy to identify lineages with major changes in gene content. Users can also inspect the orthogroups associated with each gain or loss event and view their member gene IDs.
+PhyloGain is a visualization tool that uses **OrthoFinder or PIRATE results to infer and display gene family gains and losses across a phylogenetic tree**. It counts gain and loss events along each branch, making it easy to identify lineages with major changes in gene content. Users can also inspect the gene families associated with each gain or loss event and view their member gene IDs.
+
+Example visualizations in rectangular and circular layouts:
+
+![PhyloGain rectangular tree visualization](docs/images/phylogain-rectangular-view.png)
+
+![PhyloGain circular tree visualization](docs/images/phylogain-circular-view.png)
 
 ## Install
 
@@ -10,9 +16,12 @@ pip install git+https://github.com/kazumaxneo/PhyloGain.git
 
 ## Quick start
 
-The standard workflow is **OrthoFinder → eggNOG-mapper → GTDB-Tk → PhyloGain**.
+PhyloGain accepts either OrthoFinder or PIRATE output. The two standard workflows are:
 
-### 1. Run OrthoFinder
+- **OrthoFinder -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
+- **PIRATE -> eggNOG-mapper -> GTDB-Tk -> PhyloGain**
+
+### 1A. Run OrthoFinder
 
 Place the protein FASTA files in one directory and run OrthoFinder.
 
@@ -22,13 +31,34 @@ orthofinder -f proteomes -t 16 -a 16
 
 The directory created under `proteomes/OrthoFinder/` is used as the PhyloGain input.
 
+### 1B. Run PIRATE
+
+Alternatively, place one GFF3 file per genome in a directory and run PIRATE.
+
+```bash
+PIRATE -i gff_files -o pirate_output -t 16
+```
+
+The `pirate_output/` directory is used as the PhyloGain input. It must contain `PIRATE.gene_families.tsv`; PhyloGain can also use `binary_presence_absence.nwk` and `representative_sequences.faa` from this directory.
+
 ### 2. Run eggNOG-mapper
+
+#### OrthoFinder workflow
 
 Combine the same protein FASTA files used by OrthoFinder, then annotate them with eggNOG-mapper. Gene IDs must remain identical to those in the OrthoFinder results.
 
 ```bash
 cat proteomes/*.faa > all_proteins.faa
 emapper.py -i all_proteins.faa --itype proteins --output eggnog --cpu 16
+curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
+```
+
+#### PIRATE workflow
+
+Annotate the representative protein sequences produced by PIRATE.
+
+```bash
+emapper.py -i pirate_output/representative_sequences.faa --itype proteins --output pirate --cpu 16
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
 ```
 
@@ -44,12 +74,23 @@ For bacterial genomes, use `gtdbtk_output/gtdbtk.bac120.summary.tsv` in the next
 
 ### 4. Run PhyloGain
 
+#### OrthoFinder input
+
 ```bash
 phylogain build --orthofinder proteomes/OrthoFinder/Results_MmmDD --annotations eggnog.emapper.annotations --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv --go-obo go-basic.obo --fetch-kegg-names --output phylogain_output
 phylogain serve phylogain_output
 ```
 
-Replace `Results_MmmDD` with the actual OrthoFinder result directory. The viewer opens in a web browser.
+Replace `Results_MmmDD` with the actual OrthoFinder result directory.
+
+#### PIRATE input
+
+```bash
+phylogain build --pirate pirate_output --annotations pirate.emapper.annotations --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv --go-obo go-basic.obo --fetch-kegg-names --output phylogain_output
+phylogain serve phylogain_output
+```
+
+For PIRATE, a rooted species tree can be supplied with `--species-tree rooted_species_tree.nwk`. Without it, PhyloGain uses `binary_presence_absence.nwk` from the PIRATE output directory. The viewer opens in a web browser after `phylogain serve` is run.
 
 ## Add phenotype metadata
 
@@ -65,9 +106,18 @@ species_D	?	?
 
 Accepted states are `+`, `-`, `?`, `1`, `0`, `present`, `absent`, and `unknown`.
 
-Add `--phenotypes` to the PhyloGain command. Use `--phenotype` to select a column; omit it to analyze every phenotype column.
+Add `--phenotypes` to either PhyloGain command. Use `--phenotype` to select a column; omit it to analyze every phenotype column.
+
+OrthoFinder input:
 
 ```bash
 phylogain build --orthofinder proteomes/OrthoFinder/Results_MmmDD --annotations eggnog.emapper.annotations --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv --go-obo go-basic.obo --fetch-kegg-names --phenotypes phenotypes.tsv --phenotype nitrogen_fixation --output phylogain_output
+phylogain serve phylogain_output
+```
+
+PIRATE input:
+
+```bash
+phylogain build --pirate pirate_output --annotations pirate.emapper.annotations --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv --go-obo go-basic.obo --fetch-kegg-names --phenotypes phenotypes.tsv --phenotype nitrogen_fixation --output phylogain_output
 phylogain serve phylogain_output
 ```
