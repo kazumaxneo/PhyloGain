@@ -10,8 +10,23 @@ Example visualizations in rectangular and circular layouts:
 
 ## Install
 
+### Create a mamba environment and install with pip
+
 ```bash
+mamba create -n phylogain -c conda-forge python=3.11 pip -y
+mamba activate phylogain
 pip install git+https://github.com/kazumaxneo/PhyloGain.git
+```
+
+### Create the environment from YAML
+
+The repository includes `environment.yml`, which creates the environment and installs PhyloGain from the cloned source.
+
+```bash
+git clone https://github.com/kazumaxneo/PhyloGain.git
+cd PhyloGain
+mamba env create -f environment.yml
+mamba activate phylogain
 ```
 
 ## Quick start
