@@ -136,10 +136,30 @@ conda deactivate
 
 ### Step 4. Run GTDB-Tk
 
-Run GTDB-Tk on the corresponding genome assemblies.
+Create and activate a dedicated GTDB-Tk environment. The version is pinned because each GTDB-Tk release supports specific reference database releases.
+
+```bash
+mamba create -n gtdbtk-2.7.2 -c conda-forge -c bioconda gtdbtk=2.7.2 -y
+conda activate gtdbtk-2.7.2
+```
+
+Download and extract the compatible R232 reference database. Approximately 100 GB of free storage is required. The bundled script also stores `GTDBTK_DATA_PATH` in the active Conda environment.
+
+```bash
+mkdir -p databases/gtdbtk-r232
+download-db.sh -d "$PWD/databases/gtdbtk-r232" -t 8
+
+# Reactivate the environment to load GTDBTK_DATA_PATH.
+conda deactivate
+conda activate gtdbtk-2.7.2
+gtdbtk check_install
+```
+
+Run GTDB-Tk on the original genome assemblies. Bacterial classification requires substantial memory; the current documentation estimates approximately 140 GB.
 
 ```bash
 gtdbtk classify_wf --genome_dir genomes --out_dir gtdbtk_output --extension fna --cpus 16
+conda deactivate
 ```
 
 For bacterial genomes, use `gtdbtk_output/gtdbtk.bac120.summary.tsv` in the next step.
