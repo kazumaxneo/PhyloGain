@@ -143,7 +143,7 @@
     .control-tab-panel[hidden] { display: none; }
     .tree-control-window .control-section-title { padding: 7px 12px 4px; color: var(--cp-accent); font-size: 9px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid var(--cp-line); }
     #controlTabBasic:not([hidden]) { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    #controlTabBasic > .header-controls, #controlTabBasic > .control-section-title, #controlTabBasic > .tree-tools, #controlTabBasic > .legend-controls { grid-column: 1 / -1; }
+    #controlTabBasic > .header-controls, #controlTabBasic > .control-section-title, #controlTabBasic > .tree-tools, #controlTabBasic > .legend-controls, #controlTabBasic > .reset-all-row { grid-column: 1 / -1; }
     .tree-control-window .header-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; padding: 0; border-bottom: 0; white-space: normal; }
     .tree-control-window .header-controls > .control-section-title { grid-column: 1 / -1; }
     .tree-control-window .control-row, .tree-control-window .header-field { display: grid; grid-template-columns: 78px minmax(0, 1fr); align-items: center; gap: 7px; min-height: 32px; padding: 4px 12px; border-bottom: 1px solid var(--cp-line); }
@@ -225,9 +225,9 @@
     .genome-size-track-hit { fill: transparent; pointer-events: all; }
     .genome-size-grid { stroke: var(--tree-grid); stroke-width: 1; pointer-events: none; }
     .genome-size-axis-label, .genome-size-title, .genome-size-value { fill: var(--ink); font-family: var(--tree-label-font, Inter, ui-sans-serif, system-ui, sans-serif); pointer-events: none; }
-    .genome-size-axis-label { font-size: 8px; fill: var(--muted); }
-    .genome-size-title { font-size: 10px; font-weight: 650; }
-    .genome-size-value { font-size: 8px; }
+    .genome-size-axis-label { font-size: var(--genome-size-font-size, 8px); fill: var(--muted); }
+    .genome-size-title { font-size: calc(var(--genome-size-font-size, 8px) + 2px); font-weight: 650; }
+    .genome-size-value { font-size: var(--genome-size-font-size, 8px); }
     .genome-size-bar { fill: var(--accent); fill-opacity: .72; cursor: ew-resize; }
     .gain-value { fill: var(--gain-text); }
     .loss-value { fill: var(--loss-text); }
@@ -526,6 +526,11 @@
             <option value="log10">Log10</option>
           </select>
         </div>
+        <div class="tree-scale-control" id="genomeSizeFontSizeControl">
+          <label for="genomeSizeFontSize">Genome labels</label>
+          <input id="genomeSizeFontSize" type="range" min="6" max="18" step="1" value="8" aria-label="Genome size axis and value label size">
+          <output id="genomeSizeFontSizeValue" for="genomeSizeFontSize">8px</output>
+        </div>
         <div class="tree-tools">
           <div class="tree-scale-control">
             <label for="treeZoom">Zoom</label>
@@ -598,8 +603,7 @@
             <input id="phenotypeLegendScale" type="range" min="50" max="200" step="5" value="100" aria-label="Phenotype legend size">
             <output id="phenotypeLegendScaleValue" for="phenotypeLegendScale">100%</output>
           </div>
-          <div class="control-row"><span class="control-row-label">Settings</span><button class="filter-reset" id="filterReset" type="button">Reset</button></div>
-          <div class="control-row"><span class="control-row-label">Label edits</span><button class="filter-reset" id="restoreLabelDefaults" type="button" title="Restore original tip and GTDB labels, including tree and legend positions">Restore defaults</button></div>
+          <div class="control-row reset-all-row" id="resetAllSettingsRow"><span class="control-row-label">Reset</span><button class="filter-reset" id="resetAllSettings" type="button" title="Restore every viewer setting, label, legend, and panel position">Reset all settings</button></div>
           <div class="control-row"><span class="control-row-label">Tree image</span><button class="svg-download" id="downloadSvg" type="button">Download SVG</button></div>
         </div>
         <div class="filter-status">
@@ -624,7 +628,7 @@
       serif: "Georgia, 'Times New Roman', serif",
       mono: "ui-monospace, SFMono-Regular, Consolas, monospace"
     };
-    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
+    const state = { project: null, branches: new Map(), phenotypeEvents: new Map(), selectedBranch: null, selectedEvent: null, collapseRank: "", cladeLabelMode: "", taxonomyColorSeed: 0, supportThreshold: 0, treeOrder: "original", treeLayout: "rectangular", branchLengthMode: "cladogram", branchEventDisplay: "numbers", eventPieScale: 1, genomeSizeDisplay: "off", genomeSizeScale: "linear", genomeSizeFontSize: 8, genomeSizeOffsetX: 0, horizontalSpacing: 1, verticalSpacing: 1, tipFontSize: 9, treeFontFamily: "system", branchWidth: 1.5, branchOpacity: .75, taxonomyLabelFontSize: 9, taxonomyLegendScale: 1, phenotypeLegendScale: 1, treePanX: 0, treePanY: 0, expandedGroups: new Set(), manuallyCollapsed: new Set(), flippedNodes: new Set(), taxonomyLabelOffsets: new Map(), taxonomyLegendOffset: {x: 0, y: 0}, phenotypeLegendOffset: {x: 0, y: 0}, taxonomyLabelOverrides: new Map(), phenotypeLegendOverrides: new Map(), tipLabelOverrides: new Map(), annotationSources: [], enrichmentSource: "", enrichmentPlotType: "bar", treeZoom: 1, branchFilter: {gainMin: 0, gainMax: 0, lossMin: 0, lossMax: 0} };
     const $ = id => document.getElementById(id);
     const number = value => Number(value || 0).toLocaleString();
     const svgEl = (name, attrs = {}) => {
@@ -777,12 +781,6 @@
         maximum.addEventListener("input", () => syncBranchFilters(kind, "maximum"));
         enableDualRangeTrack($(`${kind}Range`), minimum, maximum);
       }
-      $("filterReset").addEventListener("click", () => {
-        $("gainMin").value = 0; $("gainMax").value = maxima.gain;
-        $("lossMin").value = 0; $("lossMax").value = maxima.loss;
-        state.treePanX = 0; state.treePanY = 0; applyTreePan();
-        syncBranchFilters();
-      });
       syncBranchFilters(null, null, false);
     }
     function rangeValueAtPointer(input, clientX, track = input) {
@@ -902,16 +900,56 @@
     function applyTreeFontFamily() {
       $("treeSvg").style.setProperty("--tree-label-font", treeFontFamilies[state.treeFontFamily] || treeFontFamilies.system);
     }
+    function applyGenomeSizeFontSize() {
+      $("treeSvg").style.setProperty("--genome-size-font-size", `${state.genomeSizeFontSize}px`);
+    }
     function renderTree() {
-      const svg = $("treeSvg"); svg.replaceChildren(); svg.removeAttribute("viewBox"); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily();
+      const svg = $("treeSvg"); svg.replaceChildren(); svg.removeAttribute("viewBox"); applyTreePan(); applyBranchWidth(); applyBranchOpacity(); applyTaxonomyLabelFontSize(); applyTreeFontFamily(); applyGenomeSizeFontSize();
       const hasGenomeSizes = Object.keys(state.project.metadata?.genome_size_bp || {}).length > 0;
       $("genomeSizeDisplaySelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular";
       $("genomeSizeDisplaySelect").title = !hasGenomeSizes ? "Rebuild with --genome-metadata to enable this track" : state.treeLayout === "rectangular" ? "Show genome size beside the tree" : "Genome-size bars are available in the rectangular layout";
       $("genomeSizeScaleSelect").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular" || state.genomeSizeDisplay !== "bar";
+      $("genomeSizeFontSize").disabled = !hasGenomeSizes || state.treeLayout !== "rectangular" || state.genomeSizeDisplay !== "bar";
       $("eventPieScale").disabled = state.branchEventDisplay !== "pie";
       const zoom = state.treeZoom;
       const canvas = svgEl("g", {transform: `scale(${zoom})`});
       svg.append(canvas);
+      function expandSvgForLegend(group) {
+        if (!group?.isConnected) return;
+        const svgBounds = svg.getBoundingClientRect();
+        const legendBounds = group.getBoundingClientRect();
+        if (!svgBounds.width || !svgBounds.height || !legendBounds.width || !legendBounds.height) return;
+        const currentViewBox = (svg.getAttribute("viewBox") || "").trim().split(/\s+/).map(Number);
+        const svgWidth = Number(svg.getAttribute("width")) || 1;
+        const svgHeight = Number(svg.getAttribute("height")) || 1;
+        const current = currentViewBox.length === 4 && currentViewBox.every(Number.isFinite)
+          ? {x: currentViewBox[0], y: currentViewBox[1], width: currentViewBox[2], height: currentViewBox[3]}
+          : {x: 0, y: 0, width: svgWidth, height: svgHeight};
+        const padding = 14;
+        const unitsPerPixelX = current.width / svgBounds.width;
+        const unitsPerPixelY = current.height / svgBounds.height;
+        const leftOverflow = Math.max(0, svgBounds.left + padding - legendBounds.left) * unitsPerPixelX;
+        const topOverflow = Math.max(0, svgBounds.top + padding - legendBounds.top) * unitsPerPixelY;
+        const rightOverflow = Math.max(0, legendBounds.right + padding - svgBounds.right) * unitsPerPixelX;
+        const bottomOverflow = Math.max(0, legendBounds.bottom + padding - svgBounds.bottom) * unitsPerPixelY;
+        if (!leftOverflow && !topOverflow && !rightOverflow && !bottomOverflow) return;
+        const left = current.x - leftOverflow;
+        const top = current.y - topOverflow;
+        const right = current.x + current.width + rightOverflow;
+        const bottom = current.y + current.height + bottomOverflow;
+        const width = Math.max(1, right - left);
+        const height = Math.max(1, bottom - top);
+        svg.setAttribute("viewBox", `${left} ${top} ${width} ${height}`);
+        svg.setAttribute("width", width);
+        svg.setAttribute("height", height);
+      }
+      function keepLegendOverlaysVisible() {
+        canvas.querySelectorAll("[data-taxonomy-legend-block], [data-phenotype-legend-block]").forEach(group => group.keepVisible?.());
+      }
+      function keepLegendVisibleAfterLayout(group) {
+        expandSvgForLegend(group);
+        requestAnimationFrame(() => expandSvgForLegend(group));
+      }
       const eventTotals = [...state.branches.values()].map(branch => Number(branch.gain_count || 0) + Number(branch.loss_count || 0)).filter(total => total > 0);
       const minimumEventTotal = eventTotals.length ? Math.min(...eventTotals) : 0;
       const maximumEventTotal = eventTotals.length ? Math.max(...eventTotals) : 0;
@@ -1117,6 +1155,7 @@
           itemGroup.append(label); content.append(itemGroup);
         }
         group.append(content); canvas.append(group);
+        group.keepVisible = () => keepLegendVisibleAfterLayout(group);
         return (taxonomyDisplayLegend.size + 1) * rowHeight * scale;
       }
       function appendPhenotypeLegend(x, y) {
@@ -1144,6 +1183,7 @@
           itemGroup.append(label); content.append(itemGroup);
         }
         group.append(content); canvas.append(group);
+        group.keepVisible = () => keepLegendVisibleAfterLayout(group);
         return 3 * rowHeight * scale;
       }
       const visibleNodes = [];
@@ -1295,6 +1335,7 @@
         const phenotypeLegendHeight = appendPhenotypeLegend(18, baseSize - 18 + taxonomyLegendHeight + (taxonomyLegendHeight ? 10 : 0));
         const legendHeight = taxonomyLegendHeight + phenotypeLegendHeight + (taxonomyLegendHeight && phenotypeLegendHeight ? 10 : 0);
         if (legendHeight > 17) svg.setAttribute("height", (baseSize + legendHeight - 17 + 12) * zoom);
+        keepLegendOverlaysVisible();
         return;
       }
       svg.style.backgroundImage = useBranchLengths ? "none" : "linear-gradient(90deg, var(--tree-grid) 1px, transparent 1px)";
@@ -1411,11 +1452,13 @@
       visibleNodes.forEach(node => appendCladeTaxonomyLabel(node));
       if (showGenomeSizes) {
         const available = [...genomeSummaries.values()].filter(Boolean);
-        const minimumBp = Math.min(...available.map(item => item.bp));
         const maximumBp = Math.max(...available.map(item => item.bp), 1);
-        const useLogScale = state.genomeSizeScale === "log10" && maximumBp > minimumBp && minimumBp > 0;
-        const scaledFraction = bp => useLogScale ? Math.log10(bp / minimumBp) / Math.log10(maximumBp / minimumBp) : bp / maximumBp;
-        const axisValue = fraction => useLogScale ? minimumBp * Math.pow(maximumBp / minimumBp, fraction) : maximumBp * fraction;
+        const useLogScale = state.genomeSizeScale === "log10" && maximumBp > 0;
+        const maximumMegabases = maximumBp / 1_000_000;
+        const logMaximum = Math.log10(1 + maximumMegabases);
+        const scaledFraction = bp => useLogScale ? Math.log10(1 + Math.max(0, bp) / 1_000_000) / logMaximum : Math.max(0, bp) / maximumBp;
+        const axisValue = fraction => useLogScale ? (Math.pow(10, fraction * logMaximum) - 1) * 1_000_000 : maximumBp * fraction;
+        const formatMegabases = bp => (bp / 1_000_000).toFixed(2).replace(/\.00$/, "").replace(/(\.\d)0$/, "$1");
         const genomeTrack = svgEl("g", {class: "genome-size-track", "data-genome-size-track": "", "data-genome-size-scale": useLogScale ? "log10" : "linear", transform: `translate(${state.genomeSizeOffsetX} 0)`});
         genomeTrack.updateCanvasBounds = updateGenomeSizeCanvasBounds;
         const trackHit = svgEl("rect", {x: metadataOrigin - 8, y: 0, width: metadataWidth + 118, height: baseHeight - 18, class: "genome-size-track-hit"});
@@ -1428,7 +1471,7 @@
           const x = metadataOrigin + metadataWidth * fraction;
           genomeTrack.append(svgEl("line", {x1: x, y1: 22, x2: x, y2: baseHeight - 24, class: "genome-size-grid"}));
           const tick = svgEl("text", {x, y: 32, "text-anchor": fraction === 0 ? "start" : fraction === 1 ? "end" : "middle", class: "genome-size-axis-label"});
-          tick.textContent = (axisValue(fraction) / 1_000_000).toFixed(useLogScale || fraction > 0 ? 2 : 0);
+          tick.textContent = formatMegabases(axisValue(fraction));
           genomeTrack.append(tick);
         }
         for (const node of visibleTerminals) {
@@ -1440,7 +1483,7 @@
           addSvgTooltip(bar, summary.collapsed ? `Mean genome size: ${megabases.toFixed(2)} Mb (${summary.count} genomes with values)` : `Genome size: ${megabases.toFixed(2)} Mb`);
           genomeTrack.append(bar);
           const value = svgEl("text", {x: metadataOrigin + width + 5, y: node.y + 3, class: "genome-size-value"});
-          value.textContent = `${megabases.toFixed(2)} Mb${summary.collapsed ? " mean" : ""}`;
+          value.textContent = formatMegabases(summary.bp);
           genomeTrack.append(value);
         }
         canvas.append(genomeTrack);
@@ -1449,6 +1492,7 @@
       const phenotypeLegendHeight = appendPhenotypeLegend(18, baseHeight - 18 + taxonomyLegendHeight + (taxonomyLegendHeight ? 10 : 0));
       const legendHeight = taxonomyLegendHeight + phenotypeLegendHeight + (taxonomyLegendHeight && phenotypeLegendHeight ? 10 : 0);
       if (legendHeight > 17) svg.setAttribute("height", (baseHeight + legendHeight - 17 + 12) * zoom);
+      keepLegendOverlaysVisible();
     }
     function enableEventPieScale() {
       const input = $("eventPieScale");
@@ -1458,6 +1502,21 @@
         output.textContent = `${input.value}%`;
         localStorage.setItem("species-map-event-pie-scale", input.value);
         if (state.project) renderTree();
+      });
+      enableRangeTrack(input);
+    }
+    function enableGenomeSizeFontSize() {
+      const input = $("genomeSizeFontSize");
+      const output = $("genomeSizeFontSizeValue");
+      const stored = Number(localStorage.getItem("species-map-genome-size-font-size"));
+      if (Number.isFinite(stored) && stored >= 6 && stored <= 18) input.value = stored;
+      state.genomeSizeFontSize = Number(input.value);
+      output.textContent = `${input.value}px`;
+      input.addEventListener("input", () => {
+        state.genomeSizeFontSize = Number(input.value);
+        output.textContent = `${input.value}px`;
+        localStorage.setItem("species-map-genome-size-font-size", input.value);
+        applyGenomeSizeFontSize();
       });
       enableRangeTrack(input);
     }
@@ -1619,9 +1678,9 @@
         .branch-label { font: 650 11px ${treeLabelFont}; }
         .support-label { fill: ${color("--muted")}; font: 9px ${treeLabelFont}; }
         .genome-size-grid { stroke: ${color("--tree-grid")}; stroke-width: 1; }
-        .genome-size-axis-label { fill: ${color("--muted")}; font: 8px ${treeLabelFont}; }
-        .genome-size-title { fill: ${color("--ink")}; font: 650 10px ${treeLabelFont}; }
-        .genome-size-value { fill: ${color("--ink")}; font: 8px ${treeLabelFont}; }
+        .genome-size-axis-label { fill: ${color("--muted")}; font: ${state.genomeSizeFontSize}px ${treeLabelFont}; }
+        .genome-size-title { fill: ${color("--ink")}; font: 650 ${state.genomeSizeFontSize + 2}px ${treeLabelFont}; }
+        .genome-size-value { fill: ${color("--ink")}; font: ${state.genomeSizeFontSize}px ${treeLabelFont}; }
         .genome-size-bar { fill: ${color("--accent")}; fill-opacity: .72; }
         .gain-value { fill: ${color("--gain-text")}; }
         .loss-value { fill: ${color("--loss-text")}; }
@@ -2085,23 +2144,11 @@
       localStorage.setItem("species-map-taxonomy-color-seed", String(nextSeed));
       renderTree();
     });
-    $("restoreLabelDefaults").addEventListener("click", () => {
-      state.taxonomyLabelOffsets.clear();
-      state.taxonomyLegendOffset = {x: 0, y: 0};
-      state.phenotypeLegendOffset = {x: 0, y: 0};
-      state.genomeSizeOffsetX = 0;
-      state.taxonomyLabelOverrides.clear();
-      state.phenotypeLegendOverrides.clear();
-      state.tipLabelOverrides.clear();
-      localStorage.removeItem("species-map-taxonomy-label-offsets");
-      localStorage.removeItem("species-map-taxonomy-legend-offset");
-      localStorage.removeItem("species-map-taxonomy-legend-offsets");
-      localStorage.removeItem("species-map-phenotype-legend-offset");
-      localStorage.removeItem("species-map-genome-size-offset-x");
-      localStorage.removeItem("species-map-taxonomy-label-overrides");
-      localStorage.removeItem("species-map-phenotype-legend-overrides");
-      localStorage.removeItem("species-map-tip-label-overrides");
-      renderTree();
+    $("resetAllSettings").addEventListener("click", () => {
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("species-map-")) localStorage.removeItem(key);
+      }
+      window.location.reload();
     });
     $("treeOrderSelect").addEventListener("change", event => {
       state.treeOrder = event.target.value;
@@ -2223,6 +2270,7 @@
         if (phenotypeLegend) {
           const item = event.target.closest("[data-phenotype-legend-key]");
           const current = state.phenotypeLegendOffset || {x: 0, y: 0};
+          phenotypeLegend.parentNode?.append(phenotypeLegend);
           draggedPhenotypeLegend = {key: item?.dataset.phenotypeLegendKey || null, item, group: phenotypeLegend, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: Number(current.x) || 0, y: Number(current.y) || 0, moved: false};
           return;
         }
@@ -2230,6 +2278,7 @@
         if (taxonomyLegend) {
           const item = event.target.closest("[data-taxonomy-legend-key]");
           const current = state.taxonomyLegendOffset || {x: 0, y: 0};
+          taxonomyLegend.parentNode?.append(taxonomyLegend);
           draggedTaxonomyLegend = {key: item?.dataset.taxonomyLegendKey || null, item, group: taxonomyLegend, pointerId: event.pointerId, startX: event.clientX, startY: event.clientY, x: Number(current.x) || 0, y: Number(current.y) || 0, moved: false};
           return;
         }
@@ -2281,6 +2330,8 @@
           const next = {x: Math.round((draggedTaxonomyLegend.x + dx) * 10) / 10, y: Math.round((draggedTaxonomyLegend.y + dy) * 10) / 10};
           state.taxonomyLegendOffset = next;
           draggedTaxonomyLegend.group.setAttribute("transform", `translate(${next.x} ${next.y})`);
+          draggedTaxonomyLegend.group.parentNode?.append(draggedTaxonomyLegend.group);
+          draggedTaxonomyLegend.group.keepVisible?.();
           event.preventDefault();
           return;
         }
@@ -2295,6 +2346,8 @@
           const next = {x: Math.round((draggedPhenotypeLegend.x + dx) * 10) / 10, y: Math.round((draggedPhenotypeLegend.y + dy) * 10) / 10};
           state.phenotypeLegendOffset = next;
           draggedPhenotypeLegend.group.setAttribute("transform", `translate(${next.x} ${next.y})`);
+          draggedPhenotypeLegend.group.parentNode?.append(draggedPhenotypeLegend.group);
+          draggedPhenotypeLegend.group.keepVisible?.();
           event.preventDefault();
           return;
         }
@@ -2355,6 +2408,7 @@
             localStorage.setItem("species-map-taxonomy-legend-offset", JSON.stringify(state.taxonomyLegendOffset));
             lastLegendClickKey = null;
             lastLegendClickTime = 0;
+            renderTree();
           } else {
             const now = Date.now();
             if (interaction.item && lastLegendClickKey === interaction.key && now - lastLegendClickTime <= 500) {
@@ -2376,6 +2430,7 @@
             localStorage.setItem("species-map-phenotype-legend-offset", JSON.stringify(state.phenotypeLegendOffset));
             lastPhenotypeLegendClickKey = null;
             lastPhenotypeLegendClickTime = 0;
+            renderTree();
           } else {
             const now = Date.now();
             if (interaction.item && lastPhenotypeLegendClickKey === interaction.key && now - lastPhenotypeLegendClickTime <= 500) {
@@ -2601,7 +2656,7 @@
       const legendControls = document.createElement("div");
       legendControls.className = "legend-controls";
       legendControls.append($("taxonomyLegendScaleControl"), $("phenotypeLegendScaleControl"));
-      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), appearanceTitle, staging.querySelector(".tree-tools"), legendsTitle, legendControls);
+      $("controlTabBasic").append(document.querySelector(".header-controls"), sectionTitles[0], $("branchEventDisplaySelect").closest(".control-row"), $("eventPieScaleControl"), $("genomeSizeControl"), $("genomeSizeScaleControl"), $("genomeSizeFontSizeControl"), appearanceTitle, staging.querySelector(".tree-tools"), legendsTitle, legendControls, $("resetAllSettingsRow"));
       $("controlTabFilters").append(sectionTitles[1], $("supportCollapseSelect").closest(".control-row"), staging.querySelector(".gain-filter"), staging.querySelector(".loss-filter"), staging.querySelector(".filter-status"));
       $("controlTabOutput").append(staging.querySelector(".filter-actions"));
       staging.remove();
@@ -2682,6 +2737,7 @@
     initializeTreeControlWindow();
     enableTreePan();
     enableEventPieScale();
+    enableGenomeSizeFontSize();
     enableLegendScales();
     enableTreeZoom();
     enableTreeLayoutControls();

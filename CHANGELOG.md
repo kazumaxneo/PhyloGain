@@ -3,6 +3,9 @@
 ## Unreleased
 
 - Add a Cladogram/Phylogram switch that optionally scales rectangular and circular trees by Newick branch lengths.
+- Keep draggable GTDB and phenotype legends in the foreground and automatically expand the SVG canvas when they move beyond its original bounds.
+- Replace partial reset actions with one Basic-tab reset that restores every saved viewer setting, label, legend, and panel position.
+- Anchor linear and log-scaled genome-size metadata bars at zero, add adjustable genome-label sizing, and omit repeated Mb units from individual bar labels.
 
 ## 0.4.0 — 2026-08-15
 
