@@ -14,8 +14,9 @@ Example visualizations in rectangular and circular layouts:
 
 ```bash
 mamba create -n phylogain -c conda-forge python=3.11 pip -y
-mamba activate phylogain
+conda activate phylogain
 pip install git+https://github.com/kazumaxneo/PhyloGain.git
+conda deactivate
 ```
 
 ### Create the environment from YAML
@@ -26,7 +27,8 @@ The repository includes `environment.yml`, which creates the environment and ins
 git clone https://github.com/kazumaxneo/PhyloGain.git
 cd PhyloGain
 mamba env create -f environment.yml
-mamba activate phylogain
+conda activate phylogain
+conda deactivate
 ```
 
 ## Quick start
@@ -42,7 +44,7 @@ Create and activate a dedicated environment, then download the full Bakta databa
 
 ```bash
 mamba create -n bakta -c conda-forge -c bioconda bakta -y
-mamba activate bakta
+conda activate bakta
 
 mkdir -p databases/bakta
 bakta_db download --output databases/bakta --type full
@@ -63,6 +65,7 @@ for genome in genomes/*.fna; do
     cp "bakta_output/$sample/$sample.faa" "proteomes/$sample.faa"
     cp "bakta_output/$sample/$sample.gff3" "gff_files/$sample.gff"
 done
+conda deactivate
 ```
 
 ### Step 2a. Run OrthoFinder
@@ -71,8 +74,9 @@ Create and activate a separate OrthoFinder environment, then analyze the Bakta p
 
 ```bash
 mamba create -n orthofinder -c conda-forge -c bioconda python=3.12 orthofinder -y
-mamba activate orthofinder
+conda activate orthofinder
 orthofinder -f proteomes -t 16 -a 16
+conda deactivate
 ```
 
 The directory created under `proteomes/OrthoFinder/` is used as the PhyloGain input.
@@ -85,8 +89,9 @@ Create and activate a separate PIRATE environment, then analyze the Bakta GFF fi
 
 ```bash
 mamba create -n pirate -c conda-forge -c bioconda pirate -y
-mamba activate pirate
+conda activate pirate
 PIRATE -i gff_files -o pirate_output -t 16
+conda deactivate
 ```
 
 The `pirate_output/` directory is used as the PhyloGain input. It must contain `PIRATE.gene_families.tsv`; PhyloGain can also use `binary_presence_absence.nwk` and `representative_sequences.faa` from this directory.
@@ -97,7 +102,7 @@ Create and activate an eggNOG-mapper v2 environment compatible with the database
 
 ```bash
 mamba create -n eggnog-mapper -c conda-forge -c bioconda python=3.9 eggnog-mapper=2.1.13 diamond -y
-mamba activate eggnog-mapper
+conda activate eggnog-mapper
 ```
 
 The official eggNOG-mapper database download script may currently fail. Download the prebuilt [eggNOG-mapper database snapshot](https://zenodo.org/records/18780433) described in [this installation note](https://kazumaxneo.hatenablog.com/entry/2020/02/08/225420), extract it, and set `EGGNOG_DATA_DIR` before running `emapper.py`. The archive is a static, unmodified eggNOG DB v5.0.2 snapshot for eggNOG-mapper v2.1.x (approximately 12 GB to download).
@@ -116,6 +121,7 @@ Combine the same protein FASTA files used by OrthoFinder, then annotate them wit
 cat proteomes/*.faa > all_proteins.faa
 emapper.py -i all_proteins.faa --itype proteins --output eggnog --cpu 16 --data_dir "$EGGNOG_DATA_DIR"
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
+conda deactivate
 ```
 
 #### PIRATE workflow
@@ -125,6 +131,7 @@ Annotate the representative protein sequences produced by PIRATE.
 ```bash
 emapper.py -i pirate_output/representative_sequences.faa --itype proteins --output pirate --cpu 16 --data_dir "$EGGNOG_DATA_DIR"
 curl -L https://purl.obolibrary.org/obo/go/go-basic.obo -o go-basic.obo
+conda deactivate
 ```
 
 ### Step 4. Run GTDB-Tk
@@ -142,7 +149,7 @@ For bacterial genomes, use `gtdbtk_output/gtdbtk.bac120.summary.tsv` in the next
 Activate the PhyloGain environment created in the installation section before building the report.
 
 ```bash
-mamba activate phylogain
+conda activate phylogain
 ```
 
 #### OrthoFinder input
@@ -150,6 +157,7 @@ mamba activate phylogain
 ```bash
 phylogain build --orthofinder proteomes/OrthoFinder/Results_MmmDD --annotations eggnog.emapper.annotations --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv --go-obo go-basic.obo --fetch-kegg-names --output phylogain_output
 phylogain serve phylogain_output
+conda deactivate
 ```
 
 Replace `Results_MmmDD` with the actual OrthoFinder result directory.
@@ -159,6 +167,7 @@ Replace `Results_MmmDD` with the actual OrthoFinder result directory.
 ```bash
 phylogain build --pirate pirate_output --annotations pirate.emapper.annotations --gtdb-taxonomy gtdbtk_output/gtdbtk.bac120.summary.tsv --go-obo go-basic.obo --fetch-kegg-names --output phylogain_output
 phylogain serve phylogain_output
+conda deactivate
 ```
 
 For PIRATE, a rooted species tree can be supplied with `--species-tree rooted_species_tree.nwk`. Without it, PhyloGain uses `binary_presence_absence.nwk` from the PIRATE output directory. The viewer opens in a web browser after `phylogain serve` is run.
