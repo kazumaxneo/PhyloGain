@@ -155,6 +155,10 @@ class ProjectTests(unittest.TestCase):
                 self.assertTrue((output / name).is_file(), name)
             project = json.loads((output / "project.json").read_text(encoding="utf-8"))
             self.assertEqual(project["species_count"], 4)
+            html = (output / "index.html").read_text(encoding="utf-8")
+            self.assertIn('<div class="control-row" id="genomeSizeControl">', html)
+            self.assertIn('hasGenomeSizes ? "Off" : "Unavailable"', html)
+            self.assertIn('Rebuild with --genome-metadata to enable this track', html)
             with closing(sqlite3.connect(output / "species_map.sqlite")) as connection:
                 candidate = connection.execute(
                     "SELECT score FROM candidates WHERE phenotype_id=? AND family_id=?",
